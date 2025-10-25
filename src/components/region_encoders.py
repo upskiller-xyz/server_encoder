@@ -128,7 +128,7 @@ class BackgroundRegionEncoder(BaseRegionEncoder):
             
             encoded = self._encode_parameter(param_name.value, param_value)
             channels.append(base * encoded)
-        img = np.concatenate(channels, axis=2).astype(float)
+            
         return np.concatenate(channels, axis=2).astype(float)
     
 
