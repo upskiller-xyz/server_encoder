@@ -14,11 +14,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
+import io
+import zipfile
 
 from src.server.enums import ContentType, HTTPStatus
+from src.components.enums import ModelType, ParameterName
+from src.components.encoding_service import EncodingServiceFactory
 
 
 
@@ -31,6 +35,7 @@ class ServerApplication:
         CORS(self._app)
         self._controller = None
         self._logger = None
+        self._encoding_service = None
         self._setup_dependencies()
         self._setup_routes()
 
@@ -43,11 +48,13 @@ class ServerApplication:
         # Logger
         self._logger = StructuredLogger("Server", LogLevel.INFO)
 
-        # TODO: Initialize your services here and add them to the services dict
-        # Example:
-        # my_service = MyService()
-        # services = {"my_service": my_service}
-        services = {}
+        # Encoding service
+        self._encoding_service = EncodingServiceFactory.get_instance(self._logger)
+
+        # Services dict
+        services = {
+            "encoding_service": self._encoding_service
+        }
 
         # Controller
         self._controller = ServerController(
@@ -61,38 +68,135 @@ class ServerApplication:
     def _setup_routes(self) -> None:
         """Setup Flask routes"""
         self._app.add_url_rule("/", "get_status", self._get_status, methods=["GET"])
-        self._app.add_url_rule("/route_example", "route_example", self._route_example, methods=["POST"])
+        self._app.add_url_rule("/encode", "encode", self._encode_room, methods=["POST"])
 
     def _get_status(self) -> Dict[str, Any]:
         """Get server status endpoint"""
         return jsonify(self._controller.get_status())
 
-    def _route_example(self) -> Dict[str, Any]:
-        """Run prediction endpoint"""
-        # Check if file was uploaded
-        if 'file' not in request.files:
-            raise BadRequest("No file uploaded")
+    def _encode_room(self):
+        """
+        Encode room parameters into an image or multiple images (one per window)
 
-        file = request.files['file']
+        Expected JSON payload (unified structure):
+        {
+            "model_type": "df_default" | "da_default" | "df_custom" | "da_custom",
+            "parameters": {
+                "height_roof_over_floor": 3.0,
+                "floor_height_above_terrain": 2.0,
+                ... (shared room parameters)
+                "windows": {
+                    "window1": {
+                        "window_sill_height": 0.9,
+                        "window_frame_ratio": 0.8,
+                        "window_height": 1.5,
+                        "x1": -0.6, "y1": 0.0, "z1": 0.9,
+                        "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                        "obstruction_angle_horizon": 45.0,
+                        "obstruction_angle_zenith": 30.0,
+                        ... (window-specific parameters)
+                    },
+                    "window2": {
+                        ... (optional additional windows)
+                    }
+                }
+            }
+        }
 
-        # Validate content type
-        # remove if using other input types
-        if not ContentType.is_image(file.content_type):
-            raise BadRequest("File must be an image")
-
+        Returns:
+            PNG image file (single window) or ZIP file (multiple windows)
+        """
         try:
-            # endpoint logic
+            # Get JSON data
+            data = request.get_json()
+            if not data:
+                raise BadRequest("No JSON data provided")
 
-            result = {}
+            # Validate required fields
+            if "model_type" not in data:
+                raise BadRequest("Missing 'model_type' field")
+            if "parameters" not in data:
+                raise BadRequest("Missing 'parameters' field")
 
-            # Check for errors
-            if result.get("status") == "error":
-                return jsonify(result), HTTPStatus.INTERNAL_SERVER_ERROR.value
+            # Parse model type
+            model_type_str = data["model_type"]
+            try:
+                model_type = ModelType(model_type_str)
+            except ValueError:
+                valid_types = [mt.value for mt in ModelType]
+                raise BadRequest(
+                    f"Invalid model_type '{model_type_str}'. "
+                    f"Valid types: {', '.join(valid_types)}"
+                )
 
-            return jsonify(result)
+            # Get parameters
+            parameters = data["parameters"]
 
+            # Validate windows structure
+            if ParameterName.WINDOWS.value not in parameters:
+                raise BadRequest("Missing 'windows' field in parameters. At least one window must be provided.")
+
+            if not isinstance(parameters[ParameterName.WINDOWS.value], dict) or len(parameters[ParameterName.WINDOWS.value]) == 0:
+                raise BadRequest("'windows' must be a non-empty dictionary with at least one window.")
+
+            # Determine if single or multi-window
+            window_count = len(parameters[ParameterName.WINDOWS.value])
+            is_single_window = window_count == 1
+
+            # Log request
+            self._logger.info(
+                f"{'Single' if is_single_window else 'Multi'}-window encoding request - "
+                f"model_type: {model_type_str}, window_count: {window_count}"
+            )
+
+            # Encode image(s)
+            if is_single_window:
+                # Single window - return PNG file
+                image_bytes = self._encoding_service.encode_room_image(
+                    parameters=parameters,
+                    model_type=model_type
+                )
+
+                return send_file(
+                    io.BytesIO(image_bytes),
+                    mimetype='image/png',
+                    as_attachment=True,
+                    download_name='encoded_room.png'
+                )
+            else:
+                # Multiple windows - return ZIP file
+                image_dict = self._encoding_service.encode_multi_window_images(
+                    parameters=parameters,
+                    model_type=model_type
+                )
+
+                # Create ZIP file in memory
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    for window_id, image_bytes in image_dict.items():
+                        zip_file.writestr(f'{window_id}.png', image_bytes)
+
+                zip_buffer.seek(0)
+
+                self._logger.info(
+                    f"Multi-window encoding complete - {len(image_dict)} images in ZIP"
+                )
+
+                return send_file(
+                    zip_buffer,
+                    mimetype='application/zip',
+                    as_attachment=True,
+                    download_name='encoded_room_windows.zip'
+                )
+
+        except BadRequest:
+            raise
+        except ValueError as e:
+            self._logger.error(f"Validation error: {str(e)}")
+            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
-            return jsonify({"error": f"Prediction failed: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR.value
+            self._logger.error(f"Encoding failed: {str(e)}")
+            return jsonify({"error": f"Encoding failed: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR.value
 
     @property
     def app(self) -> Flask:

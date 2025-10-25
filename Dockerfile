@@ -1,26 +1,39 @@
 
-FROM python:3.12
+FROM python:3.10-slim
 
-# Use .dockerignore to exclude unnecessary files (e.g. .git, tests, docs, assets, etc.)
+# Set working directory
+WORKDIR /app
 
-# Copy only requirements.txt and main files to root
+# Install system dependencies required for OpenCV (headless)
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better layer caching
 COPY requirements.txt ./
 
-# Copy only necessary source files to /src
-COPY src/ /src/
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /src
+# Copy source code
+COPY src/ ./src/
 
-# RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6
-RUN pip install --no-cache-dir -r /requirements.txt
+# Set environment variables
+ENV PORT=8080 \
+    PYTHONUNBUFFERED=1 \
+    CUDA_VISIBLE_DEVICES=-1 \
+    TF_CPP_MIN_LOG_LEVEL=3 \
+    OPENCV_IO_ENABLE_OPENEXR=0 \
+    OMP_NUM_THREADS=1
 
-RUN chmod 444 main.py
-RUN chmod 444 /requirements.txt
+# Make files read-only for security
+RUN chmod -R 444 ./src/ && \
+    chmod 444 ./requirements.txt
 
-ENV PORT 8080
-
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 900 main:app
-
-
-# Run the application
-# CMD ["python", "main.py"]
+# Run with gunicorn
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 900 --access-logfile - --error-logfile - src.main:app
