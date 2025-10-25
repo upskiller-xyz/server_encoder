@@ -154,9 +154,15 @@ class RoomPolygon:
         # Window's left edge position
         window_left_edge_x = image_size - window_offset_px - wall_thickness_px
 
-        # Room should align 1 pixel to the left of window for perfect adjacency
+        # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
         room_facade_x = window_left_edge_x - 1
         window_y_pixels = image_size // 2
+
+        # First pass: calculate room extent to check for obstruction bar overlap
+        # Find leftmost (minimum) x-coordinate of room polygon in pixels
+        from src.components.enums import ImageDimensions
+        dims = ImageDimensions(image_size)
+        obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
 
         # Convert vertices to pixel coordinates
         # Coordinate transformation from 3D to 2D top-down view:
@@ -169,14 +175,53 @@ class RoomPolygon:
             dy = vertex.y - window_center_y  # Into room (perpendicular to façade)
 
             # Map to pixel coordinates:
-            # - x_pixel: y=0 (façade) is 1px left of window, larger y goes further LEFT (subtract)
+            # - x_pixel: y=0 (façade) is at room_facade_x, larger y goes further LEFT (subtract)
             # - y_pixel: x=0 (window center) is at image center, positive x goes DOWN
             x_pixel = room_facade_x - round(dy / resolution)
             y_pixel = window_y_pixels + round(dx / resolution)
 
             pixel_coords.append([x_pixel, y_pixel])
 
-        return np.array([pixel_coords], dtype=np.int32)
+        # Clip polygon to boundaries using Shapely
+        # Room should end 2 pixels before obstruction bar (which itself is 4 pixels from right edge)
+        # At 128x128: obs_bar at x=124, so room should clip at x<=122 (6 pixels from right edge)
+        # Use obs_bar_x_start - 3 because Shapely box(minx, miny, maxx, maxy) max values are inclusive,
+        # so box(0, 0, 121, 128) clips at x<=121, giving us 2-pixel gap before obs_bar at 124
+        right_boundary = obs_bar_x_start - 3
+
+        # Create clipping rectangle: x from 0 to right_boundary, y from 0 to image_size
+        from shapely.geometry import Polygon as ShapelyPolygon, box
+
+        room_poly = ShapelyPolygon(pixel_coords)
+        clip_box = box(0, 0, right_boundary, image_size)
+
+        # Clip the polygon
+        clipped = room_poly.intersection(clip_box)
+
+        # Handle different geometry types that might result from clipping
+        if clipped.is_empty:
+            # No intersection - return empty polygon
+            return np.array([[[0, 0]]], dtype=np.int32)
+        elif clipped.geom_type == 'Polygon':
+            # Simple polygon - extract coordinates
+            clipped_coords = list(clipped.exterior.coords)[:-1]  # Remove duplicate last point
+        elif clipped.geom_type == 'MultiPolygon':
+            # Multiple polygons - take the largest one
+            largest = max(clipped.geoms, key=lambda p: p.area)
+            clipped_coords = list(largest.exterior.coords)[:-1]
+        elif clipped.geom_type == 'GeometryCollection':
+            # Mixed geometry types - extract polygons
+            polygons = [g for g in clipped.geoms if g.geom_type == 'Polygon']
+            if polygons:
+                largest = max(polygons, key=lambda p: p.area)
+                clipped_coords = list(largest.exterior.coords)[:-1]
+            else:
+                return np.array([[[0, 0]]], dtype=np.int32)
+        else:
+            # Fallback - use original coordinates
+            clipped_coords = pixel_coords
+
+        return np.array([clipped_coords], dtype=np.int32)
 
     @classmethod
     def from_dict(cls, data: List[dict]) -> 'RoomPolygon':
