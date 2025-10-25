@@ -2,7 +2,7 @@ from typing import Dict, Any, List
 import numpy as np
 import cv2
 from src.components.interfaces import IRegionEncoder
-from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING
+from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING, FACADE_ROTATION_MAP
 from src.components.encoders import EncoderFactory
 from src.components.geometry import RoomPolygon, WindowPosition, WindowGeometry
 
@@ -268,6 +268,9 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 window_y1 = geom.get(ParameterName.Y1.value)
                 window_x2 = geom.get(ParameterName.X2.value)
                 window_y2 = geom.get(ParameterName.Y2.value)
+
+            # Note: Rotation is handled at a higher level (in image builder)
+            # so polygon and window coordinates here are already rotated if needed
 
             # Create mask
             mask = np.zeros((height, width), dtype=np.uint8)

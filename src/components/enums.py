@@ -249,3 +249,12 @@ REGION_CHANNEL_MAPPING = {
         ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,
     },
 }
+
+
+# Facade rotation map: orientation angle -> rotation needed to face south (Strategy Pattern)
+FACADE_ROTATION_MAP = {
+    0.0: 0.0,      # South: no rotation needed
+    90.0: -270.0,  # West: rotate -270° (equivalent to +90°)
+    180.0: -180.0,  # North: rotate 180°
+    270.0: -90.0,  # East: rotate -90° (equivalent to +270°)
+}

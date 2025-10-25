@@ -97,8 +97,10 @@ class RoomImageDirector:
             Complete encoded image
         """
         # Reset and configure builder
-        
         self._builder.reset().set_model_type(model_type)
+
+        # Rotate geometry if window is not on south facade
+        all_parameters = self._rotate_geometry_if_needed(all_parameters)
 
         # Define region encoding order (list-based iteration)
         region_order = [
@@ -115,6 +117,84 @@ class RoomImageDirector:
 
         # Build final image
         return self._builder.build()
+
+    def _rotate_geometry_if_needed(self, all_parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Rotate room polygon and window coordinates if window is not on south facade
+
+        Args:
+            all_parameters: Parameters grouped by region
+
+        Returns:
+            Parameters with rotated geometry
+        """
+        from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
+        from src.components.enums import ParameterName, FACADE_ROTATION_MAP, RegionType
+
+        # Get window parameters
+        window_params = all_parameters.get(RegionType.WINDOW.value, {})
+        if not window_params:
+            return all_parameters
+
+        # Get window coordinates
+        window_x1 = window_params.get(ParameterName.X1.value)
+        window_y1 = window_params.get(ParameterName.Y1.value)
+        window_x2 = window_params.get(ParameterName.X2.value)
+        window_y2 = window_params.get(ParameterName.Y2.value)
+
+        # Check window_geometry dict if individual coords not found
+        if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in window_params:
+            geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
+            window_x1 = geom.get(ParameterName.X1.value)
+            window_y1 = geom.get(ParameterName.Y1.value)
+            window_x2 = geom.get(ParameterName.X2.value)
+            window_y2 = geom.get(ParameterName.Y2.value)
+
+        if window_x1 is None:
+            return all_parameters
+
+        # Determine facade orientation
+        window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0)
+        facade_angle = window_geom.get_facade_orientation()
+
+        if abs(facade_angle) < 0.01:  # Already south-facing
+            return all_parameters
+
+        # Get rotation angle from map
+        rotation_angle = FACADE_ROTATION_MAP.get(facade_angle, 0.0)
+        origin = Point2D(0, 0)
+
+        # Make a deep copy of parameters to avoid modifying original
+        import copy
+        rotated_params = copy.deepcopy(all_parameters)
+
+        # Rotate window geometry
+        rotated_window = window_geom.rotate(rotation_angle, origin)
+        window_params_copy = rotated_params[RegionType.WINDOW.value]
+        window_params_copy[ParameterName.X1.value] = rotated_window.x1
+        window_params_copy[ParameterName.Y1.value] = rotated_window.y1
+        window_params_copy[ParameterName.X2.value] = rotated_window.x2
+        window_params_copy[ParameterName.Y2.value] = rotated_window.y2
+
+        # Rotate room polygon if present
+        room_params = rotated_params.get(RegionType.ROOM.value, {})
+        if ParameterName.ROOM_POLYGON.value in room_params:
+            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
+            if isinstance(polygon_data, RoomPolygon):
+                polygon = polygon_data
+            else:
+                polygon = RoomPolygon.from_dict(polygon_data)
+
+            rotated_polygon = polygon.rotate(rotation_angle, origin)
+            room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
+
+            # Also update window coordinates in room parameters
+            room_params[ParameterName.X1.value] = rotated_window.x1
+            room_params[ParameterName.Y1.value] = rotated_window.y1
+            room_params[ParameterName.X2.value] = rotated_window.x2
+            room_params[ParameterName.Y2.value] = rotated_window.y2
+
+        return rotated_params
 
     def construct_from_flat_parameters(
         self,

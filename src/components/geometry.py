@@ -2,6 +2,8 @@ from typing import List, Tuple
 from dataclasses import dataclass
 import numpy as np
 import cv2
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.affinity import rotate as shapely_rotate
 
 
 @dataclass
@@ -74,6 +76,35 @@ class RoomPolygon:
     def vertices(self) -> List[Point2D]:
         """Get polygon vertices"""
         return self._vertices
+
+    def rotate(self, angle_degrees: float, center: Point2D = None) -> 'RoomPolygon':
+        """
+        Rotate polygon around a center point using Shapely
+
+        Args:
+            angle_degrees: Rotation angle in degrees (positive = counter-clockwise)
+            center: Center of rotation (default: origin (0,0))
+
+        Returns:
+            New RoomPolygon with rotated vertices
+        """
+        if center is None:
+            center = Point2D(0, 0)
+
+        # Create Shapely polygon from vertices
+        coords = [(v.x, v.y) for v in self._vertices]
+        shapely_poly = ShapelyPolygon(coords)
+
+        # Rotate using Shapely (angle in degrees, counter-clockwise, around origin by default)
+        rotated_poly = shapely_rotate(
+            shapely_poly,
+            angle_degrees,
+            origin=(center.x, center.y)
+        )
+
+        # Extract rotated vertices
+        rotated_vertices = list(rotated_poly.exterior.coords)[:-1]  # Remove duplicate last point
+        return RoomPolygon(rotated_vertices)
 
     def to_pixel_array(
         self,
@@ -222,6 +253,101 @@ class WindowGeometry:
     def top_height(self) -> float:
         """Get top height (maximum z coordinate)"""
         return self._z_max
+
+    @property
+    def x1(self) -> float:
+        """Get x1 coordinate"""
+        return self._corner1.x
+
+    @property
+    def y1(self) -> float:
+        """Get y1 coordinate"""
+        return self._corner1.y
+
+    @property
+    def x2(self) -> float:
+        """Get x2 coordinate"""
+        return self._corner2.x
+
+    @property
+    def y2(self) -> float:
+        """Get y2 coordinate"""
+        return self._corner2.y
+
+    def get_facade_orientation(self) -> float:
+        """
+        Determine which facade wall this window is on
+
+        Returns angle in degrees representing the window's orientation:
+        - 0°: South facade (default, y ≈ 0, window spans in x)
+        - 90°: West facade (x < 0, window spans in y)
+        - 180°: North facade (y > 0, window spans in x)
+        - 270°: East facade (x > 0, window spans in y)
+
+        Coordinate system:
+        - Origin at window center
+        - Y-axis: positive points into room (north), negative is outside (south)
+        - X-axis: positive points right (east), negative points left (west)
+        """
+        tolerance = 0.01  # 1cm tolerance for "same" coordinate
+
+        x_span = abs(self._corner2.x - self._corner1.x)
+        y_span = abs(self._corner2.y - self._corner1.y)
+
+        avg_x = (self._corner1.x + self._corner2.x) / 2
+        avg_y = (self._corner1.y + self._corner2.y) / 2
+
+        # Window spans in x direction (south or north facade)
+        if x_span > tolerance and y_span <= tolerance:
+            # South: y ≈ 0 or negative (at or outside building)
+            # North: y significantly > 0 (inside building, far wall)
+            if avg_y < 1.0:  # Within 1m of facade - treat as south
+                return 0.0  # South facade
+            else:
+                return 180.0  # North facade
+
+        # Window spans in y direction (east or west facade)
+        elif y_span > tolerance and x_span <= tolerance:
+            # West: x < 0 (left side)
+            # East: x > 0 (right side)
+            if avg_x < 0:
+                return 90.0  # West facade
+            else:
+                return 270.0  # East facade
+
+        # Default to south if unclear
+        return 0.0
+
+    def rotate(self, angle_degrees: float, center: Point2D = None) -> 'WindowGeometry':
+        """
+        Rotate window geometry around a center point using Shapely
+
+        Args:
+            angle_degrees: Rotation angle in degrees (positive = counter-clockwise)
+            center: Center of rotation in 2D (default: origin (0,0))
+
+        Returns:
+            New WindowGeometry with rotated coordinates
+        """
+        if center is None:
+            center = Point2D(0, 0)
+
+        # Create line segment from the two corners
+        from shapely.geometry import LineString
+        from shapely.affinity import rotate as shapely_rotate
+
+        line = LineString([(self._corner1.x, self._corner1.y), (self._corner2.x, self._corner2.y)])
+        rotated_line = shapely_rotate(line, angle_degrees, origin=(center.x, center.y))
+
+        # Extract rotated coordinates
+        coords = list(rotated_line.coords)
+        new_x1, new_y1 = coords[0]
+        new_x2, new_y2 = coords[1]
+
+        return WindowGeometry(
+            new_x1, new_y1, self._corner1.z,
+            new_x2, new_y2, self._corner2.z
+        )
 
     def get_pixel_bounds(
         self,
