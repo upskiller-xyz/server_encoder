@@ -1,0 +1,97 @@
+{
+  "model_type": "df_custom",
+  "parameters": {
+    "height_roof_over_floor": 3.0,
+    "floor_height_above_terrain": 2.0,
+    "ceiling_reflectance": 0.85,
+    "horizontal_reflectance": 0.3,
+    "vertical_reflectance": 0.7,
+    "facade_reflectance": 0.6,
+    "terrain_reflectance": 0.25,
+    "room_polygon": [
+      {"x": -3.0, "y": 0.0},
+      {"x": 3.0, "y": 0.0},
+      {"x": 3.0, "y": 2.0},
+      {"x": 1.0, "y": 2.0},
+      {"x": 1.0, "y": 6.0},
+      {"x": -3.0, "y": 6.0}
+    ],
+    "windows": {
+      "window_west_bottom": {
+        "window_sill_height": 0.9,
+        "window_frame_ratio": 0.8,
+        "window_height": 1.5,
+        "x1": -3.0,
+        "y1": 1.0,
+        "z1": 0.9,
+        "x2": -3.0,
+        "y2": 3.0,
+        "z2": 2.4,
+        "obstruction_angle_horizon": 45.0,
+        "obstruction_angle_zenith": 30.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      },
+      "window_south": {
+        "window_sill_height": 0.8,
+        "window_frame_ratio": 0.85,
+        "window_height": 2.2,
+        "x1": -1.2,
+        "y1": 0.0,
+        "z1": 0.8,
+        "x2": 1.2,
+        "y2": 0.0,
+        "z2": 3.0,
+        "obstruction_angle_horizon": 20.0,
+        "obstruction_angle_zenith": 15.0,
+        "window_frame_reflectance": 0.6,
+        "balcony_underside_reflectance": 0.8
+      },
+      "window_north": {
+        "window_sill_height": 1.1,
+        "window_frame_ratio": 0.75,
+        "window_height": 1.2,
+        "x1": -0.5,
+        "y1": 6.0,
+        "z1": 1.1,
+        "x2": 0.5,
+        "y2": 6.0,
+        "z2": 2.3,
+        "obstruction_angle_horizon": 60.0,
+        "obstruction_angle_zenith": 40.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.6
+      },
+      "window_inner_east": {
+        "window_sill_height": 1.0,
+        "window_frame_ratio": 0.8,
+        "window_height": 1.0,
+        "x1": 3.0,
+        "y1": 0.5,
+        "z1": 1.0,
+        "x2": 3.0,
+        "y2": 1.5,
+        "z2": 2.0,
+        "obstruction_angle_horizon": 10.0,
+        "obstruction_angle_zenith": 5.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      },
+      "window_inner_north": {
+        "window_sill_height": 1.0,
+        "window_frame_ratio": 0.8,
+        "window_height": 1.0,
+        "x1": 1.5,
+        "y1": 2.0,
+        "z1": 1.0,
+        "x2": 2.5,
+        "y2": 2.0,
+        "z2": 2.0,
+        "obstruction_angle_horizon": 10.0,
+        "obstruction_angle_zenith": 5.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      }
+    }
+  }
+}

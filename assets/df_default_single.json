@@ -1,0 +1,28 @@
+{
+  "model_type": "df_default",
+  "parameters": {
+    "height_roof_over_floor": 3.0,
+    "floor_height_above_terrain": 2.0,
+    "room_polygon": [
+      {"x": -2.0, "y": 0.0},
+      {"x": 2.0, "y": 0.0},
+      {"x": 2.0, "y": 5.0},
+      {"x": -2.0, "y": 5.0}
+    ],
+    "windows": {
+      "window1": {
+        "window_sill_height": 0.9,
+        "window_frame_ratio": 0.8,
+        "window_height": 1.5,
+        "x1": -0.6,
+        "y1": 0.0,
+        "z1": 0.9,
+        "x2": 0.6,
+        "y2": 0.0,
+        "z2": 2.4,
+        "obstruction_angle_horizon": 45.0,
+        "obstruction_angle_zenith": 30.0
+      }
+    }
+  }
+}

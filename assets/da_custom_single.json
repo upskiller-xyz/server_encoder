@@ -1,0 +1,36 @@
+{
+  "model_type": "da_custom",
+  "parameters": {
+    "roof_over_floor_height": 3.5,
+    "floor_over_terrain": 1.5,
+    "window_orientation": 180.0,
+    "facade_reflectance": 0.6,
+    "terrain_reflectance": 0.25,
+    "ceiling_reflectance": 0.85,
+    "horizontal_reflectance": 0.3,
+    "vertical_reflectance": 0.7,
+    "room_polygon": [
+      {"x": -2.0, "y": 0.0},
+      {"x": 2.0, "y": 0.0},
+      {"x": 2.0, "y": 5.0},
+      {"x": -2.0, "y": 5.0}
+    ],
+    "windows": {
+      "window1": {
+        "window_sill_height": 1.0,
+        "window_frame_ratio": 0.75,
+        "window_height": 2.0,
+        "x1": -0.6,
+        "y1": 0.0,
+        "z1": 1.0,
+        "x2": 0.6,
+        "y2": 0.0,
+        "z2": 3.0,
+        "obstruction_angle_horizon": 30.0,
+        "obstruction_angle_zenith": 20.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      }
+    }
+  }
+}

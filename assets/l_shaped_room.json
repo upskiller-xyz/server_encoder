@@ -1,0 +1,37 @@
+{
+  "model_type": "df_custom",
+  "parameters": {
+    "roof_over_floor_height": 3.0,
+    "floor_over_terrain": 2.0,
+    "facade_reflectance": 0.6,
+    "terrain_reflectance": 0.25,
+    "ceiling_reflectance": 0.85,
+    "horizontal_reflectance": 0.3,
+    "vertical_reflectance": 0.7,
+    "room_polygon": [
+      {"x": -2.0, "y": 0.0},
+      {"x": 2.0, "y": 0.0},
+      {"x": 2.0, "y": 3.0},
+      {"x": -1.0, "y": 3.0},
+      {"x": -1.0, "y": 6.0},
+      {"x": -2.0, "y": 6.0}
+    ],
+    "windows": {
+      "window1": {
+        "sill_height": 0.9,
+        "frame_ratio": 0.8,
+        "window_height": 1.5,
+        "x1": -0.6,
+        "y1": 0.0,
+        "z1": 0.9,
+        "x2": 0.6,
+        "y2": 0.0,
+        "z2": 2.4,
+        "obstruction_angle_horizon": 30.0,
+        "obstruction_angle_zenith": 20.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "model_type": "df_custom",
+  "parameters": {
+    "height_roof_over_floor": 3.0,
+    "floor_height_above_terrain": 2.0,
+    "ceiling_reflectance": 0.85,
+    "horizontal_reflectance": 0.3,
+    "vertical_reflectance": 0.7,
+    "facade_reflectance": 0.6,
+    "terrain_reflectance": 0.25,
+    "room_polygon": [
+      {"x": -3.0, "y": 0.0},
+      {"x": 3.0, "y": 0.0},
+      {"x": 3.0, "y": 6.0},
+      {"x": -3.0, "y": 6.0}
+    ],
+    "windows": {
+      "bedroom_east": {
+        "window_sill_height": 0.9,
+        "window_frame_ratio": 0.8,
+        "window_height": 1.5,
+        "x1": -0.6,
+        "y1": 0.0,
+        "z1": 0.9,
+        "x2": 0.6,
+        "y2": 0.0,
+        "z2": 2.4,
+        "obstruction_angle_horizon": 45.0,
+        "obstruction_angle_zenith": 30.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.7
+      },
+      "living_room_south": {
+        "window_sill_height": 0.8,
+        "window_frame_ratio": 0.85,
+        "window_height": 2.2,
+        "x1": -1.2,
+        "y1": 0.0,
+        "z1": 0.8,
+        "x2": 1.2,
+        "y2": 0.0,
+        "z2": 3.0,
+        "obstruction_angle_horizon": 20.0,
+        "obstruction_angle_zenith": 15.0,
+        "window_frame_reflectance": 0.6,
+        "balcony_underside_reflectance": 0.8
+      },
+      "kitchen_north": {
+        "window_sill_height": 1.1,
+        "window_frame_ratio": 0.75,
+        "window_height": 1.2,
+        "x1": -0.5,
+        "y1": 0.0,
+        "z1": 1.1,
+        "x2": 0.5,
+        "y2": 0.0,
+        "z2": 2.3,
+        "obstruction_angle_horizon": 60.0,
+        "obstruction_angle_zenith": 40.0,
+        "window_frame_reflectance": 0.5,
+        "balcony_underside_reflectance": 0.6
+      }
+    }
+  }
+}
