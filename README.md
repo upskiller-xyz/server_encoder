@@ -6,29 +6,29 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
-
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/upskiller-xyz/server_template">
+  <a href="https://github.com/upskiller-xyz/server_encoder">
     <img src="https://github.com/upskiller-xyz/DaylightFactor/blob/main/docs/images/logo_upskiller.png" alt="Logo" height="100" >
   </a>
 
-  <h3 align="center">XXX Server</h3>
+  <h3 align="center">Room Encoding Server</h3>
 
   <p align="center">
-    Short description
+    Encode room geometry and parameters into images for daylight prediction models
     <br />
-    <a href="https://github.com/upskiller-xyz/server_template">View Demo</a>
+    <a href="docs/api_reference.md">API Reference</a>
     ·
-    <a href="https://github.com/upskiller-xyz/server_template/issues">Report Bug</a>
+    <a href="docs/request_schema.md">Request Schema</a>
     ·
-    <a href="https://github.com/upskiller-xyz/server_template/issues">Request Feature</a>
+    <a href="docs/encoding_logic.md">Encoding Logic</a>
+    <br />
+    <a href="https://github.com/upskiller-xyz/server_encoder/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/upskiller-xyz/server_encoder/issues">Request Feature</a>
   </p>
 </div>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -49,232 +49,236 @@
     </li>
     <li><a href="#usage">Usage</a>
         <li><a href="#api-endpoints">API Endpoints</a></li>
-        <li><a href="#deployment">Deployment</a>
-          <li><a href="#locally">Local deployment</a></li>
-        </li>
+        <li><a href="#deployment">Deployment</a></li>
     </li>
-    <li><a href="#design">Design</a>
-      <li><a href="#architecture">Architecture</a></li>
-    </li>
+    <li><a href="#design">Design</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#documentation">Documentation</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contribution">Contribution</a></li>
     <li><a href="#license">License</a></li>
-    <li><a href="#attribution">Attribution</a></li>
-    <li><a href="#trademark-notice">Trademark notice</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
-
-
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Longer description
+The **Room Encoding Server** transforms 3D room geometry and physical parameters into 2D encoded images for use with Daylight Factor (DF) and Daylight Autonomy (DA) prediction models.
 
-
+**Key Features:**
+- Encode room geometry, materials, and environmental context into RGBA images
+- Support for single and multi-window rooms
+- Automatic facade rotation for windows on different orientations
+- Multiple model types: DF/DA with default or custom materials
+- RESTful API with comprehensive validation
+- Object-oriented design following SOLID principles
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 ### Built With
 
-* [Python](https://www.python.org/)
-* [Flask](https://flask.palletsprojects.com/)
+* [Python 3.10+](https://www.python.org/)
+* [Flask](https://flask.palletsprojects.com/) - Web framework
+* [OpenCV](https://opencv.org/) - Image processing
+* [NumPy](https://numpy.org/) - Numerical computing
+* [Shapely](https://shapely.readthedocs.io/) - Geometric operations
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these simple steps.
-
 ### Prerequisites
 
-* [Python 3.13+](https://www.python.org/downloads/)
-* [Poetry](https://python-poetry.org/docs/#installation)
-* CUDA-capable GPU (optional, for GPU acceleration)
+* Python 3.10 or higher
+* Poetry (recommended) or pip
 
 ### Installation
 
-1. Clone the repo
+#### Using Poetry (recommended)
+
+1. Clone the repository
    ```sh
-   git clone https://github.com/upskiller-xyz/server_template.git
-   cd server_template
+   git clone https://github.com/upskiller-xyz/server_encoder.git
+   cd server_encoder
    ```
 
-2. Install dependencies using Poetry:
+2. Install dependencies
    ```sh
    poetry install
    ```
 
-3. Activate the virtual environment:
+3. Activate virtual environment
    ```sh
    poetry shell
    ```
 
-4. Set environment variables (optional):
+4. Run the server
    ```sh
-   export PORT=8000               # Server port
+   python -m src.main
    ```
 
-5. Run the server:
+#### Using pip
+
+1. Clone the repository
    ```sh
-   python main.py
+   git clone https://github.com/upskiller-xyz/server_encoder.git
+   cd server_encoder
    ```
+
+2. Create virtual environment
+   ```sh
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies
+   ```sh
+   pip install flask flask-cors numpy opencv-python-headless shapely
+   ```
+
+4. Run the server
+   ```sh
+   python -m src.main
+   ```
+
+#### Environment Variables
+
+```sh
+export PORT=8081  # Default: 8081
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-### 🎯 Interactive Demo with PyTorch Models
-
-**Start here!** For hands-on examples with PyTorch model loading and feature extraction, see the **[Playground Notebook](example/demo.ipynb)**:
-
-```bash
-# Install Jupyter and start the demo
-poetry run jupyter notebook example/demo.ipynb
-```
-
-### 🔧 API Endpoints
-
-The server provides REST API endpoints for model predictions:
-
-#### Health Check
-Check if the server is running and model is loaded:
+### Quick Start
 
 ```python
 import requests
+import json
 
-response = requests.get("http://localhost:8000/")
-print(response.json())
-# Output: {"status": "ready", "model_loaded": true, "timestamp": "2024-01-01T00:00:00Z"}
+url = "http://localhost:8081/encode"
+
+payload = {
+    "model_type": "df_default",
+    "parameters": {
+        "height_roof_over_floor": 2.7,
+        "floor_height_above_terrain": 3.0,
+        "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
+        "windows": {
+            "main_window": {
+                "window_sill_height": 0.9,
+                "window_frame_ratio": 0.15,
+                "window_height": 1.5,
+                "x1": -0.6, "y1": 0.0, "z1": 0.9,
+                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                "obstruction_angle_horizon": 15.0,
+                "obstruction_angle_zenith": 10.0
+            }
+        }
+    }
+}
+
+response = requests.post(url, json=payload)
+
+# Save the encoded image
+with open("encoded_room.png", "wb") as f:
+    f.write(response.content)
 ```
 
-#### Image Prediction
-Submit an image for model prediction:
+### API Endpoints
+
+#### `GET /`
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "running",
+  "service": "encoding_service",
+  "timestamp": "2025-10-26T12:34:56"
+}
+```
+
+#### `POST /encode`
+Encode room geometry and parameters into image(s).
+
+**Request:** JSON with `model_type` and `parameters`
+
+**Response:**
+- Single window: PNG image
+- Multiple windows: ZIP archive with one PNG per window
+
+See [API Reference](docs/api_reference.md) for complete documentation.
+
+### Model Types
+
+| Model Type | Description |
+|------------|-------------|
+| `df_default` | Daylight Factor with default materials (reflectance = 0.8) |
+| `da_default` | Daylight Autonomy with default materials |
+| `df_custom` | Daylight Factor with custom material reflectances |
+| `da_custom` | Daylight Autonomy with custom material reflectances |
+
+### Multi-Window Support
+
+For rooms with windows on different facades:
 
 ```python
-import requests
+payload = {
+    "model_type": "df_custom",
+    "parameters": {
+        "height_roof_over_floor": 2.7,
+        "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
+        "windows": {
+            "south_window": {
+                "x1": -0.6, "y1": 0.0, "z1": 0.9,
+                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                # ... other parameters
+            },
+            "west_window": {
+                "x1": 0.0, "y1": -0.5, "z1": 1.0,
+                "x2": 0.0, "y2": 0.5, "z2": 2.0,
+                # ... other parameters
+            }
+        }
+    }
+}
 
-# Send image file for prediction
-with open("input_image.jpg", "rb") as f:
-    files = {"file": f}
-    response = requests.post("http://localhost:8000/run", files=files)
-
-result = response.json()
-print(f"Prediction result: {result}")
-```
-
-#### Example with OpenCV preprocessing:
-
-```python
-import cv2
-import requests
-import numpy as np
-from io import BytesIO
-
-# Load and preprocess image
-image = cv2.imread("input.jpg")
-image = cv2.resize(image, (480, 640))  # Resize to model input size
-
-# Convert to bytes
-_, buffer = cv2.imencode('.jpg', image)
-image_bytes = BytesIO(buffer)
-
-# Send prediction request
-files = {"file": ("image.jpg", image_bytes, "image/jpeg")}
-response = requests.post("http://localhost:8000/run", files=files)
-
-prediction = response.json()
-print(f"Model output shape: {prediction.get('output_shape')}")
-print(f"Processing time: {prediction.get('processing_time_ms')}ms")
-```
-
-### Deployment
-
-#### Environment Configuration
-Create a `.env` file with required configurations:
-```sh
-MODEL=df_default_2.0.0
-PORT=8000
-GCP_REGION=us-central1
-SERVER_NAME=model-server
-REPO_NAME=server_template
-IMAGE_NAME=model-server
-
-SCW_REGISTRY_NAMESPACE=nsp
-SCW_PROJECT_ID=project-id
-SCW_SERVER=serve-container
-SCW_IMAGE=server_template
-```
-
-#### Docker Deployment
-Build and run using Docker:
-```sh
-docker build -t model-server .
-docker run -p 8000:8000 model-server
-```
-
-#### Cloud Deployment
-Deploy to Google Cloud Platform:
-```sh
-gcloud auth login
-bash build.sh
-```
-
-or Scaleway:
-```sh
-bash build_scw.sh
+response = requests.post(url, json=payload)
+# Returns ZIP file with south_window.png and west_window.png
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-#### Locally
+### Deployment
 
-Set up the Model Server locally for development and testing:
+#### Local Development
 
-1. **Clone the Repository**
-   ```bash
-   git clone <your-repo-url>
-   cd server_template
-   ```
+```sh
+export PORT=8081
+python -m src.main
+```
 
-2. **Install Dependencies with Poetry**
-   ```bash
-   poetry install
-   ```
+Server runs on `http://localhost:8081` with debug mode enabled.
 
-3. **Activate Virtual Environment**
-   ```bash
-   poetry shell
-   ```
+#### Docker
 
-4. **Set Environment Variables (Optional)**
-   ```bash
-   export MODEL=df_default_2.0.0
-   export PORT=8000
-   ```
+```sh
+docker build -t room-encoder .
+docker run -p 8081:8081 room-encoder
+```
 
-5. **Run the Server**
-   ```bash
-   python main.py
-   ```
-   The server will start on `http://localhost:8000` by default.
+#### Production
 
-6. **Run Tests**
-   ```bash
-   poetry run pytest
-   ```
+Use a production WSGI server:
 
-7. **Code Quality Checks**
-   ```bash
-   poetry run ruff check .
-   poetry run mypy .
-   ```
+```sh
+gunicorn -w 4 -b 0.0.0.0:8081 src.main:app
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -283,95 +287,123 @@ Set up the Model Server locally for development and testing:
 
 ### Architecture
 
-The Model Server follows object-oriented design principles with clean separation of concerns:
+The server follows strict **Object-Oriented Programming** principles and design patterns:
 
+**Core Components:**
 ```
-ModelServerApplication
-├── DownloadStrategy (handles model downloads)
-└── StructuredLogger (logging system)
+ServerApplication
+├── EncodingService (handles encoding logic)
+│   ├── RoomImageBuilder (constructs images)
+│   ├── RoomImageDirector (orchestrates building)
+│   └── RegionEncoders (encode specific regions)
+│       ├── BackgroundRegionEncoder
+│       ├── RoomRegionEncoder
+│       ├── WindowRegionEncoder
+│       └── ObstructionBarRegionEncoder
+├── StructuredLogger (logging system)
+└── ServerController (request handling)
 ```
 
-**Key Components:**
-- **Dependency Injection**: All services are injected through constructors
-- **Factory Patterns**: Services are created using factory classes
-- **Strategy Pattern**: Different loading and processing strategies
-- **Single Responsibility**: Each class has one clear purpose
-- **Abstract Base Classes**: Define contracts for implementations
+**Design Patterns Used:**
+- **Builder Pattern**: Image construction
+- **Director Pattern**: Orchestration of building process
+- **Factory Pattern**: Encoder and service creation
+- **Strategy Pattern**: Channel mappings, validation rules
+- **Singleton Pattern**: Service instances
+- **Adapter Pattern**: Parameter transformation
+- **Enumerator Pattern**: Constants and magic strings
+
+**Principles:**
+- Single Responsibility Principle (SRP)
+- Dependency Injection
+- Separation of Concerns
+- Type Safety with Type Hints
+
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- TESTING -->
+## Testing
+
+Run the test suite:
+
+```sh
+# Run all tests
+poetry run pytest
+
+# Run with coverage
+poetry run pytest --cov=src --cov-report=html
+
+# Run specific test file
+poetry run pytest tests/test_window.py -v
+```
+
+**Test Coverage:**
+- 101 unit tests across 5 test modules
+- Coverage for all region encoders
+- Validation and integration tests
+- Image scaling and positioning tests
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- DOCUMENTATION -->
+## Documentation
+
+Comprehensive documentation available in the `docs/` directory:
+
+- **[API Reference](docs/api_reference.md)** - Endpoint documentation and examples
+- **[Request Schema](docs/request_schema.md)** - Complete parameter reference and validation
+- **[Encoding Logic](docs/encoding_logic.md)** - Detailed encoding mechanics and algorithms
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP -->
 ## Roadmap
 
-See the [open issues](https://github.com/upskiller-xyz/server_template/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/upskiller-xyz/server_encoder/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTION -->
 ## Contribution
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Contributions are welcome! Please follow these guidelines:
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+3. Follow the development guidelines in [CLAUDE.md](CLAUDE.md)
+4. Write tests for new functionality
+5. Ensure all tests pass: `poetry run pytest`
+6. Commit your Changes using [conventional commits](https://www.conventionalcommits.org/)
+7. Push to the Branch (`git push origin feature/AmazingFeature`)
+8. Open a Pull Request
 
 **Development Guidelines:**
-
-* Follow Object-Oriented Programming principles and design patterns
-* Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
-* Follow [semantic versioning](https://semver.org/)
-* Add type hints and documentation
-* Write tests for new functionality
-* Run `poetry run ruff check` and `poetry run mypy` before committing
-
-See [CLAUDE.md](CLAUDE.md) for detailed development instructions.
-
-### Top contributors:
-
-<a href="https://github.com/upskiller-xyz/server_template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=upskiller-xyz/server_template" alt="Top Contributors" />
-</a>
+- Follow Object-Oriented Programming principles
+- Use design patterns appropriately
+- Add type hints to all functions
+- Write self-documenting code
+- Update documentation for API changes
+- Maintain test coverage above 90%
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- LICENSE -->
 ## License
 
-See [License](./docs/LICENSE) for more details - or [read a summary](https://choosealicense.com/licenses/gpl-3.0/).
+See [License](./docs/LICENSE) for details - [GPL-3.0](https://choosealicense.com/licenses/gpl-3.0/).
 
-In short:
-
-Strong copyleft. You **can** use, distribute and modify this code in both academic and commercial contexts. At the same time you **have to** keep the code open-source under the same license (`GPL-3.0`) and give the appropriate [attribution](#attribution) to the authors.
+**Summary:**
+Strong copyleft. You can use, distribute and modify this code in academic and commercial contexts, but you must keep the code open-source under GPL-3.0 and provide appropriate attribution.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-## Attribution
-
-📖 **Academic/Industry Use**: Please cite this work as described in [CITATION.cff](docs/citation/CITATION.cff), [CITE.txt](docs/citation/CITE.txt) or [ATTRIBUTION.md](docs/citation/ATTRIBUTION.md). Alternatively you can download the BibTeX file [here](docs/citation/model-server.bib) by adding it to `.tex` files by
-
-```tex
-\bibliography{model-server}
-```
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Trademark Notice
-
-- **"Upskiller"** is an informal collaborative name used by contributors affiliated with BIMTech Innovations AB.
-- BIMTech Innovations AB owns all legal rights to the **Model Server** project.
-- The GPL-3.0 license applies to code, not branding. Commercial use of the names requires permission.
-
-Contact: [Upskiller](mailto:info@upskiller.xyz)
 
 ## Contact
 
-Stanislava Fedorova - [e-mail](mailto:stasya.fedorova@gmail.com)
+Stanislava Fedorova - [stasya.fedorova@gmail.com](mailto:stasya.fedorova@gmail.com)
+
+Project Link: [https://github.com/upskiller-xyz/server_encoder](https://github.com/upskiller-xyz/server_encoder)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -379,23 +411,21 @@ Stanislava Fedorova - [e-mail](mailto:stasya.fedorova@gmail.com)
 ## Acknowledgments
 
 * [README template](https://github.com/othneildrew/Best-README-Template)
-* [PyTorch](https://pytorch.org/) - Deep learning framework
 * [Flask](https://flask.palletsprojects.com/) - Web framework
-* Alberto Floris - [e-mail](mailto:alberto.floris@arkion.co)
+* [OpenCV](https://opencv.org/) - Image processing
+* [NumPy](https://numpy.org/) - Numerical computing
+* [Shapely](https://shapely.readthedocs.io/) - Geometric operations
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/upskiller-xyz/server_template.svg?style=for-the-badge
-[contributors-url]: https://github.com/upskiller-xyz/server_template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/upskiller-xyz/server_template.svg?style=for-the-badge
-[forks-url]: https://github.com/upskiller-xyz/server_template/network/members
-[stars-shield]: https://img.shields.io/github/stars/upskiller-xyz/server_template.svg?style=for-the-badge
-[stars-url]: https://github.com/upskiller-xyz/server_template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/upskiller-xyz/server_template.svg?style=for-the-badge
-[issues-url]: https://github.com/upskiller-xyz/server_template/issues
-[license-shield]: https://img.shields.io/github/license/upskiller-xyz/server_template.svg?style=for-the-badge
-[license-url]: https://github.com/upskiller-xyz/server_template/blob/master/docs/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/upskiller-xyz/server_encoder.svg?style=for-the-badge
+[contributors-url]: https://github.com/upskiller-xyz/server_encoder/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/upskiller-xyz/server_encoder.svg?style=for-the-badge
+[forks-url]: https://github.com/upskiller-xyz/server_encoder/network/members
+[stars-shield]: https://img.shields.io/github/stars/upskiller-xyz/server_encoder.svg?style=for-the-badge
+[stars-url]: https://github.com/upskiller-xyz/server_encoder/stargazers
+[issues-shield]: https://img.shields.io/github/issues/upskiller-xyz/server_encoder.svg?style=for-the-badge
+[issues-url]: https://github.com/upskiller-xyz/server_encoder/issues
+[license-shield]: https://img.shields.io/github/license/upskiller-xyz/server_encoder.svg?style=for-the-badge
+[license-url]: https://github.com/upskiller-xyz/server_encoder/blob/master/docs/LICENSE.txt

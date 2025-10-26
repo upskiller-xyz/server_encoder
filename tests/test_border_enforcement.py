@@ -17,7 +17,7 @@ from src.components.region_encoders import (
     WindowRegionEncoder,
     ObstructionBarEncoder
 )
-from src.components.enums import ModelType
+from src.components.enums import ModelType, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -140,8 +140,8 @@ class TestBorderEnforcement(unittest.TestCase):
 
         # Encode window (centered, should not touch borders)
         window_params = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -229,8 +229,8 @@ class TestBorderEnforcementAllRegions(unittest.TestCase):
         # Encode window
         window_encoder = WindowRegionEncoder()
         window_params = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -322,8 +322,8 @@ class TestBorderEnforcementIntegration(unittest.TestCase):
         image = (builder
                  .reset()
                  .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_background({'floor_height_above_terrain': 2.0})
-                 .encode_room({
+                 .encode_region(RegionType.BACKGROUND, {'floor_height_above_terrain': 2.0})
+                 .encode_region(RegionType.ROOM, {
                      'height_roof_over_floor': 3.0,
                      'room_polygon': [
                          {"x": -5.0, "y": 0.0},
@@ -334,14 +334,14 @@ class TestBorderEnforcementIntegration(unittest.TestCase):
                      'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                      'x2': 0.6, 'y2': 0.0, 'z2': 2.4
                  })
-                 .encode_window({
-                     'sill_height': 0.9,
-                     'frame_ratio': 0.8,
+                 .encode_region(RegionType.WINDOW, {
+                     'window_sill_height': 0.9,
+                     'window_frame_ratio': 0.8,
                      'window_height': 1.5,
                      'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                      'x2': 0.6, 'y2': 0.0, 'z2': 2.4
                  })
-                 .encode_obstruction_bar({
+                 .encode_region(RegionType.OBSTRUCTION_BAR, {
                      'obstruction_angle_zenith': 35.0,
                      'obstruction_angle_horizon': 45.0
                  })

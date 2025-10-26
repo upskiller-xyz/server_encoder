@@ -13,7 +13,7 @@ Tests verify:
 import unittest
 import numpy as np
 from src.components.region_encoders import ObstructionBarEncoder
-from src.components.enums import ModelType, ImageDimensions
+from src.components.enums import ModelType, ImageDimensions, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -552,7 +552,7 @@ class TestObstructionBarIntegration(unittest.TestCase):
         image = (builder
                  .reset()
                  .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_obstruction_bar(parameters)
+                 .encode_region(RegionType.OBSTRUCTION_BAR, parameters)
                  .build())
 
         # Verify image dimensions
@@ -744,7 +744,7 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
         image = (builder
                  .reset()
                  .set_model_type(ModelType.DF_CUSTOM)
-                 .encode_obstruction_bar(parameters)
+                 .encode_region(RegionType.OBSTRUCTION_BAR, parameters)
                  .build())
 
         # Verify alpha channel encoded correctly

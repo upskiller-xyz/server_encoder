@@ -15,7 +15,7 @@ import unittest
 import numpy as np
 from src.components.region_encoders import WindowRegionEncoder
 from src.components.geometry import WindowGeometry
-from src.components.enums import ModelType
+from src.components.enums import ModelType, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -97,8 +97,8 @@ class TestWindowConstruction(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -130,8 +130,8 @@ class TestWindowConstruction(unittest.TestCase):
 
         # Window with 1.2m width = 12 pixels tall in top view
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -172,8 +172,8 @@ class TestWindowDimensions(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -203,8 +203,8 @@ class TestWindowDimensions(unittest.TestCase):
 
         # Window with 1.2m width in 3D = 12 pixels in top view
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -235,8 +235,8 @@ class TestWindowDimensions(unittest.TestCase):
 
         # Small window: 0.8m wide
         params_small = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.4, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.4, 'y2': 0.0, 'z2': 2.4
@@ -244,8 +244,8 @@ class TestWindowDimensions(unittest.TestCase):
 
         # Large window: 2.0m wide
         params_large = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -1.0, 'y1': 0.0, 'z1': 0.9,
             'x2': 1.0, 'y2': 0.0, 'z2': 2.4
@@ -284,8 +284,8 @@ class TestWindowColorEncoding(unittest.TestCase):
 
         for sill_height, expected_value in test_cases:
             parameters = {
-                'sill_height': sill_height,
-                'frame_ratio': 0.8,
+                'window_sill_height': sill_height,
+                'window_frame_ratio': 0.8,
                 'window_height': 1.5,
                 'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                 'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -315,8 +315,8 @@ class TestWindowColorEncoding(unittest.TestCase):
 
         for frame_ratio, expected_value in test_cases:
             parameters = {
-                'sill_height': 0.9,
-                'frame_ratio': frame_ratio,
+                'window_sill_height': 0.9,
+                'window_frame_ratio': frame_ratio,
                 'window_height': 1.5,
                 'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                 'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -346,8 +346,8 @@ class TestWindowColorEncoding(unittest.TestCase):
 
         for window_height, expected_value in test_cases:
             parameters = {
-                'sill_height': 0.9,
-                'frame_ratio': 0.8,
+                'window_sill_height': 0.9,
+                'window_frame_ratio': 0.8,
                 'window_height': window_height,
                 'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                 'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -371,8 +371,8 @@ class TestWindowColorEncoding(unittest.TestCase):
 
         # Don't provide window_frame_reflectance parameter
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -400,8 +400,8 @@ class TestWindowColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'window_frame_reflectance': 0.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
@@ -435,14 +435,14 @@ class TestWindowParameterValidation(unittest.TestCase):
             self.encoder.encode_region(self.image, {}, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('sill_height', error_msg)
-        self.assertIn('frame_ratio', error_msg)
+        self.assertIn('window_sill_height', error_msg)
+        self.assertIn('window_frame_ratio', error_msg)
         self.assertIn('window_height', error_msg)
 
     def test_missing_sill_height(self):
         """Test error when sill_height is missing"""
         parameters = {
-            'frame_ratio': 0.8,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -452,12 +452,12 @@ class TestWindowParameterValidation(unittest.TestCase):
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('sill_height', error_msg)
+        self.assertIn('window_sill_height', error_msg)
 
     def test_missing_frame_ratio(self):
         """Test error when frame_ratio is missing"""
         parameters = {
-            'sill_height': 0.9,
+            'window_sill_height': 0.9,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -467,13 +467,13 @@ class TestWindowParameterValidation(unittest.TestCase):
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('frame_ratio', error_msg)
+        self.assertIn('window_frame_ratio', error_msg)
 
     def test_missing_window_height(self):
         """Test error when window_height is missing"""
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
         }
@@ -487,8 +487,8 @@ class TestWindowParameterValidation(unittest.TestCase):
     def test_missing_geometry(self):
         """Test error when window geometry is missing"""
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5
         }
 
@@ -501,8 +501,8 @@ class TestWindowParameterValidation(unittest.TestCase):
     def test_window_frame_reflectance_optional(self):
         """Test that window_frame_reflectance is optional"""
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -521,8 +521,8 @@ class TestWindowParameterValidation(unittest.TestCase):
     def test_all_parameters_provided(self):
         """Test successful encoding when all parameters provided"""
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'window_frame_reflectance': 0.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
@@ -544,8 +544,8 @@ class TestWindowParameterValidation(unittest.TestCase):
         )
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'window_geometry': geometry
         }
@@ -571,8 +571,8 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -603,8 +603,8 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((256, 256, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -627,8 +627,8 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((512, 512, 4), dtype=np.uint8)
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -656,8 +656,8 @@ class TestWindowImageScaling(unittest.TestCase):
         }
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -697,8 +697,8 @@ class TestWindowImageScaling(unittest.TestCase):
         }
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -731,8 +731,8 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256, 512, 1024]
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -767,8 +767,8 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256]
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -811,8 +811,8 @@ class TestWindowImageScaling(unittest.TestCase):
         """Test different window sizes scale correctly across image sizes"""
         # Test with a larger window
         parameters_large = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -1.0, 'y1': 0.0, 'z1': 0.9,  # 2.0m wide
             'x2': 1.0, 'y2': 0.0, 'z2': 2.4
@@ -858,8 +858,8 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256, 512]
 
         parameters = {
-            'sill_height': 2.5,    # Should encode to ~127
-            'frame_ratio': 0.5,    # Should encode to ~127 (reversed)
+            'window_sill_height': 2.5,    # Should encode to ~127
+            'window_frame_ratio': 0.5,    # Should encode to ~127 (reversed)
             'window_height': 2.6,  # Should encode to ~127 (reversed)
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -899,8 +899,8 @@ class TestWindowIntegration(unittest.TestCase):
         builder = RoomImageBuilder()
 
         parameters = {
-            'sill_height': 0.9,
-            'frame_ratio': 0.8,
+            'window_sill_height': 0.9,
+            'window_frame_ratio': 0.8,
             'window_height': 1.5,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
             'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -909,7 +909,7 @@ class TestWindowIntegration(unittest.TestCase):
         image = (builder
                  .reset()
                  .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_window(parameters)
+                 .encode_region(RegionType.WINDOW, parameters)
                  .build())
 
         # Verify image dimensions
@@ -932,8 +932,8 @@ class TestWindowIntegration(unittest.TestCase):
                 'obstruction_angle_zenith': 30.0
             },
             'window': {
-                'sill_height': 0.9,
-                'frame_ratio': 0.8,
+                'window_sill_height': 0.9,
+                'window_frame_ratio': 0.8,
                 'window_height': 1.5,
                 'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
                 'x2': 0.6, 'y2': 0.0, 'z2': 2.4
@@ -943,8 +943,8 @@ class TestWindowIntegration(unittest.TestCase):
         image = (builder
                  .reset()
                  .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_obstruction_bar(all_params['obstruction_bar'])
-                 .encode_window(all_params['window'])
+                 .encode_region(RegionType.OBSTRUCTION_BAR, all_params['obstruction_bar'])
+                 .encode_region(RegionType.WINDOW, all_params['window'])
                  .build())
 
         # Verify both regions exist

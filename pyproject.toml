@@ -1,17 +1,24 @@
 [tool.poetry]
-name = "Upskiller-tool"
-version = "0.1.0"
-description = "case study for RTE RFQ process"
+name = "room-encoder-server"
+version = "1.0.0"
+description = "Encode room geometry and parameters into images for daylight prediction models"
 authors = ["stasja fedorova <stasja.fedorova@upskiller.xyz>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.13"
+python = "^3.10"
 
-setuptools = "66.1.1"
-
+# Core dependencies
 flask = "^3.0.0"
+flask-cors = "^4.0.0"
 werkzeug = "^3.0.0"
+
+# Scientific computing
+numpy = "^1.24.0"
+opencv-python-headless = "^4.8.0"
+shapely = "^2.0.0"
+
+# HTTP client
 requests = "^2.32.0"
 
 
