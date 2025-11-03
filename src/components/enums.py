@@ -217,7 +217,7 @@ DEFAULT_PARAMETER_VALUES = {
     ParameterName.WINDOW_FRAME_REFLECTANCE: 0.8,
 
     # Obstruction bar defaults
-    ParameterName.CONTEXT_REFLECTANCE: 1.0,
+    ParameterName.CONTEXT_REFLECTANCE: 0.6,
     ParameterName.BALCONY_REFLECTANCE: 0.8,
 }
 

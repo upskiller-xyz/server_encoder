@@ -1,10 +1,12 @@
 <a name="readme-top"></a>
 
+<!-- Badges commented out - uncomment if needed
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
+-->
 
 <!-- PROJECT LOGO -->
 <br />
@@ -21,8 +23,6 @@
     <a href="docs/api_reference.md">API Reference</a>
     ·
     <a href="docs/request_schema.md">Request Schema</a>
-    ·
-    <a href="docs/encoding_logic.md">Encoding Logic</a>
     <br />
     <a href="https://github.com/upskiller-xyz/server_encoder/issues">Report Bug</a>
     ·
@@ -354,7 +354,6 @@ Comprehensive documentation available in the `docs/` directory:
 
 - **[API Reference](docs/api_reference.md)** - Endpoint documentation and examples
 - **[Request Schema](docs/request_schema.md)** - Complete parameter reference and validation
-- **[Encoding Logic](docs/encoding_logic.md)** - Detailed encoding mechanics and algorithms
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -419,6 +418,7 @@ Project Link: [https://github.com/upskiller-xyz/server_encoder](https://github.c
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
+<!-- Commented out - uncomment if needed
 [contributors-shield]: https://img.shields.io/github/contributors/upskiller-xyz/server_encoder.svg?style=for-the-badge
 [contributors-url]: https://github.com/upskiller-xyz/server_encoder/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/upskiller-xyz/server_encoder.svg?style=for-the-badge
@@ -429,3 +429,4 @@ Project Link: [https://github.com/upskiller-xyz/server_encoder](https://github.c
 [issues-url]: https://github.com/upskiller-xyz/server_encoder/issues
 [license-shield]: https://img.shields.io/github/license/upskiller-xyz/server_encoder.svg?style=for-the-badge
 [license-url]: https://github.com/upskiller-xyz/server_encoder/blob/master/docs/LICENSE.txt
+-->

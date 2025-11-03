@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Transform 3D room geometry into encoded images for daylight prediction. RESTful API for Daylight Factor and Daylight Autonomy models." />
+  <meta name="keywords" content="daylight factor, daylight autonomy, building simulation, room encoding, architectural lighting, API, machine learning" />
+  <meta name="author" content="Stanislava Fedorova" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ page.canonical_url }}" />
+  <meta property="og:title" content="Room Encoding Server - Daylight Prediction API" />
+  <meta property="og:description" content="Transform 3D room geometry into encoded images for daylight prediction. RESTful API for Daylight Factor and Daylight Autonomy models." />
+  <meta property="og:image" content="https://upskiller-website.s3.fr-par.scw.cloud/docs.lux/docs_cover.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="{{ page.canonical_url }}" />
+  <meta property="twitter:title" content="Room Encoding Server - Daylight Prediction API" />
+  <meta property="twitter:description" content="Transform 3D room geometry into encoded images for daylight prediction. RESTful API for Daylight Factor and Daylight Autonomy models." />
+  <meta property="twitter:image" content="https://upskiller-website.s3.fr-par.scw.cloud/docs.lux/docs_cover.png" />
+
+  <!-- Additional SEO -->
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="{{ page.canonical_url }}" />
+{% endblock %}

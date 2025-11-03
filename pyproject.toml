@@ -37,10 +37,6 @@ mkdocstrings-python = "1.10.9"
 
 [tool.poetry.scripts]
 
-
-[[tool.poetry.source]]
-
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
