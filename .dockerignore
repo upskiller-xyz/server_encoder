@@ -11,6 +11,9 @@ htmlcov/
 .idea/
 .vscode/
 example/
+deployment/
+*.md
+README.md
 
 # Python cache
 __pycache__/
@@ -49,8 +52,15 @@ Thumbs.db
 
 # Documentation site build
 site/
+docs/
 
 # Misc
 *.swp
 *.swo
 *~
+
+# Model checkpoints (if any local ones exist)
+checkpoints/
+*.h5
+*.keras
+saved_model/
