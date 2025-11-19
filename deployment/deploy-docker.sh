@@ -147,9 +147,28 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# Stop existing containers
-echo -e "${YELLOW}Stopping existing containers...${NC}"
-$DOCKER_COMPOSE down --remove-orphans 2>/dev/null || true
+# Stop existing instances of this container only
+echo -e "${YELLOW}Stopping existing instances of encoder-server...${NC}"
+
+# Stop and remove encoder-server container if it exists
+if docker ps -a --format '{{.Names}}' | grep -q '^encoder-server$'; then
+    echo -e "${YELLOW}  Stopping encoder-server container...${NC}"
+    docker stop encoder-server 2>/dev/null || true
+    docker rm encoder-server 2>/dev/null || true
+    echo -e "${GREEN}  ✓ encoder-server stopped and removed${NC}"
+fi
+
+# Stop and remove encoder-nginx container if it exists (for --with-nginx deployments)
+if docker ps -a --format '{{.Names}}' | grep -q '^encoder-nginx$'; then
+    echo -e "${YELLOW}  Stopping encoder-nginx container...${NC}"
+    docker stop encoder-nginx 2>/dev/null || true
+    docker rm encoder-nginx 2>/dev/null || true
+    echo -e "${GREEN}  ✓ encoder-nginx stopped and removed${NC}"
+fi
+
+# Clean up unused networks for this project only
+docker network ls --format '{{.Name}}' | grep -q '^deployment_encoder-network$' && \
+    docker network rm deployment_encoder-network 2>/dev/null || true
 
 # Build and start containers
 if [ "$FORCE_BUILD" = true ]; then
