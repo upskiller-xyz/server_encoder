@@ -289,6 +289,88 @@ class RoomPolygon:
         rotated_vertices = list(rotated_poly.exterior.coords)[:-1]  # Remove duplicate last point
         return RoomPolygon(rotated_vertices)
 
+    def _find_window_edge_and_rotation(
+        self,
+        window_x1: float,
+        window_y1: float,
+        window_x2: float,
+        window_y2: float,
+        tolerance: float = 0.01
+    ) -> Tuple[int, float, bool]:
+        """
+        Find which polygon edge contains the window and calculate rotation needed.
+
+        Args:
+            window_x1, window_y1: First window endpoint
+            window_x2, window_y2: Second window endpoint
+            tolerance: Distance tolerance for edge matching
+
+        Returns:
+            Tuple of (edge_index, rotation_angle_degrees, needs_flip)
+            - edge_index: Index of the edge containing the window
+            - rotation_angle_degrees: Angle to rotate so window edge is horizontal (constant y)
+            - needs_flip: Whether to flip direction so room extends in -y direction
+        """
+        from shapely.geometry import LineString as ShapelyLine, Point as ShapelyPt
+
+        window_line = ShapelyLine([(window_x1, window_y1), (window_x2, window_y2)])
+
+        # Find which edge contains the window
+        for i in range(len(self._vertices)):
+            v1 = self._vertices[i]
+            v2 = self._vertices[(i + 1) % len(self._vertices)]
+
+            edge = ShapelyLine([(v1.x, v1.y), (v2.x, v2.y)])
+
+            # Check if window line is contained in this edge (with buffer for tolerance)
+            if edge.buffer(tolerance).contains(window_line):
+                # Found the window edge
+                # Calculate angle of this edge
+                dx = v2.x - v1.x
+                dy = v2.y - v1.y
+
+                # Angle of edge from horizontal
+                import math
+                edge_angle = math.atan2(dy, dx) * 180 / math.pi
+
+                # We want to rotate so this edge becomes horizontal (y = constant)
+                # An edge at angle θ from horizontal needs rotation of -θ to become horizontal
+                rotation_needed = -edge_angle
+
+                # After rotation, check if room extends in +y or -y direction
+                # Get the center of polygon
+                center_x = sum(v.x for v in self._vertices) / len(self._vertices)
+                center_y = sum(v.y for v in self._vertices) / len(self._vertices)
+
+                # Edge midpoint
+                edge_mid_x = (v1.x + v2.x) / 2
+                edge_mid_y = (v1.y + v2.y) / 2
+
+                # Vector from edge to polygon center
+                to_center_x = center_x - edge_mid_x
+                to_center_y = center_y - edge_mid_y
+
+                # Rotate this vector by rotation_needed
+                angle_rad = rotation_needed * math.pi / 180
+                cos_a = math.cos(angle_rad)
+                sin_a = math.sin(angle_rad)
+                rotated_cx = to_center_x * cos_a - to_center_y * sin_a
+                rotated_cy = to_center_x * sin_a + to_center_y * cos_a
+
+                # Looking at the coordinate mapping below:
+                # x_pixel = room_facade_x - round(dy / resolution)
+                # This means: positive dy -> more leftward (smaller x_pixel)
+                # For room to extend left, we need dy > 0
+                # So if rotated center has dy < 0, we need to flip
+                needs_flip = rotated_cy < 0
+
+                return i, rotation_needed, needs_flip
+
+        raise ValueError(
+            f"Window at ({window_x1:.2f}, {window_y1:.2f}) to ({window_x2:.2f}, {window_y2:.2f}) "
+            f"does not lie on any polygon edge"
+        )
+
     def to_pixel_array(
         self,
         image_size: int = 128,
@@ -301,7 +383,9 @@ class RoomPolygon:
         Convert polygon to pixel coordinates for drawing on image
 
         The room polygon is positioned so that:
-        - Its rightmost side (where window is located) aligns with the left edge of window area
+        - The edge containing the window is rotated to be horizontal (constant y)
+        - The window edge aligns with the left edge of the window area on the image
+        - The room extends to the left (negative x in image coordinates)
         - Window outer wall (left edge) is at: image_size - 12 - wall_thickness pixels from left
         - Resolution: 1 pixel = 0.1m (10cm) for 128x128 image, scales proportionally
 
@@ -318,23 +402,41 @@ class RoomPolygon:
         if window_x1 is None or window_y1 is None or window_x2 is None or window_y2 is None:
             raise ValueError("Window coordinates required for room positioning")
 
+        # Find window edge and calculate rotation
+        _, rotation_angle, needs_flip = self._find_window_edge_and_rotation(
+            window_x1, window_y1, window_x2, window_y2
+        )
+
+        # Apply rotation to align window edge horizontally
+        # Rotate around window center
+        window_center = Point2D(
+            (window_x1 + window_x2) / 2,
+            (window_y1 + window_y2) / 2
+        )
+        rotated_polygon = self.rotate(rotation_angle, window_center)
+
+        # If needed, flip the polygon so room extends in -y direction
+        if needs_flip:
+            # Flip by rotating 180 degrees around window edge
+            rotated_polygon = rotated_polygon.rotate(180, window_center)
+
         # Calculate resolution based on image size (scales proportionally)
         scale = image_size / 128.0
         resolution = 0.1 / scale  # Meters per pixel
 
-        # Window center in 3D coordinates
-        window_center_x = (window_x1 + window_x2) / 2.0
-        window_center_y = (window_y1 + window_y2) / 2.0
+        # After rotation, the window should be at a constant y value
+        # and the polygon extends in the -y direction (into the room)
+        window_y_after_rotation = window_center.y
 
         # Window position calculation:
         # - Window is 12px from right edge
         # - Wall thickness is ~0.3m = 3 pixels at base scale
-        # - Room façade (y=0) aligns with window's left edge
+        # - Room façade (window edge) aligns with window's left edge on image
         window_offset_px = 12
         wall_thickness_m = 0.3
         wall_thickness_px = round(wall_thickness_m / resolution)
 
-        # Window's left edge position
+        # Window's left edge position on image
         window_left_edge_x = image_size - window_offset_px - wall_thickness_px
 
         # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
@@ -347,19 +449,20 @@ class RoomPolygon:
         dims = ImageDimensions(image_size)
         obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
 
-        # Convert vertices to pixel coordinates
-        # Coordinate transformation from 3D to 2D top-down view:
+        # Convert rotated polygon vertices to pixel coordinates
+        # Coordinate transformation from rotated 3D to 2D top-down view:
         #   3D x (along façade) -> image y (vertical, down is positive)
-        #   3D y (into room) -> image x (horizontal, but REVERSED: into room = leftward)
+        #   3D y (into room, positive direction after rotation/flip) -> image x (horizontal, leftward)
         pixel_coords = []
-        for vertex in self._vertices:
+        for vertex in rotated_polygon.vertices:
             # Offset from window center in meters
-            dx = vertex.x - window_center_x  # Along façade
-            dy = vertex.y - window_center_y  # Into room (perpendicular to façade)
+            dx = vertex.x - window_center.x  # Along façade
+            dy = vertex.y - window_y_after_rotation  # Into room (should be >= 0 after rotation/flip)
 
             # Map to pixel coordinates:
-            # - x_pixel: y=0 (façade) is at room_facade_x, larger y goes further LEFT (subtract)
-            # - y_pixel: x=0 (window center) is at image center, positive x goes DOWN
+            # - x_pixel: y=window_y (façade) is at room_facade_x, POSITIVE y goes further LEFT (subtract)
+            # - y_pixel: x=window_center.x is at image center, positive x goes DOWN
+            # Since dy is positive for room interior, and we want left (smaller x), we subtract
             x_pixel = room_facade_x - round(dy / resolution)
             y_pixel = window_y_pixels + round(dx / resolution)
 
