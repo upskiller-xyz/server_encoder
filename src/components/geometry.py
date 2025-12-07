@@ -224,17 +224,35 @@ class RoomPolygon:
         return np.array([clipped_coords], dtype=np.int32)
 
     @classmethod
-    def from_dict(cls, data: List[dict]) -> 'RoomPolygon':
+    def from_dict(cls, data: List) -> 'RoomPolygon':
         """
-        Create polygon from list of coordinate dictionaries
+        Create polygon from list of coordinate dictionaries or lists
 
         Args:
             data: List of dicts like [{"x": 0, "y": 0}, {"x": 3, "y": 0}, ...]
+                  OR list of lists/tuples like [[0, 0], [3, 0], ...] or [(0, 0), (3, 0), ...]
 
         Returns:
             RoomPolygon instance
         """
-        vertices = [(point["x"], point["y"]) for point in data]
+        if not data:
+            raise ValueError("Polygon data cannot be empty")
+
+        # Check format of first element to determine data structure
+        first_element = data[0]
+
+        if isinstance(first_element, dict):
+            # List of dictionaries format: [{"x": 0, "y": 0}, ...]
+            vertices = [(point["x"], point["y"]) for point in data]
+        elif isinstance(first_element, (list, tuple)):
+            # List of lists/tuples format: [[0, 0], ...] or [(0, 0), ...]
+            vertices = [(point[0], point[1]) for point in data]
+        else:
+            raise ValueError(
+                f"Invalid polygon data format. Expected list of dicts or list of lists/tuples, "
+                f"but got list of {type(first_element).__name__}"
+            )
+
         return cls(vertices)
 
 

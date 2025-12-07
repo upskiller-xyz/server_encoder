@@ -12,9 +12,9 @@ __pycache__/
 
 saved_model
 *.keras
+*.h5
 
 *.csv
-*.json
 .venv/*
 *.pdf
 *.pptx
@@ -22,9 +22,14 @@ saved_model
 *.zip
 .bashrc
 .env
+.env.*
 
 *.xls
 *.DS_Store
+
+# Deployment artifacts
+deployment/*.bak
+deployment/logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

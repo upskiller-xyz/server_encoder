@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 
 # Set environment variables
-ENV PORT=8080 \
+ENV PORT=8082 \
     PYTHONUNBUFFERED=1 \
     CUDA_VISIBLE_DEVICES=-1 \
     TF_CPP_MIN_LOG_LEVEL=3 \

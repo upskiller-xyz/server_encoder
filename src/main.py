@@ -234,7 +234,7 @@ def main() -> None:
     """Main entry point"""
     launcher = ServerLauncher()
     application = launcher.create_application()
-    port = int(os.getenv("PORT", 8081))
+    port = int(os.getenv("PORT", 8082))
     launcher.run_server(application, port=port, debug=True)
 
 
