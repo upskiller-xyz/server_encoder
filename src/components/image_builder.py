@@ -289,12 +289,20 @@ class RoomImageDirector:
         # Room positioning depends on window coordinates - copy using list comprehension
         room_key = RegionType.ROOM.value
         window_key = RegionType.WINDOW.value
+        background_key = RegionType.BACKGROUND.value
+
+        # Copy window geometry to room
         coord_keys = [ParameterName.X1.value, ParameterName.Y1.value,
                       ParameterName.X2.value, ParameterName.Y2.value,
                       ParameterName.WINDOW_GEOMETRY.value]
 
         [grouped[room_key].update({k: grouped[window_key][k]})
          for k in coord_keys if k in grouped[window_key]]
+
+        # Window sill height calculation depends on floor_height_above_terrain from background
+        # Copy it to window region for calculator access
+        if "floor_height_above_terrain" in grouped[background_key]:
+            grouped[window_key]["floor_height_above_terrain"] = grouped[background_key]["floor_height_above_terrain"]
 
         return grouped
     

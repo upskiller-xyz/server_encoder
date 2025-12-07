@@ -1,8 +1,9 @@
-from typing import List, Tuple
+from typing import List, Tuple, Any, Union, Dict
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 import numpy as np
 import cv2
-from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.geometry import Polygon as ShapelyPolygon, Point as ShapelyPoint, LineString
 from shapely.affinity import rotate as shapely_rotate
 
 
@@ -47,6 +48,188 @@ class Point3D:
             (x_pixel, y_pixel) tuple
         """
         return self.to_point2d().to_pixel(resolution)
+
+
+class IPolygonDataParser(ABC):
+    """
+    Abstract base class for polygon data parsers (Strategy Pattern)
+
+    Each parser handles a specific input format and converts it to
+    a list of (x, y) vertex tuples.
+    """
+
+    @abstractmethod
+    def can_parse(self, data: Any) -> bool:
+        """
+        Check if this parser can handle the given data format
+
+        Args:
+            data: Input data to check
+
+        Returns:
+            True if parser can handle this format
+        """
+        pass
+
+    @abstractmethod
+    def parse(self, data: Any) -> List[Tuple[float, float]]:
+        """
+        Parse data into list of vertex tuples
+
+        Args:
+            data: Input data to parse
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If data format is invalid
+        """
+        pass
+
+
+class DictPolygonParser(IPolygonDataParser):
+    """
+    Parser for dictionary-based polygon format: [{"x": 0, "y": 0}, ...]
+    """
+
+    def can_parse(self, data: Any) -> bool:
+        """Check if data is a list of dictionaries"""
+        if not isinstance(data, list) or not data:
+            return False
+        return isinstance(data[0], dict)
+
+    def parse(self, data: List[dict]) -> List[Tuple[float, float]]:
+        """
+        Parse dictionary format polygon data
+
+        Args:
+            data: List of dicts like [{"x": 0, "y": 0}, ...]
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If dict format is invalid
+        """
+        vertices = []
+        for i, point in enumerate(data):
+            if not isinstance(point, dict):
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} is not a dict. "
+                    f"Got type: {type(point).__name__}, value: {point}"
+                )
+
+            if "x" not in point or "y" not in point:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} missing 'x' or 'y' key. "
+                    f"Got: {point}. Expected format: {{'x': value, 'y': value}}"
+                )
+
+            try:
+                x = float(point["x"])
+                y = float(point["y"])
+                vertices.append((x, y))
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
+                    f"Error: {type(e).__name__}: {str(e)}. "
+                    f"Point: {point}"
+                )
+
+        return vertices
+
+
+class ListPolygonParser(IPolygonDataParser):
+    """
+    Parser for list-based polygon format: [[0, 0], [3, 0], ...]
+    """
+
+    def can_parse(self, data: Any) -> bool:
+        """Check if data is a list of lists/tuples"""
+        if not isinstance(data, list) or not data:
+            return False
+        return isinstance(data[0], (list, tuple))
+
+    def parse(self, data: List[List[float]]) -> List[Tuple[float, float]]:
+        """
+        Parse list format polygon data
+
+        Args:
+            data: List of lists/tuples like [[0, 0], [3, 0], ...]
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If list format is invalid
+        """
+        vertices = []
+        for i, point in enumerate(data):
+            if not isinstance(point, (list, tuple)):
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} is not a list or tuple. "
+                    f"Got type: {type(point).__name__}, value: {point}"
+                )
+
+            if len(point) < 2:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} must have at least 2 elements. "
+                    f"Got: {point}. Expected format: [x, y]"
+                )
+
+            try:
+                x = float(point[0])
+                y = float(point[1])
+                vertices.append((x, y))
+            except (TypeError, ValueError, IndexError) as e:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
+                    f"Error: {type(e).__name__}: {str(e)}. "
+                    f"Point: {point}"
+                )
+
+        return vertices
+
+
+class PolygonParserFactory:
+    """
+    Factory for creating appropriate polygon parsers (Factory Pattern)
+
+    Uses Strategy Pattern to select the right parser based on data format.
+    """
+
+    # Available parsers in priority order
+    _PARSERS = [
+        DictPolygonParser(),
+        ListPolygonParser(),
+    ]
+
+    @classmethod
+    def get_parser(cls, data: Any) -> IPolygonDataParser:
+        """
+        Get appropriate parser for the given data format
+
+        Args:
+            data: Input data to parse
+
+        Returns:
+            Parser instance that can handle this data
+
+        Raises:
+            ValueError: If no parser can handle the data format
+        """
+        # Strategy Pattern: Try each parser until one matches
+        for parser in cls._PARSERS:
+            if parser.can_parse(data):
+                return parser
+
+        # No parser found - provide helpful error
+        raise ValueError(
+            f"Parameter 'room_polygon' has unsupported format. "
+            f"Got type: {type(data).__name__}, value: {data}. "
+            f"Expected formats: [{'x': val, 'y': val}, ...] or [[x, y], ...]"
+        )
 
 
 class RoomPolygon:
@@ -224,17 +407,36 @@ class RoomPolygon:
         return np.array([clipped_coords], dtype=np.int32)
 
     @classmethod
-    def from_dict(cls, data: List[dict]) -> 'RoomPolygon':
+    def from_dict(cls, data: Union[List[dict], List[List[float]]]) -> 'RoomPolygon':
         """
-        Create polygon from list of coordinate dictionaries
+        Create polygon from list of coordinate dictionaries or lists (Factory Method Pattern)
+
+        Uses Strategy Pattern via PolygonParserFactory to select appropriate parser.
 
         Args:
             data: List of dicts like [{"x": 0, "y": 0}, {"x": 3, "y": 0}, ...]
+                  OR list of lists like [[0, 0], [3, 0], ...]
 
         Returns:
             RoomPolygon instance
+
+        Raises:
+            ValueError: If data format is invalid
         """
-        vertices = [(point["x"], point["y"]) for point in data]
+        # Validate input type
+        if not isinstance(data, list) or not data:
+            raise ValueError(
+                f"Parameter 'room_polygon' must be a non-empty list. "
+                f"Got type: {type(data).__name__}, value: {data}"
+            )
+
+        # Factory Pattern: Get appropriate parser for data format
+        parser = PolygonParserFactory.get_parser(data)
+
+        # Strategy Pattern: Use selected parser to extract vertices
+        vertices = parser.parse(data)
+
+        # Create and return polygon instance
         return cls(vertices)
 
 
@@ -318,6 +520,16 @@ class WindowGeometry:
     def y2(self) -> float:
         """Get y2 coordinate"""
         return self._corner2.y
+
+    @property
+    def z1(self) -> float:
+        """Get z1 coordinate"""
+        return self._corner1.z
+
+    @property
+    def z2(self) -> float:
+        """Get z2 coordinate"""
+        return self._corner2.z
 
     def get_facade_orientation(self) -> float:
         """
@@ -587,3 +799,224 @@ class WindowPosition:
             width=data["width"],
             height=data["height"]
         )
+
+
+class WindowBorderValidator:
+    """
+    Validator for checking if window is positioned on room polygon border
+
+    The internal side of the window should lie on one of the polygon's edges.
+    Uses Shapely geometry for precise calculations.
+    """
+
+    def __init__(self, tolerance: float = 0.01):
+        """
+        Initialize validator
+
+        Args:
+            tolerance: Distance tolerance in meters (default 1cm)
+        """
+        self._tolerance = tolerance
+
+    def validate_window_on_border(
+        self,
+        window_geometry: WindowGeometry,
+        room_polygon: RoomPolygon
+    ) -> Tuple[bool, str]:
+        """
+        Validate that window internal side lies on a polygon edge
+
+        Args:
+            window_geometry: Window geometry with x1, y1, x2, y2 coordinates
+            room_polygon: Room polygon vertices
+
+        Returns:
+            (is_valid, error_message) tuple
+        """
+        # Get window line segment (the internal side facing the room)
+        # Window spans from (x1, y1) to (x2, y2)
+        window_line = LineString([
+            (window_geometry.x1, window_geometry.y1),
+            (window_geometry.x2, window_geometry.y2)
+        ])
+
+        # Get room polygon edges
+        polygon_coords = [(v.x, v.y) for v in room_polygon._vertices]
+        room_poly = ShapelyPolygon(polygon_coords)
+
+        # Check if window line lies on the polygon boundary
+        # Method 1: Check if both endpoints are on or very close to the boundary
+        point1 = ShapelyPoint(window_geometry.x1, window_geometry.y1)
+        point2 = ShapelyPoint(window_geometry.x2, window_geometry.y2)
+
+        dist1 = point1.distance(room_poly.boundary)
+        dist2 = point2.distance(room_poly.boundary)
+
+        if dist1 > self._tolerance or dist2 > self._tolerance:
+            return False, (
+                f"Window endpoints not on polygon border. "
+                f"Point 1 ({window_geometry.x1:.3f}, {window_geometry.y1:.3f}) distance: {dist1:.4f}m, "
+                f"Point 2 ({window_geometry.x2:.3f}, {window_geometry.y2:.3f}) distance: {dist2:.4f}m. "
+                f"Tolerance: {self._tolerance}m. "
+                f"Window must lie on one of the room polygon edges."
+            )
+
+        # Method 2: Check if window line is part of one of the polygon edges
+        # Get all polygon edges
+        edges = []
+        for i in range(len(polygon_coords)):
+            p1 = polygon_coords[i]
+            p2 = polygon_coords[(i + 1) % len(polygon_coords)]
+            edges.append(LineString([p1, p2]))
+
+        # Check if window line lies on any edge
+        window_on_edge = False
+        for edge in edges:
+            # Check if window line is contained within this edge (with tolerance)
+            if edge.buffer(self._tolerance).contains(window_line):
+                window_on_edge = True
+                break
+
+        if not window_on_edge:
+            return False, (
+                f"Window line does not lie on any polygon edge. "
+                f"Window spans from ({window_geometry.x1:.3f}, {window_geometry.y1:.3f}) "
+                f"to ({window_geometry.x2:.3f}, {window_geometry.y2:.3f}). "
+                f"It must be positioned along one of the room polygon sides."
+            )
+
+        return True, ""
+
+    @classmethod
+    def validate_from_dict(
+        cls,
+        window_data: dict,
+        polygon_data: List[Union[dict, List[float]]],
+        tolerance: float = 0.01
+    ) -> Tuple[bool, str]:
+        """
+        Validate window position from dictionary data
+
+        Args:
+            window_data: Window geometry dict with x1, y1, z1, x2, y2, z2
+            polygon_data: Room polygon as list of points
+            tolerance: Distance tolerance in meters
+
+        Returns:
+            (is_valid, error_message) tuple
+        """
+        try:
+            # Parse window geometry
+            if "window_geometry" in window_data:
+                geom_data = window_data["window_geometry"]
+                window_geom = WindowGeometry.from_dict(geom_data)
+            else:
+                window_geom = WindowGeometry(
+                    x1=window_data["x1"],
+                    y1=window_data["y1"],
+                    z1=window_data["z1"],
+                    x2=window_data["x2"],
+                    y2=window_data["y2"],
+                    z2=window_data["z2"]
+                )
+
+            # Parse room polygon
+            room_poly = RoomPolygon.from_dict(polygon_data)
+
+            # Validate
+            validator = cls(tolerance=tolerance)
+            return validator.validate_window_on_border(window_geom, room_poly)
+
+        except (KeyError, ValueError, AttributeError) as e:
+            return False, f"Error parsing geometry data: {type(e).__name__}: {str(e)}"
+
+
+class WindowHeightValidator:
+    """Validates that window z-coordinates lie between room floor and roof."""
+
+    def __init__(self, tolerance: float = 1e-6):
+        """
+        Initialize validator.
+
+        Args:
+            tolerance: Numerical tolerance for height comparisons
+        """
+        self._tolerance = tolerance
+
+    def validate_window_height_bounds(
+        self,
+        window_geometry: WindowGeometry,
+        floor_height: float,
+        roof_height: float
+    ) -> Tuple[bool, str]:
+        """
+        Validate that window z-coordinates are within floor-roof bounds.
+
+        Args:
+            window_geometry: Window geometry with z1, z2 coordinates
+            floor_height: Floor height (floor_height_above_terrain)
+            roof_height: Roof height (floor_height_above_terrain + height_roof_over_floor)
+
+        Returns:
+            Tuple of (is_valid, error_message)
+            - (True, "") if window is within bounds
+            - (False, error_message) if window extends beyond floor or roof
+        """
+        try:
+            z1 = window_geometry.z1
+            z2 = window_geometry.z2
+
+            window_bottom = min(z1, z2)
+            window_top = max(z1, z2)
+
+            # Check if window bottom is below floor
+            if window_bottom < floor_height - self._tolerance:
+                return False, (
+                    f"Window bottom ({window_bottom:.2f}m) is below floor "
+                    f"({floor_height:.2f}m). Window z-coordinates must be between "
+                    f"floor and roof heights."
+                )
+
+            # Check if window top is above roof
+            if window_top > roof_height + self._tolerance:
+                return False, (
+                    f"Window top ({window_top:.2f}m) is above roof "
+                    f"({roof_height:.2f}m). Window z-coordinates must be between "
+                    f"floor and roof heights."
+                )
+
+            return True, ""
+
+        except (KeyError, ValueError, AttributeError) as e:
+            return False, f"Error validating window height: {type(e).__name__}: {str(e)}"
+
+    @classmethod
+    def validate_from_parameters(
+        cls,
+        window_geometry_data: Dict[str, Any],
+        floor_height: float,
+        roof_height: float,
+        tolerance: float = 1e-6
+    ) -> Tuple[bool, str]:
+        """
+        Validate window height from parameter dictionaries.
+
+        Args:
+            window_geometry_data: Dict with x1, y1, z1, x2, y2, z2
+            floor_height: Floor height above terrain
+            roof_height: Roof height (floor + height_roof_over_floor)
+            tolerance: Numerical tolerance for comparisons
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Parse window geometry
+            window_geom = WindowGeometry.from_dict(window_geometry_data)
+
+            # Validate
+            validator = cls(tolerance=tolerance)
+            return validator.validate_window_height_bounds(window_geom, floor_height, roof_height)
+
+        except (KeyError, ValueError, AttributeError, TypeError) as e:
+            return False, f"Error parsing height data: {type(e).__name__}: {str(e)}"

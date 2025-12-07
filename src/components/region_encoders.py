@@ -342,15 +342,22 @@ class WindowRegionEncoder(BaseRegionEncoder):
         Encode window region
 
         Channels (CORRECTED):
-        - Red: sill_height (z1, 0-5m → 0-1) [REQUIRED]
+        - Red: sill_height (z1, 0-5m → 0-1) [AUTO-CALCULATED]
         - Green: frame_ratio (1-0 → 0-1, reversed) [REQUIRED]
-        - Blue: window_height (z2-z1, 0.2-5m → 0.99-0.01, reversed) [REQUIRED]
+        - Blue: window_height (z2-z1, 0.2-5m → 0.99-0.01, reversed) [AUTO-CALCULATED]
         - Alpha: window_frame_reflectance (0-1 → 0-1, optional, default=0.8)
 
         Raises:
             ValueError: If required parameters are missing
         """
-        
+        # Calculate derived parameters (window_sill_height, window_height)
+        # Strict mode (no logger) - will raise ValueError if calculation fails
+        from src.components.encoding_service import ParameterCalculatorRegistry
+        calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(
+            parameters,
+            logger=None  # Strict mode: raise on failure
+        )
+        parameters.update(calculated_params)
 
         # Validate required parameters
         self._validate_required_parameters(parameters)
@@ -374,6 +381,16 @@ class WindowRegionEncoder(BaseRegionEncoder):
                 param_name.value,
                 DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
             )
+
+            # Check if parameter is None (missing or failed calculation)
+            if param_value is None:
+                raise ValueError(
+                    f"Window parameter '{param_name.value}' is missing or could not be calculated. "
+                    f"Available parameters: {list(parameters.keys())}. "
+                    f"For window_sill_height and window_height, ensure window_geometry "
+                    f"(with z1, z2) and floor_height_above_terrain are provided."
+                )
+
             # Encode and append
             encoded = self._encode_parameter(param_name.value, param_value)
             channels.append(encoded)

@@ -131,6 +131,7 @@ class ParameterName(Enum):
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)
+# Note: window_sill_height and window_height are auto-calculated from window geometry
 REQUIRED_PARAMETERS = {
     RegionType.BACKGROUND: [
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN
@@ -140,9 +141,9 @@ REQUIRED_PARAMETERS = {
         ParameterName.ROOM_POLYGON
     ],
     RegionType.WINDOW: [
-        ParameterName.WINDOW_SILL_HEIGHT,
+        # window_sill_height - auto-calculated from min(z1,z2) - floor_height_above_terrain
+        # window_height - auto-calculated from abs(z2 - z1)
         ParameterName.WINDOW_FRAME_RATIO,
-        ParameterName.WINDOW_HEIGHT
     ],
     RegionType.OBSTRUCTION_BAR: [
         ParameterName.OBSTRUCTION_ANGLE_HORIZON,

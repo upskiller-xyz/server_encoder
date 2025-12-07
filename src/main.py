@@ -19,6 +19,7 @@ from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 import io
 import zipfile
+import traceback
 
 from src.server.enums import ContentType, HTTPStatus
 from src.components.enums import ModelType, ParameterName
@@ -192,11 +193,24 @@ class ServerApplication:
         except BadRequest:
             raise
         except ValueError as e:
-            self._logger.error(f"Validation error: {str(e)}")
+            # Log validation error with traceback
+            self._logger.error(
+                f"Validation error: {str(e)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
             return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
-            self._logger.error(f"Encoding failed: {str(e)}")
-            return jsonify({"error": f"Encoding failed: {str(e)}"}), HTTPStatus.INTERNAL_SERVER_ERROR.value
+            # Log encoding error with full traceback
+            error_trace = traceback.format_exc()
+            self._logger.error(
+                f"Encoding failed: {str(e)}\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Traceback:\n{error_trace}"
+            )
+            return jsonify({
+                "error": f"Encoding failed: {str(e)}",
+                "error_type": type(e).__name__
+            }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 
     @property
     def app(self) -> Flask:
