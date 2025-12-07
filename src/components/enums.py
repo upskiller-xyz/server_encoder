@@ -128,6 +128,7 @@ class ParameterName(Enum):
     X2 = "x2"
     Y2 = "y2"
     Z2 = "z2"
+    DIRECTION_ANGLE = "direction_angle"
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)
@@ -183,6 +184,7 @@ PARAMETER_REGIONS = {
     ParameterName.X2.value: RegionType.WINDOW,
     ParameterName.Y2.value: RegionType.WINDOW,
     ParameterName.Z2.value: RegionType.WINDOW,
+    ParameterName.DIRECTION_ANGLE.value: RegionType.WINDOW,
 
     # Obstruction bar parameters
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,

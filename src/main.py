@@ -20,10 +20,13 @@ from werkzeug.exceptions import BadRequest
 import io
 import zipfile
 import traceback
+import re
 
-from src.server.enums import ContentType, HTTPStatus
+from src.server.enums import ContentType, HTTPStatus, LogLevel
 from src.components.enums import ModelType, ParameterName
 from src.components.encoding_service import EncodingServiceFactory
+from src.server.services.logging import StructuredLogger
+from src.server.controllers.base_controller import ServerController
 
 
 
@@ -42,10 +45,6 @@ class ServerApplication:
 
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
-        from src.server.services.logging import StructuredLogger
-        from src.server.enums import LogLevel
-        from src.server.controllers.base_controller import ServerController
-
         # Logger
         self._logger = StructuredLogger("Server", LogLevel.INFO)
 
@@ -86,8 +85,6 @@ class ServerApplication:
         Returns:
             Model type prefix without version suffix
         """
-        import re
-
         # Match pattern: anything followed by underscore and version number (e.g., "_2.0.1", "_1.5")
         # Version pattern: _<digit(s)>.<digit(s)> optionally followed by .<digit(s)>
         version_pattern = r'_\d+\.\d+(?:\.\d+)?$'

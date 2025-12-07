@@ -260,14 +260,25 @@ class RoomRegionEncoder(BaseRegionEncoder):
             window_y1 = parameters.get(ParameterName.Y1.value)
             window_x2 = parameters.get(ParameterName.X2.value)
             window_y2 = parameters.get(ParameterName.Y2.value)
+            direction_angle = parameters.get(ParameterName.DIRECTION_ANGLE.value)
 
             # Also check window_geometry dict
             if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in parameters:
                 geom = parameters[ParameterName.WINDOW_GEOMETRY.value]
-                window_x1 = geom.get(ParameterName.X1.value)
-                window_y1 = geom.get(ParameterName.Y1.value)
-                window_x2 = geom.get(ParameterName.X2.value)
-                window_y2 = geom.get(ParameterName.Y2.value)
+                if isinstance(geom, WindowGeometry):
+                    window_x1 = geom.x1
+                    window_y1 = geom.y1
+                    window_x2 = geom.x2
+                    window_y2 = geom.y2
+                    if direction_angle is None:
+                        direction_angle = geom.direction_angle
+                else:
+                    window_x1 = geom.get(ParameterName.X1.value)
+                    window_y1 = geom.get(ParameterName.Y1.value)
+                    window_x2 = geom.get(ParameterName.X2.value)
+                    window_y2 = geom.get(ParameterName.Y2.value)
+                    if direction_angle is None:
+                        direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
 
             # Note: Rotation is handled at a higher level (in image builder)
             # so polygon and window coordinates here are already rotated if needed
@@ -279,8 +290,10 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 window_x1=window_x1,
                 window_y1=window_y1,
                 window_x2=window_x2,
-                window_y2=window_y2
+                window_y2=window_y2,
+                direction_angle=direction_angle
             )
+            print("PIXEL COORDS", pixel_coords)
             cv2.fillPoly(mask, pixel_coords, 1)
 
             # Enforce border
@@ -362,8 +375,6 @@ class WindowRegionEncoder(BaseRegionEncoder):
         # Validate required parameters
         self._validate_required_parameters(parameters)
 
-        height, width = image.shape[:2]
-
         # Get window bounds from geometry
         x_start, y_start, x_end, y_end = self._get_window_bounds(
             image, parameters
@@ -394,7 +405,7 @@ class WindowRegionEncoder(BaseRegionEncoder):
             # Encode and append
             encoded = self._encode_parameter(param_name.value, param_value)
             channels.append(encoded)
-
+        print("window area",y_start,y_end, x_start,x_end )
         image[y_start:y_end, x_start:x_end] = channels
 
         return image
@@ -452,7 +463,8 @@ class WindowRegionEncoder(BaseRegionEncoder):
                 z1=parameters[ParameterName.Z1.value],
                 x2=parameters[ParameterName.X2.value],
                 y2=parameters[ParameterName.Y2.value],
-                z2=parameters[ParameterName.Z2.value]
+                z2=parameters[ParameterName.Z2.value],
+                direction_angle=parameters.get(ParameterName.DIRECTION_ANGLE.value)
             )
 
         # Get pixel bounds from geometry

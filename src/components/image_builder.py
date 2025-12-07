@@ -1,4 +1,6 @@
 from typing import Dict, Any, Optional
+import copy
+import math
 import numpy as np
 from src.components.interfaces import IImageBuilder
 from src.components.enums import ModelType, RegionType, ParameterName, PARAMETER_REGIONS
@@ -129,43 +131,66 @@ class RoomImageDirector:
             Parameters with rotated geometry
         """
         from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
-        from src.components.enums import ParameterName, FACADE_ROTATION_MAP, RegionType
+        from src.components.enums import FACADE_ROTATION_MAP
 
         # Get window parameters
         window_params = all_parameters.get(RegionType.WINDOW.value, {})
         if not window_params:
             return all_parameters
 
-        # Get window coordinates
+        # Get window coordinates and direction_angle
         window_x1 = window_params.get(ParameterName.X1.value)
         window_y1 = window_params.get(ParameterName.Y1.value)
         window_x2 = window_params.get(ParameterName.X2.value)
         window_y2 = window_params.get(ParameterName.Y2.value)
+        direction_angle = window_params.get(ParameterName.DIRECTION_ANGLE.value)
 
         # Check window_geometry dict if individual coords not found
         if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in window_params:
             geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
-            window_x1 = geom.get(ParameterName.X1.value)
-            window_y1 = geom.get(ParameterName.Y1.value)
-            window_x2 = geom.get(ParameterName.X2.value)
-            window_y2 = geom.get(ParameterName.Y2.value)
+            if isinstance(geom, WindowGeometry):
+                window_x1 = geom.x1
+                window_y1 = geom.y1
+                window_x2 = geom.x2
+                window_y2 = geom.y2
+                if direction_angle is None:
+                    direction_angle = geom.direction_angle
+            else:
+                window_x1 = geom.get(ParameterName.X1.value)
+                window_y1 = geom.get(ParameterName.Y1.value)
+                window_x2 = geom.get(ParameterName.X2.value)
+                window_y2 = geom.get(ParameterName.Y2.value)
+                if direction_angle is None:
+                    direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
 
         if window_x1 is None:
             return all_parameters
 
-        # Determine facade orientation
-        window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0)
-        facade_angle = window_geom.get_facade_orientation()
+        # If direction_angle is provided, use it for rotation
+        # Otherwise fall back to old facade orientation logic
+        if direction_angle is not None:
+            # direction_angle is in radians, shows where window is currently pointing
+            # We want it to point right (0 radians), so rotation = -direction_angle
+            rotation_angle = -direction_angle * 180 / math.pi  # Convert to degrees
 
-        if abs(facade_angle) < 0.01:  # Already south-facing
-            return all_parameters
+            # If already pointing right (within tolerance), no rotation needed
+            if abs(rotation_angle) < 0.01:
+                return all_parameters
+        else:
+            # Fallback: use old facade orientation logic
+            window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0)
+            facade_angle = window_geom.get_facade_orientation()
 
-        # Get rotation angle from map
-        rotation_angle = FACADE_ROTATION_MAP.get(facade_angle, 0.0)
+            if abs(facade_angle) < 0.01:  # Already south-facing
+                return all_parameters
+
+            # Get rotation angle from map
+            rotation_angle = FACADE_ROTATION_MAP.get(facade_angle, 0.0)
+
         origin = Point2D(0, 0)
+        window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
 
         # Make a deep copy of parameters to avoid modifying original
-        import copy
         rotated_params = copy.deepcopy(all_parameters)
 
         # Rotate window geometry
@@ -193,6 +218,15 @@ class RoomImageDirector:
             room_params[ParameterName.Y1.value] = rotated_window.y1
             room_params[ParameterName.X2.value] = rotated_window.x2
             room_params[ParameterName.Y2.value] = rotated_window.y2
+
+            # Remove direction_angle from room params since we've already applied the rotation
+            # This prevents double-rotation in to_pixel_array()
+            if ParameterName.DIRECTION_ANGLE.value in room_params:
+                del room_params[ParameterName.DIRECTION_ANGLE.value]
+
+        # Remove direction_angle from window params since we've already applied the rotation
+        if ParameterName.DIRECTION_ANGLE.value in rotated_params.get(RegionType.WINDOW.value, {}):
+            del rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value]
 
         return rotated_params
 
@@ -294,7 +328,7 @@ class RoomImageDirector:
         # Copy window geometry to room
         coord_keys = [ParameterName.X1.value, ParameterName.Y1.value,
                       ParameterName.X2.value, ParameterName.Y2.value,
-                      ParameterName.WINDOW_GEOMETRY.value]
+                      ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value]
 
         [grouped[room_key].update({k: grouped[window_key][k]})
          for k in coord_keys if k in grouped[window_key]]
