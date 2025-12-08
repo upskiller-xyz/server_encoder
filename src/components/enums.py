@@ -128,9 +128,12 @@ class ParameterName(Enum):
     X2 = "x2"
     Y2 = "y2"
     Z2 = "z2"
+    DIRECTION_ANGLE = "direction_angle"
+    WALL_THICKNESS = "wall_thickness"
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)
+# Note: window_sill_height and window_height are auto-calculated from window geometry
 REQUIRED_PARAMETERS = {
     RegionType.BACKGROUND: [
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN
@@ -140,9 +143,9 @@ REQUIRED_PARAMETERS = {
         ParameterName.ROOM_POLYGON
     ],
     RegionType.WINDOW: [
-        ParameterName.WINDOW_SILL_HEIGHT,
+        # window_sill_height - auto-calculated from min(z1,z2) - floor_height_above_terrain
+        # window_height - auto-calculated from abs(z2 - z1)
         ParameterName.WINDOW_FRAME_RATIO,
-        ParameterName.WINDOW_HEIGHT
     ],
     RegionType.OBSTRUCTION_BAR: [
         ParameterName.OBSTRUCTION_ANGLE_HORIZON,
@@ -182,6 +185,8 @@ PARAMETER_REGIONS = {
     ParameterName.X2.value: RegionType.WINDOW,
     ParameterName.Y2.value: RegionType.WINDOW,
     ParameterName.Z2.value: RegionType.WINDOW,
+    ParameterName.DIRECTION_ANGLE.value: RegionType.WINDOW,
+    ParameterName.WALL_THICKNESS.value: RegionType.WINDOW,
 
     # Obstruction bar parameters
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
@@ -199,6 +204,17 @@ class EncoderType(str, Enum):
     LINEAR = "linear"
     ANGLE = "angle"
     REFLECTANCE = "reflectance"
+
+
+class GeometryType(str, Enum):
+    """Shapely geometry type enumeration (Enumerator Pattern)"""
+    POLYGON = "Polygon"
+    MULTI_POLYGON = "MultiPolygon"
+    GEOMETRY_COLLECTION = "GeometryCollection"
+    POINT = "Point"
+    LINE_STRING = "LineString"
+    MULTI_POINT = "MultiPoint"
+    MULTI_LINE_STRING = "MultiLineString"
 
 
 # Default parameter values map (Strategy Pattern)

@@ -1,9 +1,13 @@
-from typing import List, Tuple
+from typing import List, Tuple, Any, Union, Dict, Callable
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
+import math
 import numpy as np
 import cv2
-from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.geometry import Polygon as ShapelyPolygon, Point as ShapelyPoint, LineString as ShapelyLine, box as ShapelyBox
 from shapely.affinity import rotate as shapely_rotate
+from src.components.enums import ImageDimensions, GeometryType, ParameterName
+from src.components.graphics_constants import GRAPHICS_CONSTANTS
 
 
 @dataclass
@@ -22,7 +26,7 @@ class Point2D:
         Returns:
             (x_pixel, y_pixel) tuple
         """
-        return (int(self.x / resolution), int(self.y / resolution))
+        return (GRAPHICS_CONSTANTS.get_pixel_value(self.x), GRAPHICS_CONSTANTS.get_pixel_value(self.y))
 
 
 @dataclass
@@ -47,6 +51,267 @@ class Point3D:
             (x_pixel, y_pixel) tuple
         """
         return self.to_point2d().to_pixel(resolution)
+
+
+class IPolygonDataParser(ABC):
+    """
+    Abstract base class for polygon data parsers (Strategy Pattern)
+
+    Each parser handles a specific input format and converts it to
+    a list of (x, y) vertex tuples.
+    """
+
+    @abstractmethod
+    def can_parse(self, data: Any) -> bool:
+        """
+        Check if this parser can handle the given data format
+
+        Args:
+            data: Input data to check
+
+        Returns:
+            True if parser can handle this format
+        """
+        pass
+
+    @abstractmethod
+    def parse(self, data: Any) -> List[Tuple[float, float]]:
+        """
+        Parse data into list of vertex tuples
+
+        Args:
+            data: Input data to parse
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If data format is invalid
+        """
+        pass
+
+
+class DictPolygonParser(IPolygonDataParser):
+    """
+    Parser for dictionary-based polygon format: [{"x": 0, "y": 0}, ...]
+    """
+
+    def can_parse(self, data: Any) -> bool:
+        """Check if data is a list of dictionaries"""
+        if not isinstance(data, list) or not data:
+            return False
+        return isinstance(data[0], dict)
+
+    def parse(self, data: List[dict]) -> List[Tuple[float, float]]:
+        """
+        Parse dictionary format polygon data
+
+        Args:
+            data: List of dicts like [{"x": 0, "y": 0}, ...]
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If dict format is invalid
+        """
+        vertices = []
+        for i, point in enumerate(data):
+            if not isinstance(point, dict):
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} is not a dict. "
+                    f"Got type: {type(point).__name__}, value: {point}"
+                )
+
+            if "x" not in point or "y" not in point:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} missing 'x' or 'y' key. "
+                    f"Got: {point}. Expected format: {{'x': value, 'y': value}}"
+                )
+
+            try:
+                x = float(point["x"])
+                y = float(point["y"])
+                vertices.append((x, y))
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
+                    f"Error: {type(e).__name__}: {str(e)}. "
+                    f"Point: {point}"
+                )
+
+        return vertices
+
+
+class ListPolygonParser(IPolygonDataParser):
+    """
+    Parser for list-based polygon format: [[0, 0], [3, 0], ...]
+    """
+
+    def can_parse(self, data: Any) -> bool:
+        """Check if data is a list of lists/tuples"""
+        if not isinstance(data, list) or not data:
+            return False
+        return isinstance(data[0], (list, tuple))
+
+    def parse(self, data: List[List[float]]) -> List[Tuple[float, float]]:
+        """
+        Parse list format polygon data
+
+        Args:
+            data: List of lists/tuples like [[0, 0], [3, 0], ...]
+
+        Returns:
+            List of (x, y) vertex tuples
+
+        Raises:
+            ValueError: If list format is invalid
+        """
+        vertices = []
+        for i, point in enumerate(data):
+            if not isinstance(point, (list, tuple)):
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} is not a list or tuple. "
+                    f"Got type: {type(point).__name__}, value: {point}"
+                )
+
+            if len(point) < 2:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} must have at least 2 elements. "
+                    f"Got: {point}. Expected format: [x, y]"
+                )
+
+            try:
+                x = float(point[0])
+                y = float(point[1])
+                vertices.append((x, y))
+            except (TypeError, ValueError, IndexError) as e:
+                raise ValueError(
+                    f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
+                    f"Error: {type(e).__name__}: {str(e)}. "
+                    f"Point: {point}"
+                )
+
+        return vertices
+
+
+class PolygonParserFactory:
+    """
+    Factory for creating appropriate polygon parsers (Factory Pattern)
+
+    Uses Strategy Pattern to select the right parser based on data format.
+    """
+
+    # Available parsers in priority order
+    _PARSERS = [
+        DictPolygonParser(),
+        ListPolygonParser(),
+    ]
+
+    @classmethod
+    def get_parser(cls, data: Any) -> IPolygonDataParser:
+        """
+        Get appropriate parser for the given data format
+
+        Args:
+            data: Input data to parse
+
+        Returns:
+            Parser instance that can handle this data
+
+        Raises:
+            ValueError: If no parser can handle the data format
+        """
+        # Strategy Pattern: Try each parser until one matches
+        for parser in cls._PARSERS:
+            if parser.can_parse(data):
+                return parser
+
+        # No parser found - provide helpful error
+        raise ValueError(
+            f"Parameter 'room_polygon' has unsupported format. "
+            f"Got type: {type(data).__name__}, value: {data}. "
+            f"Expected formats: [{'x': val, 'y': val}, ...] or [[x, y], ...]"
+        )
+
+
+class GeometryAdapter:
+    """
+    Adapter for converting Shapely geometry types to coordinate arrays (Adapter Pattern)
+
+    Handles different geometry types that result from clipping operations and converts
+    them to numpy arrays suitable for cv2.fillPoly.
+    """
+
+    @staticmethod
+    def _extract_polygon_coords(geometry: Any) -> List[Tuple[float, float]]:
+        """Extract coordinates from a Polygon geometry"""
+        return list(geometry.exterior.coords)[:-1]  # Remove duplicate last point
+
+    @staticmethod
+    def _extract_multi_polygon_coords(geometry: Any) -> List[Tuple[float, float]]:
+        """Extract coordinates from MultiPolygon by taking the largest polygon"""
+        largest = max(geometry.geoms, key=lambda p: p.area)
+        return list(largest.exterior.coords)[:-1]
+
+    @staticmethod
+    def _extract_geometry_collection_coords(geometry: Any) -> List[Tuple[float, float]]:
+        """Extract coordinates from GeometryCollection by finding polygons"""
+        polygons = [g for g in geometry.geoms if g.geom_type == GeometryType.POLYGON.value]
+        if not polygons:
+            return []
+        largest = max(polygons, key=lambda p: p.area)
+        return list(largest.exterior.coords)[:-1]
+
+    # Strategy map: GeometryType -> extraction function (Strategy Pattern)
+    GEOMETRY_HANDLERS: Dict[GeometryType, Callable] = {
+        GeometryType.POLYGON: _extract_polygon_coords.__func__,
+        GeometryType.MULTI_POLYGON: _extract_multi_polygon_coords.__func__,
+        GeometryType.GEOMETRY_COLLECTION: _extract_geometry_collection_coords.__func__,
+    }
+
+    @classmethod
+    def vertical_mirror(cls, poly:ShapelyPolygon)->ShapelyPolygon:
+        crds = np.array([x for x in poly.exterior.coords])
+        return ShapelyPolygon(crds.dot([[1,0],[0,-1]]))
+
+    @classmethod
+    def extract_coordinates(
+        cls,
+        geometry: Any,
+        fallback_coords: List[Tuple[float, float]] = None
+    ) -> np.ndarray:
+        """
+        Extract coordinates from a Shapely geometry object
+
+        Args:
+            geometry: Shapely geometry object (result of clipping)
+            fallback_coords: Fallback coordinates if extraction fails
+
+        Returns:
+            Numpy array of shape (1, N, 2) for cv2.fillPoly
+        """
+        # Handle empty geometry
+        if geometry.is_empty:
+            return np.array([[[0, 0]]], dtype=np.int32)
+
+        # Get geometry type
+        geom_type_str = geometry.geom_type
+
+        # Try to find handler in map
+
+        for geom_type, handler in cls.GEOMETRY_HANDLERS.items():
+            if geom_type_str == geom_type.value:
+                coords = handler(geometry)
+                if coords:
+                    return np.array([coords], dtype=np.int32)
+                # If extraction returned empty, fall through to fallback
+                break
+
+        # Fallback: use provided fallback coordinates or empty polygon
+        if fallback_coords:
+            return np.array([fallback_coords], dtype=np.int32)
+        return np.array([[[0, 0]]], dtype=np.int32)
 
 
 class RoomPolygon:
@@ -92,10 +357,9 @@ class RoomPolygon:
             center = Point2D(0, 0)
 
         # Create Shapely polygon from vertices
-        coords = [(v.x, v.y) for v in self._vertices]
-        shapely_poly = ShapelyPolygon(coords)
-
-        # Rotate using Shapely (angle in degrees, counter-clockwise, around origin by default)
+        
+        shapely_poly = ShapelyPolygon(self.get_coords())
+        
         rotated_poly = shapely_rotate(
             shapely_poly,
             angle_degrees,
@@ -106,19 +370,76 @@ class RoomPolygon:
         rotated_vertices = list(rotated_poly.exterior.coords)[:-1]  # Remove duplicate last point
         return RoomPolygon(rotated_vertices)
 
+
+    def get_edges(self):
+        polygon_coords = self.get_coords()
+        
+        return [ShapelyLine([
+            polygon_coords[i], 
+            polygon_coords[(i + 1) % len(polygon_coords)]]) for i in range(len(polygon_coords))]
+    
+    def get_coords(self):
+        return [(v.x, v.y) for v in self._vertices]
+
+    def _build_edge(self, ind:int):
+        v1 = self._vertices[ind]
+        v2 = self._vertices[(ind + 1) % len(self._vertices)]
+
+        return ShapelyLine([(v1.x, v1.y), (v2.x, v2.y)])
+
+    def _window_edge_and_rotation(
+        self,
+        window_line: ShapelyLine,
+        tolerance: float = 0.01
+    ) -> Tuple[ShapelyLine, int, float]:
+        """
+        Find which polygon edge contains the window and calculate rotation needed.
+
+        Args:
+            window_x1, window_y1: First window endpoint
+            window_x2, window_y2: Second window endpoint
+            tolerance: Distance tolerance for edge matching
+
+        Returns:
+            Tuple of (edge_index, rotation_angle_degrees, needs_flip)
+            - edge_index: Index of the edge containing the window
+            - rotation_angle_degrees: Angle to rotate so window edge is horizontal (constant y)
+            - needs_flip: Whether to flip direction so room extends in -y direction
+        """
+        
+
+        edges = [self._build_edge(i) for i in range(len(self._vertices))]
+        edges = [(i,edge) for i,edge in enumerate(edges) if edge.buffer(tolerance).contains(window_line)]
+
+        if len(edges)<1:
+            raise ValueError(
+            f"Window at ({window_line.coords[0][0]:.2f}, {window_line.coords[0][1]:.2f}) to ({window_line.coords[1][0]:.2f}, {window_line.coords[1][1]:.2f}) "
+            f"does not lie on any polygon edge")
+        
+        ind, edge = edges[0]
+        v1 = self._vertices[ind]
+        v2 = self._vertices[(ind + 1) % len(self._vertices)]
+        edge_angle = math.atan2(v2.y - v1.y, v2.x - v1.x) * 180 / math.pi
+
+        return edge, ind, edge_angle
+        
     def to_pixel_array(
         self,
         image_size: int = 128,
         window_x1: float = None,
         window_y1: float = None,
         window_x2: float = None,
-        window_y2: float = None
+        window_y2: float = None,
+        direction_angle: float = None,
+        wall_thickness: float = None
     ) -> np.ndarray:
         """
         Convert polygon to pixel coordinates for drawing on image
 
         The room polygon is positioned so that:
-        - Its rightmost side (where window is located) aligns with the left edge of window area
+        - The edge containing the window is rotated to be horizontal (constant y)
+        - The window edge aligns with the left edge of the window area on the image
+        - The room extends to the left (negative x in image coordinates)
         - Window outer wall (left edge) is at: image_size - 12 - wall_thickness pixels from left
         - Resolution: 1 pixel = 0.1m (10cm) for 128x128 image, scales proportionally
 
@@ -128,100 +449,83 @@ class RoomPolygon:
             window_y1: Window front y coordinate in meters (required)
             window_x2: Window right x coordinate in meters (required)
             window_y2: Window back y coordinate in meters (required)
+            direction_angle: Window direction angle in radians (optional, if not provided will be calculated from polygon edge)
 
         Returns:
             Numpy array of shape (N, 1, 2) for cv2.fillPoly
         """
         if window_x1 is None or window_y1 is None or window_x2 is None or window_y2 is None:
             raise ValueError("Window coordinates required for room positioning")
+            
+        rotated_polygon = self.get_coords()
+        
+        window = WindowGeometry.from_corners(window_x1, window_y1, 0, window_x2, window_y2, 0)
+        w_edges = window.get_candidate_edges()
 
-        # Calculate resolution based on image size (scales proportionally)
-        scale = image_size / 128.0
-        resolution = 0.1 / scale  # Meters per pixel
+        # Create polygon from rotated coordinates to check which edge is on it
+        rotated_room_poly = ShapelyPolygon(rotated_polygon)
+        tolerance = 0.01
 
-        # Window center in 3D coordinates
-        window_center_x = (window_x1 + window_x2) / 2.0
-        window_center_y = (window_y1 + window_y2) / 2.0
+        # Check which edge is on the polygon boundary
+        edge_on_boundary = None
+        
+        res = [w_edge for w_edge in w_edges if rotated_room_poly.boundary.buffer(tolerance).contains(w_edge)]
 
-        # Window position calculation:
-        # - Window is 12px from right edge
-        # - Wall thickness is ~0.3m = 3 pixels at base scale
-        # - Room façade (y=0) aligns with window's left edge
-        window_offset_px = 12
-        wall_thickness_m = 0.3
-        wall_thickness_px = round(wall_thickness_m / resolution)
+        window_center_rotated = Point2D((window_x1 + window_x2) / 2, (window_y1 + window_y2) / 2)
+        if len(res)>0:
+            edge_on_boundary = res[0]
+            edge_coords = list(edge_on_boundary.coords)
+            window_center_rotated = Point2D(
+                (edge_coords[0][0] + edge_coords[1][0]) / 2,
+                (edge_coords[0][1] + edge_coords[1][1]) / 2
+            )
+        
+        rotated_polygon = RoomPolygon(rotated_polygon)
+        
+        
+        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size)
 
-        # Window's left edge position
-        window_left_edge_x = image_size - window_offset_px - wall_thickness_px
+        if direction_angle is not None:
+            window_geom = WindowGeometry(
+                window_x1, window_y1, 0,
+                window_x2, window_y2, 0,
+                direction_angle=direction_angle
+            )
+            wall_thickness_px = window_geom.wall_thickness_px
+                
+        
+        # Window's left edge position on image
+        window_left_edge_x = image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_thickness_px
 
         # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
-        room_facade_x = window_left_edge_x - 1
+        room_facade_x = window_left_edge_x - GRAPHICS_CONSTANTS.ROOM_FACADE_OFFSET_PX
         window_y_pixels = image_size // 2
+        
 
         # First pass: calculate room extent to check for obstruction bar overlap
-        # Find leftmost (minimum) x-coordinate of room polygon in pixels
-        from src.components.enums import ImageDimensions
         dims = ImageDimensions(image_size)
         obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
+        
+        offsets = [GeometryOps.offset_coords(vertex, window_center_rotated) for vertex in rotated_polygon.vertices]
 
-        # Convert vertices to pixel coordinates
-        # Coordinate transformation from 3D to 2D top-down view:
-        #   3D x (along façade) -> image y (vertical, down is positive)
-        #   3D y (into room) -> image x (horizontal, but REVERSED: into room = leftward)
-        pixel_coords = []
-        for vertex in self._vertices:
-            # Offset from window center in meters
-            dx = vertex.x - window_center_x  # Along façade
-            dy = vertex.y - window_center_y  # Into room (perpendicular to façade)
+        offsets = [[GRAPHICS_CONSTANTS.get_pixel_value(i, image_size) for i in dd] for dd in offsets]
 
-            # Map to pixel coordinates:
-            # - x_pixel: y=0 (façade) is at room_facade_x, larger y goes further LEFT (subtract)
-            # - y_pixel: x=0 (window center) is at image center, positive x goes DOWN
-            x_pixel = room_facade_x - round(dy / resolution)
-            y_pixel = window_y_pixels + round(dx / resolution)
-
-            pixel_coords.append([x_pixel, y_pixel])
-
-        # Clip polygon to boundaries using Shapely
-        # Room should end 2 pixels before obstruction bar (which itself is 4 pixels from right edge)
-        # At 128x128: obs_bar at x=124, so room should clip at x<=122 (6 pixels from right edge)
-        # Use obs_bar_x_start - 3 because Shapely box(minx, miny, maxx, maxy) max values are inclusive,
-        # so box(0, 0, 121, 128) clips at x<=121, giving us 2-pixel gap before obs_bar at 124
-        right_boundary = obs_bar_x_start - 3
-
+        # Flip y-axis: image coordinates have y increasing downward, geometric coordinates have y increasing upward
+        pixel_coords = [[room_facade_x + dx,
+                         window_y_pixels - dy] for [dx, dy] in offsets]
+        
+        # Clip room to avoid overlap with obstruction bar
+        right_boundary = obs_bar_x_start - GRAPHICS_CONSTANTS.OBSTRUCTION_BAR_GAP_PX 
         # Create clipping rectangle: x from 0 to right_boundary, y from 0 to image_size
-        from shapely.geometry import Polygon as ShapelyPolygon, box
-
         room_poly = ShapelyPolygon(pixel_coords)
-        clip_box = box(0, 0, right_boundary, image_size)
+        clip_box = ShapelyBox(0, 0, right_boundary, image_size)
 
         # Clip the polygon
         clipped = room_poly.intersection(clip_box)
-
-        # Handle different geometry types that might result from clipping
-        if clipped.is_empty:
-            # No intersection - return empty polygon
-            return np.array([[[0, 0]]], dtype=np.int32)
-        elif clipped.geom_type == 'Polygon':
-            # Simple polygon - extract coordinates
-            clipped_coords = list(clipped.exterior.coords)[:-1]  # Remove duplicate last point
-        elif clipped.geom_type == 'MultiPolygon':
-            # Multiple polygons - take the largest one
-            largest = max(clipped.geoms, key=lambda p: p.area)
-            clipped_coords = list(largest.exterior.coords)[:-1]
-        elif clipped.geom_type == 'GeometryCollection':
-            # Mixed geometry types - extract polygons
-            polygons = [g for g in clipped.geoms if g.geom_type == 'Polygon']
-            if polygons:
-                largest = max(polygons, key=lambda p: p.area)
-                clipped_coords = list(largest.exterior.coords)[:-1]
-            else:
-                return np.array([[[0, 0]]], dtype=np.int32)
-        else:
-            # Fallback - use original coordinates
-            clipped_coords = pixel_coords
-
-        return np.array([clipped_coords], dtype=np.int32)
+        
+        # clipped = room_poly
+        # Use GeometryAdapter to handle different geometry types (Adapter Pattern)
+        return GeometryAdapter.extract_coordinates(clipped, fallback_coords=pixel_coords)
 
     @classmethod
     def from_dict(cls, data: List) -> 'RoomPolygon':
@@ -234,6 +538,9 @@ class RoomPolygon:
 
         Returns:
             RoomPolygon instance
+
+        Raises:
+            ValueError: If data format is invalid
         """
         if not data:
             raise ValueError("Polygon data cannot be empty")
@@ -255,6 +562,62 @@ class RoomPolygon:
 
         return cls(vertices)
 
+class GeometryOps:
+
+    @classmethod 
+    def project(cls, vv:Point2D | Point3D, sin_a:float, cos_a:float):
+        return vv.x * cos_a + vv.y * sin_a
+    
+    @classmethod
+    def offset_coords(cls, vv:Point2D|Point3D, vv1:Point2D|Point3D):
+        dx = vv.x - vv1.x  # Along façade
+        dy = vv.y - vv1.y  # Perpendicular to façade
+        return [dx, dy]
+    
+    @classmethod
+    def projection_dist(cls, vv:Point2D|Point3D, vv1:Point2D|Point3D, angle):
+        # Unit vector perpendicular to direction_angle
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+
+        # Project both points onto the perpendicular direction
+        # Point 1 projection
+        proj1 = GeometryOps.project(vv, sin_a, cos_a)
+        proj2 = GeometryOps.project(vv1, sin_a, cos_a)
+        
+        # Window width is the distance between projections
+        return abs(proj2 - proj1)
+    
+    @classmethod
+    def rotate_vertex(cls, vv:Point2D|Point3D, sin_a:float, cos_a:float):
+        rot_x = cls.rotate_coord(vv, sin_a, cos_a) 
+        rot_y = cls.rotate_coord(vv, sin_a, cos_a, False)
+        return (rot_x, rot_y)
+    
+    @classmethod
+    def rotate_coord(cls, vv:Point2D|Point3D, sin_a:float, cos_a:float, x_axis=True):
+        if x_axis:
+            return vv.x * cos_a - vv.y * sin_a 
+        return vv.x * sin_a + vv.y * cos_a
+    
+    @classmethod
+    def perpendicular_dir_inside_polygon(cls, room_poly, edge_coords, perp)->bool:
+        test_offset = 0.1
+        edge_center_x = (edge_coords[0][0] + edge_coords[1][0]) / 2
+        edge_center_y = (edge_coords[0][1] + edge_coords[1][1]) / 2
+        test_x1 = edge_center_x + test_offset * math.cos(perp)
+        test_y1 = edge_center_y + test_offset * math.sin(perp)
+        test_point1 = ShapelyPoint(test_x1, test_y1)
+        return room_poly.contains(test_point1)
+    
+    @classmethod
+    def normalize_angle(cls, angle):
+        # Normalize to [0, 2π)
+        while angle < 0:
+            angle += 2 * math.pi
+        while angle >= 2 * math.pi:
+            angle -= 2 * math.pi
+        return angle
 
 class WindowGeometry:
     """
@@ -279,7 +642,8 @@ class WindowGeometry:
         z1: float,
         x2: float,
         y2: float,
-        z2: float
+        z2: float,
+        direction_angle: float = None
     ):
         """
         Initialize window geometry from bounding box
@@ -287,21 +651,52 @@ class WindowGeometry:
         Args:
             x1, y1, z1: Left-bottom corner coordinates in meters
             x2, y2, z2: Right-top corner coordinates in meters
+            direction_angle: Window direction angle in radians (optional)
         """
         self._corner1 = Point3D(x1, y1, z1)
         self._corner2 = Point3D(x2, y2, z2)
+        self._direction_angle = direction_angle
 
         # Ensure corner1 is bottom-left and corner2 is top-right
         self._x_min = min(x1, x2)
         self._x_max = max(x1, x2)
         self._z_min = min(z1, z2)
         self._z_max = max(z1, z2)
+        self._y_min = min(y1,y2)
+        self._y_max = max(y1, y2)
 
     @property
     def window_width_3d(self) -> float:
-        """Get window width in 3D space (along façade, x-direction)"""
-        return self._x_max - self._x_min
+        """
+        Get window width in 3D space (perpendicular to direction_angle)
 
+        If direction_angle is provided, calculates the perpendicular distance
+        between the two lines perpendicular to direction_angle passing through
+        (x1,y1) and (x2,y2).
+
+        Otherwise falls back to max of x-span and y-span.
+        """
+        if self._direction_angle is None:
+            return max(self._x_max - self._x_min, self._y_max - self._y_min)
+        edge_angle = self._direction_angle + math.pi / 2
+        return GeometryOps.projection_dist(self._corner1, self._corner2, edge_angle)
+            
+    @property
+    def wall_thickness(self) -> float:
+        """
+        Get wall thickness from window bounding box (distance in direction_angle direction)
+
+        This is the distance between the two parallel edges of the window rectangle
+        that are perpendicular to direction_angle. It represents the wall thickness
+        where the window is installed.
+
+        If direction_angle is not provided, falls back to min of bounding box dimensions.
+        """
+        if self._direction_angle is None:
+            return min(self._y_max - self._y_min, self._x_max - self._x_min)
+        
+        return GeometryOps.projection_dist(self._corner1, self._corner2, self._direction_angle)
+        
     @property
     def window_height_3d(self) -> float:
         """Get window height in 3D space (vertical, z-direction)"""
@@ -337,49 +732,25 @@ class WindowGeometry:
         """Get y2 coordinate"""
         return self._corner2.y
 
-    def get_facade_orientation(self) -> float:
-        """
-        Determine which facade wall this window is on
+    @property
+    def z1(self) -> float:
+        """Get z1 coordinate"""
+        return self._corner1.z
 
-        Returns angle in degrees representing the window's orientation:
-        - 0°: South facade (default, y ≈ 0, window spans in x)
-        - 90°: West facade (x < 0, window spans in y)
-        - 180°: North facade (y > 0, window spans in x)
-        - 270°: East facade (x > 0, window spans in y)
+    @property
+    def z2(self) -> float:
+        """Get z2 coordinate"""
+        return self._corner2.z
+    
+    @property
+    def niche_center(self)->Point2D:
+        return Point2D((self.x1 + self.x2) / 2, 
+                       (self.y1 + self.y2) / 2)
 
-        Coordinate system:
-        - Origin at window center
-        - Y-axis: positive points into room (north), negative is outside (south)
-        - X-axis: positive points right (east), negative points left (west)
-        """
-        tolerance = 0.01  # 1cm tolerance for "same" coordinate
-
-        x_span = abs(self._corner2.x - self._corner1.x)
-        y_span = abs(self._corner2.y - self._corner1.y)
-
-        avg_x = (self._corner1.x + self._corner2.x) / 2
-        avg_y = (self._corner1.y + self._corner2.y) / 2
-
-        # Window spans in x direction (south or north facade)
-        if x_span > tolerance and y_span <= tolerance:
-            # South: y ≈ 0 or negative (at or outside building)
-            # North: y significantly > 0 (inside building, far wall)
-            if avg_y < 1.0:  # Within 1m of facade - treat as south
-                return 0.0  # South facade
-            else:
-                return 180.0  # North facade
-
-        # Window spans in y direction (east or west facade)
-        elif y_span > tolerance and x_span <= tolerance:
-            # West: x < 0 (left side)
-            # East: x > 0 (right side)
-            if avg_x < 0:
-                return 90.0  # West facade
-            else:
-                return 270.0  # East facade
-
-        # Default to south if unclear
-        return 0.0
+    @property
+    def direction_angle(self) -> float:
+        """Get window direction angle in radians (None if not set)"""
+        return self._direction_angle
 
     def rotate(self, angle_degrees: float, center: Point2D = None) -> 'WindowGeometry':
         """
@@ -396,10 +767,7 @@ class WindowGeometry:
             center = Point2D(0, 0)
 
         # Create line segment from the two corners
-        from shapely.geometry import LineString
-        from shapely.affinity import rotate as shapely_rotate
-
-        line = LineString([(self._corner1.x, self._corner1.y), (self._corner2.x, self._corner2.y)])
+        line = ShapelyLine([(self._corner1.x, self._corner1.y), (self._corner2.x, self._corner2.y)])
         rotated_line = shapely_rotate(line, angle_degrees, origin=(center.x, center.y))
 
         # Extract rotated coordinates
@@ -415,44 +783,34 @@ class WindowGeometry:
     def get_pixel_bounds(
         self,
         image_size: int = 128,
-        window_offset_px: int = 12
+        window_offset_px: int = None
     ) -> Tuple[int, int, int, int]:
         """
         Get window bounds in pixel coordinates for top view
 
         In top view:
-        - Window appears as vertical line at fixed x position (12px from right)
+        - Window appears as vertical line at fixed x position (default 12px from right)
         - Horizontal extent = wall thickness (approximately constant)
-        - Vertical extent = window width in 3D (x2 - x1) converted to pixels
+        - Vertical extent = window width in 3D converted to pixels
 
         Args:
             image_size: Image dimension in pixels (default 128)
-            window_offset_px: Distance from right edge in pixels (default 12)
+            window_offset_px: Distance from right edge in pixels (uses GRAPHICS_CONSTANTS if None)
 
         Returns:
             (x_start, y_start, x_end, y_end) tuple in pixels
         """
-        resolution = 0.1  # meters per pixel for 128x128 image
-        scale = image_size / 128.0
+        if window_offset_px is None:
+            window_offset_px = GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX
 
-        # Adjust resolution for scaled images
-        actual_resolution = resolution / scale
-
-        # Window position: fixed distance from right edge
         window_x_end = image_size - window_offset_px
-
-        # Window thickness (wall thickness) - typically ~0.3m = 3 pixels at base scale
-        wall_thickness_m = 0.3
-        wall_thickness_px = round(wall_thickness_m / actual_resolution)
-        window_x_start = window_x_end - wall_thickness_px
-
-        # Vertical extent based on window width in 3D (appears as height in top view)
-        window_width_m = self.window_width_3d
-        window_height_px = round(window_width_m / actual_resolution)
+        window_x_start = window_x_end - self.wall_thickness_px
+        
+        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(self.window_width_3d)  
 
         # Center vertically
-        image_center_y = image_size // 2
-        window_y_start = image_center_y - window_height_px // 2
+        
+        window_y_start = image_size // 2 - window_height_px // 2
         window_y_end = window_y_start + window_height_px
 
         # Clamp to image bounds
@@ -462,6 +820,14 @@ class WindowGeometry:
         y_end = min(image_size, window_y_end)
 
         return (x_start, y_start, x_end, y_end)
+    
+    @property
+    def wall_thickness_px(self):
+        wall_thickness_m = self.wall_thickness
+        # Fallback to default if calculated thickness is 0 (e.g., when y1==y2)
+        if wall_thickness_m == 0:
+            wall_thickness_m = GRAPHICS_CONSTANTS.WALL_THICKNESS_M
+        return GRAPHICS_CONSTANTS.get_pixel_value(wall_thickness_m) 
 
     @classmethod
     def from_corners(
@@ -487,121 +853,294 @@ class WindowGeometry:
         Create window geometry from dictionary
 
         Args:
-            data: Dict with keys x1, y1, z1, x2, y2, z2
+            data: Dict with keys x1, y1, z1, x2, y2, z2, and optionally direction_angle
 
         Returns:
             WindowGeometry instance
         """
         return cls(
-            x1=data["x1"],
-            y1=data["y1"],
-            z1=data["z1"],
-            x2=data["x2"],
-            y2=data["y2"],
-            z2=data["z2"]
+            x1=data[ParameterName.X1.value],
+            y1=data[ParameterName.Y1.value],
+            z1=data[ParameterName.Z1.value],
+            x2=data[ParameterName.X2.value],
+            y2=data[ParameterName.Y2.value],
+            z2=data[ParameterName.Z2.value],
+            direction_angle=data.get(ParameterName.DIRECTION_ANGLE.value, 0)
         )
 
+    def get_candidate_edges(self):
+        # Create the two possible window edges from bounding box
+        # The 4 corners are: (x1,y1), (x2,y1), (x1,y2), (x2,y2)
+        # The two candidate edges (matching the validation logic) are:
+        window_edge1 = ShapelyLine([(self.x1, self.y1), (self.x2, self.y1)])
+        window_edge2 = ShapelyLine([(self.x1, self.y2), (self.x2, self.y2)])
+        window_edge3 = ShapelyLine([(self.x1, self.y1), (self.x1, self.y2)])
+        window_edge4 = ShapelyLine([(self.x2, self.y1), (self.x2, self.y2)])
+        return [window_edge1, window_edge2, window_edge3, window_edge4]
 
-class WindowPosition:
-    """
-    DEPRECATED: Use WindowGeometry instead
+    def get_room_edge(self, room_polygon:RoomPolygon, tolerance=0.01)->list:
+        w_edges = self.get_candidate_edges()
+        # Find which polygon edge contains one of the window edges
 
-    Represents window position and dimensions (legacy format)
-    """
+        poly_edges = room_polygon.get_edges()
+        res = [(edge, i, j) for i,edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges) if edge.buffer(tolerance).contains(w_edge)]
+        return res
 
-    def __init__(
+    def calculate_direction_from_polygon(
         self,
-        x: float,
-        y: float,
-        z: float,
-        width: float,
-        height: float
-    ):
+        room_polygon: 'RoomPolygon',
+        tolerance: float = 0.01
+    ) -> float:
         """
-        Initialize window position
+        EXPERIMENTAL: Calculate direction_angle from room polygon edge
+
+        Finds which polygon edge contains the window and calculates the direction
+        the window is facing (perpendicular to the edge, pointing away from room).
 
         Args:
-            x: X coordinate of window center in meters (along façade)
-            y: Y coordinate of window center in meters (perpendicular to façade)
-            z: Z coordinate of window top in meters (sill height + height)
-            width: Window width in meters
-            height: Window height in meters
-        """
-        self._position = Point3D(x, y, z)
-        self._width = width
-        self._height = height
-
-    @property
-    def position(self) -> Point3D:
-        """Get window position"""
-        return self._position
-
-    @property
-    def width(self) -> float:
-        """Get window width"""
-        return self._width
-
-    @property
-    def height(self) -> float:
-        """Get window height"""
-        return self._height
-
-    @property
-    def sill_height(self) -> float:
-        """Calculate sill height from z coordinate"""
-        return self._position.z - self._height
-
-    def get_pixel_bounds(
-        self,
-        resolution: float = 0.1,
-        image_size: int = 128,
-        window_offset: float = 1.24
-    ) -> Tuple[int, int, int, int]:
-        """
-        Get window bounds in pixel coordinates
-
-        Args:
-            resolution: Meters per pixel (default 0.1m = 10cm)
-            image_size: Image dimension in pixels (default 128)
-            window_offset: Window center offset from right edge in meters
+            room_polygon: The room polygon containing this window
+            tolerance: Distance tolerance for edge matching (meters)
 
         Returns:
-            (x_start, y_start, x_end, y_end) tuple in pixels
+            direction_angle in radians (0 = pointing right/east, π/2 = pointing up/north)
+
+        Raises:
+            ValueError: If window is not on any polygon edge
         """
-        # Window reference point
-        window_x_pixels = image_size - int(window_offset / resolution)
-        window_y_pixels = image_size // 2
+        
+        
+        # w_edges = self.get_candidate_edges()
+        # # Find which polygon edge contains one of the window edges
+        polygon_coords =  room_polygon.get_coords()
 
-        # Convert position to pixel offset
-        x_center = window_x_pixels + int(self._position.x / resolution)
-        y_center = window_y_pixels + int(self._position.y / resolution)
+        # poly_edges = [ShapelyLine([
+        #     polygon_coords[i], 
+        #     polygon_coords[(i + 1) % len(polygon_coords)]]) for i in range(len(polygon_coords))]
+        
+        # res = [(edge.buffer(tolerance).contains(w_edge), i, j) for i,edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges)]
+        # res = [e for e in res if e[0]==True]
 
-        # Calculate bounds
-        width_pixels = int(self._width / resolution)
-        height_pixels = int(self._height / resolution)
+        res = self.get_room_edge(room_polygon, tolerance)
+        if len(res)<1:
+            raise ValueError(
+            f"Window at ({self.x1:.2f}, {self.y1:.2f}) to ({self.x2:.2f}, {self.y2:.2f}) "
+            f"does not lie on any polygon edge"
+        )
 
-        x_start = max(0, x_center - width_pixels // 2)
-        x_end = min(image_size, x_center + width_pixels // 2)
-        y_start = max(0, y_center - height_pixels // 2)
-        y_end = min(image_size, y_center + height_pixels // 2)
+        edge, i, j = res[0]
+        v1 = polygon_coords[i]
+        v2 = polygon_coords[(i + 1) % len(polygon_coords)]
+        
+        # Edge angle (direction along the edge)
+        edge_angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
 
-        return (x_start, y_start, x_end, y_end)
+        perps = [edge_angle + math.pi / 2, edge_angle - math.pi / 2]
+
+        # Get center point of the window edge that's on the polygon boundary
+        edge_coords = list(edge.coords)        
+
+        room_poly = ShapelyPolygon(polygon_coords)        
+
+        calculated_angle = perps[0]
+        res = [perp for perp in perps if GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
+        if len(res)>0:
+            calculated_angle = res[0]
+            
+        calculated_angle = GeometryOps.normalize_angle(calculated_angle)
+
+        return calculated_angle
+    
+
+class WindowBorderValidator:
+    """
+    Validator for checking if window is positioned on room polygon border
+
+    The internal side of the window should lie on one of the polygon's edges.
+    Uses Shapely geometry for precise calculations.
+    """
+
+    def __init__(self, tolerance: float = 0.01):
+        """
+        Initialize validator
+
+        Args:
+            tolerance: Distance tolerance in meters (default 1cm)
+        """
+        self._tolerance = tolerance
+
+    def validate_window_on_border(
+        self,
+        window_geometry: WindowGeometry,
+        room_polygon: RoomPolygon
+    ) -> Tuple[bool, str]:
+        """
+        Validate that window internal side lies on a polygon edge
+
+        The window is defined by:
+        - Bounding box (x1,y1) to (x2,y2) - gives spatial extent
+        - direction_angle (window normal in radians) - gives orientation
+
+        We create a rotated rectangle using two lines perpendicular to direction_angle,
+        passing through (x1,y1) and (x2,y2), then check if one edge touches the polygon.
+
+        Args:
+            window_geometry: Window geometry with coordinates and direction_angle
+            room_polygon: Room polygon vertices
+
+        Returns:
+            (is_valid, error_message) tuple
+        """
+        
+        
+        poly_edges = room_polygon.get_edges()
+        
+        w_edges = window_geometry.get_candidate_edges()   
+
+        # Check if either edge1 or edge2 lies on a polygon edge
+        window_on_edge = False
+        
+        for poly_edge in poly_edges:
+            for w_edge in w_edges:
+                # Check edge1
+                if poly_edge.buffer(self._tolerance).contains(w_edge):
+                    window_on_edge = True
+                    break
+            if window_on_edge==True:
+                break
+                
+        if not window_on_edge:
+            return False, (
+                f"Window edge not on polygon border. "
+                f"Window bounding box from ({window_geometry.x1:.3f}, {window_geometry.y1:.3f}) to "
+                f"({window_geometry.x2:.3f}, {window_geometry.y2:.3f}) "
+                f"with direction_angle={window_geometry.direction_angle:.3f} rad "
+                f"({window_geometry.direction_angle * 180 / math.pi:.1f}°). "
+                f"Expected edges: ({window_geometry.x1:.1f}, {window_geometry.y1:.1f})->({window_geometry.x2:.1f}, {window_geometry.y1:.1f}) "
+                f"or ({window_geometry.x1:.1f}, {window_geometry.y2:.1f})->({window_geometry.x2:.1f}, {window_geometry.y2:.1f}) "
+                f"to lie on polygon edge (tolerance: {self._tolerance}m)."
+            )
+
+        return True, ""
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'WindowPosition':
+    def validate_from_dict(
+        cls,
+        window_data: dict,
+        polygon_data: List[Union[dict, List[float]]],
+        tolerance: float = 0.01
+    ) -> Tuple[bool, str]:
         """
-        Create window position from dictionary
+        Validate window position from dictionary data
 
         Args:
-            data: Dict with keys x, y, z, width, height
+            window_data: Window geometry dict with x1, y1, z1, x2, y2, z2
+            polygon_data: Room polygon as list of points
+            tolerance: Distance tolerance in meters
 
         Returns:
-            WindowPosition instance
+            (is_valid, error_message) tuple
         """
-        return cls(
-            x=data["x"],
-            y=data["y"],
-            z=data["z"],
-            width=data["width"],
-            height=data["height"]
-        )
+        try:
+            # Parse window geometry
+            if ParameterName.WINDOW_GEOMETRY.value in window_data:
+                window_data = window_data[ParameterName.WINDOW_GEOMETRY.value]
+            window_geom = WindowGeometry.from_dict(window_data)
+                
+            # Parse room polygon
+            room_poly = RoomPolygon.from_dict(polygon_data)
+            
+            return cls(tolerance=tolerance).validate_window_on_border(window_geom, room_poly)
+
+        except (KeyError, ValueError, AttributeError) as e:
+            return False, f"Error parsing geometry data: {type(e).__name__}: {str(e)}"
+
+
+class WindowHeightValidator:
+    """Validates that window z-coordinates lie between room floor and roof."""
+
+    def __init__(self, tolerance: float = 1e-6):
+        """
+        Initialize validator.
+
+        Args:
+            tolerance: Numerical tolerance for height comparisons
+        """
+        self._tolerance = tolerance
+
+    def validate_window_height_bounds(
+        self,
+        window_geometry: WindowGeometry,
+        floor_height: float,
+        roof_height: float
+    ) -> Tuple[bool, str]:
+        """
+        Validate that window z-coordinates are within floor-roof bounds.
+
+        Args:
+            window_geometry: Window geometry with z1, z2 coordinates
+            floor_height: Floor height (floor_height_above_terrain)
+            roof_height: Roof height (floor_height_above_terrain + height_roof_over_floor)
+
+        Returns:
+            Tuple of (is_valid, error_message)
+            - (True, "") if window is within bounds
+            - (False, error_message) if window extends beyond floor or roof
+        """
+        try:
+            z1 = window_geometry.z1
+            z2 = window_geometry.z2
+
+            window_bottom = min(z1, z2)
+            window_top = max(z1, z2)
+
+            # Check if window bottom is below floor
+            if window_bottom < floor_height - self._tolerance:
+                return False, (
+                    f"Window bottom ({window_bottom:.2f}m) is below floor "
+                    f"({floor_height:.2f}m). Window z-coordinates must be between "
+                    f"floor and roof heights."
+                )
+
+            # Check if window top is above roof
+            if window_top > roof_height + self._tolerance:
+                return False, (
+                    f"Window top ({window_top:.2f}m) is above roof "
+                    f"({roof_height:.2f}m). Window z-coordinates must be between "
+                    f"floor and roof heights."
+                )
+
+            return True, ""
+
+        except (KeyError, ValueError, AttributeError) as e:
+            return False, f"Error validating window height: {type(e).__name__}: {str(e)}"
+
+    @classmethod
+    def validate_from_parameters(
+        cls,
+        window_geometry_data: Dict[str, Any],
+        floor_height: float,
+        roof_height: float,
+        tolerance: float = 1e-6
+    ) -> Tuple[bool, str]:
+        """
+        Validate window height from parameter dictionaries.
+
+        Args:
+            window_geometry_data: Dict with x1, y1, z1, x2, y2, z2
+            floor_height: Floor height above terrain
+            roof_height: Roof height (floor + height_roof_over_floor)
+            tolerance: Numerical tolerance for comparisons
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Parse window geometry
+            window_geom = WindowGeometry.from_dict(window_geometry_data)
+
+            # Validate
+            validator = cls(tolerance=tolerance)
+            return validator.validate_window_height_bounds(window_geom, floor_height, roof_height)
+
+        except (KeyError, ValueError, AttributeError, TypeError) as e:
+            return False, f"Error parsing height data: {type(e).__name__}: {str(e)}"

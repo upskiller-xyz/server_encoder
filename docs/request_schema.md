@@ -92,6 +92,8 @@ Array of `[x, y]` coordinate pairs in meters, defining room boundary in plan vie
 - Coordinates relative to facade
 - Polygon can be concave (L-shaped, etc.)
 - Automatically clipped to image boundaries
+- Window direction angle is automatically calculated from the polygon edge containing the window
+- Room geometry is automatically rotated so the window faces horizontally in the encoded image
 
 ## Window ID Format
 

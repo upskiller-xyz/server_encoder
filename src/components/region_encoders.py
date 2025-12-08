@@ -1,13 +1,12 @@
 from typing import Dict, Any, List
+import math
 import numpy as np
 import cv2
 from src.components.interfaces import IRegionEncoder
-from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING, FACADE_ROTATION_MAP
+from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING
 from src.components.encoders import EncoderFactory
-from src.components.geometry import RoomPolygon, WindowPosition, WindowGeometry
-
-
-
+from src.components.geometry import RoomPolygon,  WindowGeometry
+from src.components.graphics_constants import GRAPHICS_CONSTANTS
 
 
 def validate_required_parameters(
@@ -40,6 +39,56 @@ class BaseRegionEncoder(IRegionEncoder):
         """Get the region type"""
         return self._region_type
 
+    def encode_region(
+        self,
+        image: np.ndarray,
+        parameters: Dict[str, Any],
+        model_type: ModelType
+    ) -> np.ndarray:
+        """
+        Encode window region
+
+        Channels (CORRECTED):
+        - Red: sill_height (z1, 0-5m → 0-1) [AUTO-CALCULATED]
+        - Green: frame_ratio (1-0 → 0-1, reversed) [REQUIRED]
+        - Blue: window_height (z2-z1, 0.2-5m → 0.99-0.01, reversed) [AUTO-CALCULATED]
+        - Alpha: window_frame_reflectance (0-1 → 0-1, optional, default=0.8)
+
+        Raises:
+            ValueError: If required parameters are missing
+        """
+        
+        parameters = self._update_parameters(parameters)
+        # Validate required parameters
+        self._validate_required_parameters(parameters)
+
+        mask = self._get_area_mask(image, parameters, model_type)
+        # Get channel mapping for this region
+        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
+
+        _extra_params = self._get_extra(image, parameters)
+
+        image[mask] = self._encode_all_channels(parameters, channel_map, *_extra_params)
+
+        return image
+
+    def _update_parameters(self, params):
+        return params
+    
+    def _get_extra(self, image, params):
+        return []
+
+    def _validate_required_parameters(self, parameters: Dict[str, Any]) -> None:
+        """Validate required background parameters using list comprehension"""
+        missing = validate_required_parameters(self._region_type, parameters)
+        if missing:
+            raise ValueError(f"Missing required {self.__class__.__name__} parameters: {', '.join(missing)}")
+        
+    def _get_area_mask(self, image, parameters, model_type)->np.ndarray[Any, Any]:
+        height, width = image.shape[:2]
+        mask = np.ones((height, width), dtype=bool)
+        return mask
+
     def _encode_parameter(self, parameter_name: str, value: Any) -> int:
         """
         Encode a parameter value to pixel intensity
@@ -62,6 +111,73 @@ class BaseRegionEncoder(IRegionEncoder):
         """Check if model type is Daylight Autonomy"""
         return model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]
 
+    def _get_parameter_with_default(
+        self,
+        parameters: Dict[str, Any],
+        param_name: ParameterName
+    ) -> Any:
+        """
+        Get parameter value with fallback to default value
+
+        Args:
+            parameters: Parameter dictionary
+            param_name: Parameter name enum
+
+        Returns:
+            Parameter value or default value
+        """
+        return parameters.get(
+            param_name.value,
+            DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
+        )
+
+    def _encode_channel(
+        self,
+        parameters: Dict[str, Any],
+        channel_map: Dict[ChannelType, ParameterName],
+        channel_type: ChannelType
+    ) -> int | np.ndarray:
+        """
+        Encode a single channel using the channel mapping (Template Method Pattern)
+
+        Args:
+            parameters: Parameter dictionary
+            channel_map: Mapping from channel types to parameter names
+            channel_type: Channel to encode (RED, GREEN, BLUE, or ALPHA)
+
+        Returns:
+            Encoded pixel intensity [0-255]
+        """
+        param_name = channel_map[channel_type]
+        param_value = self._get_parameter_with_default(parameters, param_name)
+        if param_value is None:
+            raise ValueError(
+                f"{self.__class__} parameter '{param_name.value}' is missing or could not be calculated. "
+                f"Available parameters: {list(parameters.keys())}. "
+                
+            )
+        return self._encode_parameter(param_name.value, param_value)
+
+    def _encode_all_channels(
+        self,
+        parameters: Dict[str, Any],
+        channel_map: Dict[ChannelType, ParameterName]
+    ) -> List[int | np.ndarray]:
+        """
+        Encode all 4 channels (RGBA) using list comprehension
+
+        Args:
+            parameters: Parameter dictionary
+            channel_map: Mapping from channel types to parameter names
+
+        Returns:
+            List of 4 encoded values [R, G, B, A]
+        """
+        return [
+            self._encode_channel(parameters, channel_map, channel_type)
+            for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        ]
+
 
 class BackgroundRegionEncoder(BaseRegionEncoder):
     """
@@ -78,65 +194,6 @@ class BackgroundRegionEncoder(BaseRegionEncoder):
 
     def __init__(self):
         super().__init__(RegionType.BACKGROUND)
-
-    def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
-    ) -> np.ndarray:
-        """
-        Encode background region with corrected channel mappings
-
-        Args:
-            image: Image array (H, W, 4)
-            parameters: Background parameters including:
-                - floor_height_above_terrain: Required, 0-10m
-                - facade_reflectance: Optional, 0-1, default=1
-                - terrain_reflectance: Optional, 0-1, default=1
-                - window_orientation: Optional, 0-360°, default=0.8
-            model_type: Model type enum
-
-        Returns:
-            Updated image array
-        """
-        
-
-        # Validate required parameters
-        self._validate_required_parameters(parameters)
-
-        height, width = image.shape[:2]
-
-        # Get channel mapping for this region
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
-
-        # Fill image with background, excluding 2-pixel border on top, bottom, and left
-        # Right side has no border (obstruction bar extends to edge)
-        # Background is drawn first, then room, window, and obstruction bar are drawn on top
-        base = np.ones((*image.shape[:2], 1))
-
-        # Encode channels using mapping (Strategy Pattern)
-        channels = []
-        for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]:
-            param_name = channel_map[channel_type]
-            # Get parameter value with default
-            
-            param_value = parameters.get(
-                param_name.value,
-                DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
-            )
-            
-            encoded = self._encode_parameter(param_name.value, param_value)
-            channels.append(base * encoded)
-            
-        return np.concatenate(channels, axis=2).astype(float)
-    
-
-    def _validate_required_parameters(self, parameters: Dict[str, Any]) -> None:
-        """Validate required background parameters using list comprehension"""
-        missing = validate_required_parameters(self._region_type, parameters)
-        if missing:
-            raise ValueError(f"Missing required background parameters: {', '.join(missing)}")
 
 
 class RoomRegionEncoder(BaseRegionEncoder):
@@ -159,65 +216,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
     def __init__(self):
         super().__init__(RegionType.ROOM)
 
-    def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
-    ) -> np.ndarray:
-        """
-        Encode room region with corrected channel mappings
-
-        Args:
-            image: Image array (H, W, 4)
-            parameters: Room parameters including:
-                - height_roof_over_floor: Required, 0-30m
-                - room_polygon: Optional, array of [x,y] coordinates in meters
-                - horizontal_reflectance: Optional, 0-1, default=1
-                - vertical_reflectance: Optional, 0-1, default=1
-                - ceiling_reflectance: Optional, 0.5-1, default=1
-            model_type: Model type enum
-
-        Returns:
-            Updated image array
-        """
-        
-
-        # Validate required parameters
-        self._validate_required_parameters(parameters)
-
-        height, width = image.shape[:2]
-
-        # Create room mask from polygon if provided
-        room_mask = self._create_room_mask(image, parameters, model_type)
-
-        # Get channel mapping for this region
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
-
-        # Encode channels using mapping (Strategy Pattern)
-        channels = []
-        for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]:
-            param_name = channel_map[channel_type]
-            # Get parameter value with default
-            param_value = parameters.get(
-                param_name.value,
-                DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
-            )
-            # Encode and append
-            encoded = self._encode_parameter(param_name.value, param_value)
-            channels.append(encoded)
-
-        image[room_mask] = channels
-
-        return image
-
-    def _validate_required_parameters(self, parameters: Dict[str, Any]) -> None:
-        """Validate required room parameters using list comprehension"""
-        missing = validate_required_parameters(self._region_type, parameters)
-        if missing:
-            raise ValueError(f"Missing required room parameters: {', '.join(missing)}")
-
-    def _create_room_mask(
+    def _get_area_mask(
         self,
         image: np.ndarray,
         parameters: Dict[str, Any],
@@ -249,10 +248,8 @@ class RoomRegionEncoder(BaseRegionEncoder):
         if room_polygon_key in parameters and parameters[room_polygon_key]:
             polygon_data = parameters[room_polygon_key]
 
-            # Handle both list of dicts and RoomPolygon instance
-            if isinstance(polygon_data, RoomPolygon):
-                polygon = polygon_data
-            else:
+            polygon = polygon_data
+            if not isinstance(polygon_data, RoomPolygon):
                 polygon = RoomPolygon.from_dict(polygon_data)
 
             # Get window coordinates for positioning
@@ -260,14 +257,26 @@ class RoomRegionEncoder(BaseRegionEncoder):
             window_y1 = parameters.get(ParameterName.Y1.value)
             window_x2 = parameters.get(ParameterName.X2.value)
             window_y2 = parameters.get(ParameterName.Y2.value)
+            direction_angle = parameters.get(ParameterName.DIRECTION_ANGLE.value)
+            wall_thickness = parameters.get(ParameterName.WALL_THICKNESS.value)
 
             # Also check window_geometry dict
             if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in parameters:
                 geom = parameters[ParameterName.WINDOW_GEOMETRY.value]
-                window_x1 = geom.get(ParameterName.X1.value)
-                window_y1 = geom.get(ParameterName.Y1.value)
-                window_x2 = geom.get(ParameterName.X2.value)
-                window_y2 = geom.get(ParameterName.Y2.value)
+                if isinstance(geom, WindowGeometry):
+                    window_x1 = geom.x1
+                    window_y1 = geom.y1
+                    window_x2 = geom.x2
+                    window_y2 = geom.y2
+                    if direction_angle is None:
+                        direction_angle = geom.direction_angle
+                else:
+                    window_x1 = geom.get(ParameterName.X1.value)
+                    window_y1 = geom.get(ParameterName.Y1.value)
+                    window_x2 = geom.get(ParameterName.X2.value)
+                    window_y2 = geom.get(ParameterName.Y2.value)
+                    if direction_angle is None:
+                        direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
 
             # Note: Rotation is handled at a higher level (in image builder)
             # so polygon and window coordinates here are already rotated if needed
@@ -279,8 +288,11 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 window_x1=window_x1,
                 window_y1=window_y1,
                 window_x2=window_x2,
-                window_y2=window_y2
+                window_y2=window_y2,
+                direction_angle=direction_angle,
+                wall_thickness=wall_thickness
             )
+            
             cv2.fillPoly(mask, pixel_coords, 1)
 
             # Enforce border
@@ -289,7 +301,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
             return mask.astype(bool)
 
         # Default: entire area except borders and obstruction bar
-        border = 2
+        border = GRAPHICS_CONSTANTS.BORDER_PX
         dims = ImageDimensions(width)
         bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
         mask = np.zeros((height, width), dtype=bool)
@@ -306,10 +318,10 @@ class RoomRegionEncoder(BaseRegionEncoder):
             height: Image height
             width: Image width
         """
-        border = 2
-        mask[0:border, :] = 0  # Top 2 rows
-        mask[height-border:height, :] = 0  # Bottom 2 rows
-        mask[:, 0:border] = 0  # Left 2 columns
+        border = GRAPHICS_CONSTANTS.BORDER_PX
+        mask[0:border, :] = 0  # Top rows
+        mask[height-border:height, :] = 0  # Bottom rows
+        mask[:, 0:border] = 0  # Left columns
 
 
 class WindowRegionEncoder(BaseRegionEncoder):
@@ -330,57 +342,26 @@ class WindowRegionEncoder(BaseRegionEncoder):
     """
 
     def __init__(self):
-        super().__init__(RegionType.WINDOW)
-
-    def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
-    ) -> np.ndarray:
-        """
-        Encode window region
-
-        Channels (CORRECTED):
-        - Red: sill_height (z1, 0-5m → 0-1) [REQUIRED]
-        - Green: frame_ratio (1-0 → 0-1, reversed) [REQUIRED]
-        - Blue: window_height (z2-z1, 0.2-5m → 0.99-0.01, reversed) [REQUIRED]
-        - Alpha: window_frame_reflectance (0-1 → 0-1, optional, default=0.8)
-
-        Raises:
-            ValueError: If required parameters are missing
-        """
+        super().__init__(RegionType.WINDOW)  
+    
+    def _update_parameters(self, params):
+        from src.components.encoding_service import ParameterCalculatorRegistry
+        calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(
+            params,
+            logger=None  # Strict mode: raise on failure
+        )
+        params.update(calculated_params)
+        return params
+    
         
-
-        # Validate required parameters
-        self._validate_required_parameters(parameters)
-
+    def _get_area_mask(self, image, parameters, model_type)->np.ndarray[Any, Any]:
         height, width = image.shape[:2]
-
-        # Get window bounds from geometry
+        mask = np.zeros((height, width), dtype=bool)
         x_start, y_start, x_end, y_end = self._get_window_bounds(
             image, parameters
         )
-
-        # Get channel mapping for this region
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
-
-        # Encode channels using mapping (Strategy Pattern)
-        channels = []
-        for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]:
-            param_name = channel_map[channel_type]
-            # Get parameter value with default
-            param_value = parameters.get(
-                param_name.value,
-                DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
-            )
-            # Encode and append
-            encoded = self._encode_parameter(param_name.value, param_value)
-            channels.append(encoded)
-
-        image[y_start:y_end, x_start:x_end] = channels
-
-        return image
+        mask[y_start:y_end, x_start:x_end] = True
+        return mask
 
     def _validate_required_parameters(self, parameters: Dict[str, Any]) -> None:
         """Validate required window parameters using list comprehension"""
@@ -421,11 +402,9 @@ class WindowRegionEncoder(BaseRegionEncoder):
         # Get window geometry
         if ParameterName.WINDOW_GEOMETRY.value in parameters:
             geom_data = parameters[ParameterName.WINDOW_GEOMETRY.value]
-
-            # Handle WindowGeometry instance or dict
-            if isinstance(geom_data, WindowGeometry):
-                window_geom = geom_data
-            else:
+            
+            window_geom = geom_data
+            if not isinstance(geom_data, WindowGeometry):
                 window_geom = WindowGeometry.from_dict(geom_data)
         else:
             # Create from individual coordinates
@@ -435,14 +414,15 @@ class WindowRegionEncoder(BaseRegionEncoder):
                 z1=parameters[ParameterName.Z1.value],
                 x2=parameters[ParameterName.X2.value],
                 y2=parameters[ParameterName.Y2.value],
-                z2=parameters[ParameterName.Z2.value]
+                z2=parameters[ParameterName.Z2.value],
+                direction_angle=parameters.get(ParameterName.DIRECTION_ANGLE.value)
             )
 
         # Get pixel bounds from geometry
         x_start, y_start, x_end, y_end = window_geom.get_pixel_bounds(image_size=width)
 
-        # Enforce 2-pixel border (must remain background)
-        border = 2
+        # Enforce border (must remain background)
+        border = GRAPHICS_CONSTANTS.BORDER_PX
         x_start = max(x_start, border)
         y_start = max(y_start, border)
         x_end = min(x_end, width - border)
@@ -472,74 +452,145 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         model_type: ModelType
     ) -> np.ndarray:
         """
-        Encode obstruction bar region
+        Override encode_region for obstruction bar to handle per-row encoding
 
-        Bar: 4 pixels wide × 64 pixels tall, centered vertically, at right edge
-        Each row represents a different azimuth angle (±72.5° from façade normal)
-
-        Channels (CORRECTED):
-        - Red: obstruction_angle_horizon (0-90° → 0-1) [REQUIRED]
-        - Green: context_reflectance (0.1-0.6 → 0-1, default=1) [OPTIONAL]
-        - Blue: obstruction_angle_zenith (0-70° → 0.2-0.8) [REQUIRED]
-        - Alpha: balcony_reflectance (0-1 → 0-1, default=0.8) [OPTIONAL]
-
-        Raises:
-            ValueError: If required parameters are missing
+        The obstruction bar is special because RGB channels vary per row
+        while the alpha channel is constant.
         """
-        
-
-        # Validate required parameters
+        parameters = self._update_parameters(parameters)
         self._validate_required_parameters(parameters)
 
-        height, width = image.shape[:2]
+        # Get bar position
+        bar_x_start, bar_y_start, bar_x_end, bar_y_end = self._get_final_bar_position(image)
 
-        # Get obstruction bar dimensions based on image size
-        dims = ImageDimensions(width)
-        bar_x_start, bar_y_start, bar_x_end, bar_y_end = dims.get_obstruction_bar_position()
-        
+        # Get bar dimensions
+        dims = ImageDimensions(image.shape[1])
         bar_height = dims.obstruction_bar_height
-
-        # Get channel mapping for this region
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
-
-        # Enforce 2-pixel border (must remain background)
-        border = 2
-        bar_y_start = max(bar_y_start, border)
-        bar_y_end = min(bar_y_end, height - border)
-
-        # Recalculate actual bar height after border enforcement
         actual_bar_height = bar_y_end - bar_y_start
 
-        # Encode channels using mapping (Strategy Pattern)
-        # Channels are ordered: RED, GREEN, BLUE, ALPHA (indices 0, 1, 2, 3)
+        # Get channel mapping
+        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
         channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
 
         for channel_idx, channel_type in enumerate(channel_order):
             param_name = channel_map[channel_type]
+            param_value = self._get_parameter_with_default(parameters, param_name)
 
-            # Get parameter value with default
-            param_value = parameters.get(
-                param_name.value,
-                DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
-            )
+            if param_value is None:
+                raise ValueError(f"Missing parameter '{param_name.value}' for obstruction bar")
 
             # Alpha channel is constant, RGB channels vary per row
             if channel_type == ChannelType.ALPHA:
-                # Constant value across entire bar
                 encoded = self._encode_parameter(param_name.value, param_value)
                 image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
             else:
                 # Array values that vary per row
                 normalized_array = self._normalize_parameter(param_value, bar_height)
-                encoded_array = np.array([
+                encoded = np.array([
                     self._encode_parameter(param_name.value, val)
                     for val in normalized_array[:actual_bar_height]
-                ])
+                ])[:, np.newaxis]
                 # Broadcast each row value across the bar width
-                image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded_array[:, np.newaxis]
+                image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
 
         return image
+            
+    def _update_parameters(self, params):
+        return params
+    
+    def _get_extra(self, image, params):
+        # Get obstruction bar dimensions based on image size
+        dims = ImageDimensions(image.shape[1])
+        _, y_start, _, y_end = self._get_final_bar_position(image)
 
+        bar_height = dims.obstruction_bar_height
+        actual_bar_height = y_end - y_start
+        return [bar_height, actual_bar_height]
+
+   
+        
+    def _get_area_mask(self, image, parameters, model_type)->np.ndarray[Any, Any]:
+        height, width = image.shape[:2]
+        mask = np.zeros((height, width), dtype=bool)
+
+        x_start, y_start, x_end, y_end = self._get_final_bar_position(image)
+        mask[y_start:y_end, x_start:x_end] = True
+        return mask
+    
+    def _get_final_bar_position(self, image)->tuple[int, int, int, int]:
+        height, width = image.shape[:2]
+
+        # Get obstruction bar dimensions based on image size
+        dims = ImageDimensions(width)
+        x_start, y_start, x_end, y_end = dims.get_obstruction_bar_position()
+        
+        y_start = max(y_start, GRAPHICS_CONSTANTS.BORDER_PX)
+        y_end = min(y_end, height - GRAPHICS_CONSTANTS.BORDER_PX)
+        return (x_start, y_start, x_end, y_end)
+
+
+
+    def _encode_all_channels(
+        self,
+        parameters: Dict[str, Any],
+        channel_map: Dict[ChannelType, ParameterName], bar_height:int=64, actual_bar_height:int=64
+    ) -> List[int | np.ndarray]:
+        """
+        Encode all 4 channels (RGBA) using list comprehension
+
+        Args:
+            parameters: Parameter dictionary
+            channel_map: Mapping from channel types to parameter names
+
+        Returns:
+            List of 4 encoded values [R, G, B, A]
+        """
+        return [
+            self._encode_channel(parameters, channel_map, channel_type, bar_height, actual_bar_height)
+            for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        ]
+    
+    def _encode_channel(
+        self,
+        parameters: Dict[str, Any],
+        channel_map: Dict[ChannelType, ParameterName],
+        channel_type: ChannelType,
+        bar_height:int=64, actual_bar_height:int=64
+    ) -> np.ndarray:
+        """
+        Encode a single channel using the channel mapping (Template Method Pattern)
+
+        Args:
+            parameters: Parameter dictionary
+            channel_map: Mapping from channel types to parameter names
+            channel_type: Channel to encode (RED, GREEN, BLUE, or ALPHA)
+
+        Returns:
+            Encoded pixel intensity [0-255]
+        """
+        param_name = channel_map[channel_type]
+
+        # Get parameter value with default
+        param_value = parameters.get(
+            param_name.value,
+            DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
+        )
+
+        # Alpha channel is constant, RGB channels vary per row
+        if channel_type == ChannelType.ALPHA:
+            # Constant value across entire bar
+            px = self._encode_parameter(param_name.value, param_value)
+            encoded = np.array([px] * bar_height)
+        else:
+            # Array values that vary per row
+            normalized_array = self._normalize_parameter(param_value, bar_height)
+            encoded = np.array([
+                self._encode_parameter(param_name.value, val)
+                for val in normalized_array[:actual_bar_height]
+            ])[:, np.newaxis]
+
+        return encoded
+        
     def _validate_required_parameters(self, parameters: Dict[str, Any]) -> None:
         """
         Validate that required obstruction parameters are present (supports legacy names)
@@ -554,6 +605,28 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         if missing:
             raise ValueError(f"Missing required obstruction bar parameters: {', '.join(missing)}")
 
+    @staticmethod
+    def _upsample_values(values: list, expected_length: int) -> list:
+        """Upsample: Distribute values evenly when we have fewer values than needed"""
+        pixels_per_value = expected_length / len(values)
+        return [values[int(i / pixels_per_value)] for i in range(expected_length)]
+
+    @staticmethod
+    def _downsample_values(values: list, expected_length: int) -> list:
+        """Downsample: Take evenly spaced values when we have more values than needed"""
+        indices = np.linspace(0, len(values) - 1, expected_length).astype(int)
+        return [values[i] for i in indices]
+
+    @staticmethod
+    def _use_exact_values(values: list, expected_length: int) -> list:
+        """Exact match: Use values as-is"""
+        return values
+
+    @staticmethod
+    def _replicate_scalar(value: Any, expected_length: int) -> list:
+        """Replicate single scalar value across all pixels"""
+        return [value] * expected_length
+
     def _normalize_parameter(
         self,
         value: Any,
@@ -562,10 +635,8 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         """
         Normalize parameter to list format, distributing values evenly across bar height
 
-        If array has fewer values than expected_length, each value is distributed
-        over multiple pixels. For example:
-        - 4 values over 64 pixels: each value covers 16 pixels
-        - 64 values over 64 pixels: each value covers 1 pixel
+        Uses Strategy Pattern with map to select appropriate normalization strategy
+        based on input type and length.
 
         Args:
             value: Single value or list/array
@@ -574,28 +645,24 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         Returns:
             List of values with expected length
         """
-        if isinstance(value, (list, np.ndarray)):
-            values = list(value)
-            if len(values) == expected_length:
-                # Perfect match: use as-is
-                return values
-            elif len(values) < expected_length:
-                # Distribute values evenly across bar height
-                # Each value covers multiple pixels
-                result = []
-                pixels_per_value = expected_length / len(values)
-                for i in range(expected_length):
-                    value_index = int(i / pixels_per_value)
-                    result.append(values[value_index])
-                return result
-            else:
-                # More values than pixels: downsample
-                # Take evenly spaced values
-                indices = np.linspace(0, len(values) - 1, expected_length).astype(int)
-                return [values[i] for i in indices]
-        else:
-            # Single value: replicate for all rows
-            return [value] * expected_length
+        # Handle scalar values (non-list, non-array)
+        if not isinstance(value, (list, np.ndarray)):
+            return self._replicate_scalar(value, expected_length)
+
+        # Convert to list for processing
+        values = list(value)
+        values_length = len(values)
+
+        # Strategy map: length comparison -> normalization function (Strategy Pattern)
+        # The comparison determines which strategy to use
+        if values_length == expected_length:
+            strategy = self._use_exact_values
+        elif values_length < expected_length:
+            strategy = self._upsample_values
+        else:  # values_length > expected_length
+            strategy = self._downsample_values
+
+        return strategy(values, expected_length)
 
 
 class RegionEncoderFactory:

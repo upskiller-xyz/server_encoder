@@ -1,11 +1,250 @@
 from typing import Dict, Any, Tuple, Union
 import numpy as np
 import cv2
+from abc import ABC, abstractmethod
 from src.components.interfaces import IEncodingService
-from src.components.enums import ModelType
+from src.components.enums import ModelType, ParameterName
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.encoders import EncoderFactory
+from src.components.geometry import WindowBorderValidator, WindowHeightValidator
 from src.server.services.logging import StructuredLogger
+
+
+class IParameterCalculator(ABC):
+    """
+    Abstract base class for parameter calculators (Strategy Pattern)
+
+    Calculates derived parameters from input data.
+    """
+
+    @abstractmethod
+    def can_calculate(self, parameters: Dict[str, Any]) -> bool:
+        """
+        Check if this calculator can compute from given parameters
+
+        Args:
+            parameters: Input parameters
+
+        Returns:
+            True if calculator has required inputs
+        """
+        pass
+
+    @abstractmethod
+    def calculate(self, parameters: Dict[str, Any]) -> Any:
+        """
+        Calculate the parameter value
+
+        Args:
+            parameters: Input parameters
+
+        Returns:
+            Calculated value
+
+        Raises:
+            ValueError: If calculation cannot be performed
+        """
+        pass
+
+    @abstractmethod
+    def get_parameter_name(self) -> str:
+        """Get the name of the parameter this calculator produces"""
+        pass
+
+
+class WindowSillHeightCalculator(IParameterCalculator):
+    """
+    Calculator for window_sill_height parameter
+
+    Formula:
+    - window_sill_height = max(0, min(z1, z2) - floor_height_above_terrain)
+    - Capped to 0 if window bottom is below floor level
+
+    Where:
+    - z1, z2: Window bottom and top Z coordinates
+    - floor_height_above_terrain: Height of floor above terrain
+    """
+
+    def can_calculate(self, parameters: Dict[str, Any]) -> bool:
+        """Check if we have window geometry and floor height"""
+        has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
+        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
+        has_floor_height = ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters
+
+        return (has_window_geometry or has_z_coords) and has_floor_height
+
+    def calculate(self, parameters: Dict[str, Any]) -> float:
+        """
+        Calculate window sill height
+
+        Args:
+            parameters: Must contain z1, z2 (or window_geometry) and floor_height_above_terrain
+
+        Returns:
+            Calculated window sill height in meters (minimum 0)
+
+        Raises:
+            ValueError: If required parameters are missing or invalid
+        """
+        try:
+            # Extract Z coordinates
+            if ParameterName.WINDOW_GEOMETRY.value in parameters:
+                parameters: dict = parameters[ParameterName.WINDOW_GEOMETRY.value]
+            z1 = float(parameters.get(ParameterName.Z1.value, 0))
+            z2 = float(parameters.get(ParameterName.Z2.value, 0))
+
+            floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
+
+            # Calculate: min(z1, z2) - floor_height, capped at 0
+            window_bottom = min(z1, z2)
+            window_sill_height = max(0.0, window_bottom - floor_height)
+
+            return window_sill_height
+
+        except (KeyError, TypeError, ValueError) as e:
+            raise ValueError(
+                f"Cannot calculate window_sill_height. "
+                f"Required: z1, z2, floor_height_above_terrain. "
+                f"Error: {type(e).__name__}: {str(e)}"
+            )
+
+    def get_parameter_name(self) -> str:
+        """Get parameter name"""
+        return "window_sill_height"
+
+
+class WindowHeightCalculator(IParameterCalculator):
+    """
+    Calculator for window_height parameter
+
+    Formula:
+    - If min(z1, z2) >= floor_height_above_terrain:
+        window_height = abs(z2 - z1)  (normal case)
+    - If min(z1, z2) < floor_height_above_terrain:
+        window_height = max(z1, z2) - floor_height_above_terrain  (window starts at floor)
+
+    Where:
+    - z1, z2: Window bottom and top Z coordinates
+    - floor_height_above_terrain: Height of floor above terrain (optional for this calc)
+    """
+
+    def can_calculate(self, parameters: Dict[str, Any]) -> bool:
+        """Check if we have window Z coordinates"""
+        has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
+        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
+
+        return has_window_geometry or has_z_coords
+
+    def calculate(self, parameters: Dict[str, Any]) -> float:
+        """
+        Calculate window height
+
+        Args:
+            parameters: Must contain z1, z2 (or window_geometry)
+                       Optional: floor_height_above_terrain for floor adjustment
+
+        Returns:
+            Calculated window height in meters
+
+        Raises:
+            ValueError: If required parameters are missing or invalid
+        """
+        try:
+            # Extract Z coordinates
+            if ParameterName.WINDOW_GEOMETRY.value in parameters:
+                parameters = parameters[ParameterName.WINDOW_GEOMETRY.value]
+                
+            z1 = float(parameters[ParameterName.Z1.value])
+            z2 = float(parameters[ParameterName.Z2.value])
+
+            window_bottom = min(z1, z2)
+            window_top = max(z1, z2)
+
+            # Check if floor height is available
+            if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters:
+                floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
+                
+                window_height = window_top - window_bottom
+                # If window bottom is below floor, calculate height from floor
+                if window_bottom < floor_height:
+                    window_height = window_top - floor_height
+                    
+            else:
+                # No floor height available, use full window height
+                window_height = abs(z2 - z1)
+
+            return window_height
+
+        except (KeyError, TypeError, ValueError) as e:
+            raise ValueError(
+                f"Cannot calculate window_height. "
+                f"Required: z1, z2. "
+                f"Error: {type(e).__name__}: {str(e)}"
+            )
+
+    def get_parameter_name(self) -> str:
+        """Get parameter name"""
+        return "window_height"
+
+
+class ParameterCalculatorRegistry:
+    """
+    Registry of parameter calculators (Factory + Registry Pattern)
+
+    Manages automatic calculation of derived parameters.
+    """
+
+    # Available calculators (order matters: dependencies should be calculated first)
+    _CALCULATORS = [
+        WindowHeightCalculator(),         # No dependencies
+        WindowSillHeightCalculator(),     # Depends on floor_height_above_terrain
+    ]
+
+    @classmethod
+    def calculate_derived_parameters(
+        cls,
+        parameters: Dict[str, Any],
+        logger=None
+    ) -> Dict[str, Any]:
+        """
+        Calculate all derived parameters that can be computed
+
+        Args:
+            parameters: Input parameters
+            logger: Optional logger for warnings
+
+        Returns:
+            Updated parameters with calculated values added
+        """
+        # Create copy to avoid modifying original
+        result = parameters.copy()
+
+        # Try each calculator
+        for calculator in cls._CALCULATORS:
+            param_name = calculator.get_parameter_name()
+
+            # Skip if parameter already provided by user
+            if param_name in result:
+                continue
+
+            # Calculate if possible
+            if calculator.can_calculate(result):
+                try:
+                    calculated_value = calculator.calculate(result)
+                    result[param_name] = calculated_value
+                except ValueError as e:
+                    # Calculator couldn't compute
+                    # Log warning if logger available, otherwise re-raise
+                    if logger:
+                        logger.warning(
+                            f"Failed to calculate '{param_name}': {str(e)}. "
+                            f"This parameter must be provided manually."
+                        )
+                    else:
+                        # Re-raise if no logger (strict mode)
+                        raise
+
+        return result
 
 
 class EncodingService(IEncodingService):
@@ -94,14 +333,14 @@ class EncodingService(IEncodingService):
             ValueError: If parameters are invalid
         """
         # Check if multiple windows are provided
-        if "windows" not in parameters:
+        if ParameterName.WINDOWS.value not in parameters:
             # Single window case - return as dict for consistency
             single_image = self.encode_room_image(parameters, model_type)
             return {"window_1": single_image}
 
         self._logger.info(
             f"Encoding multi-window images - model_type: {model_type.value}, "
-            f"window_count: {len(parameters['windows'])}"
+            f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
 
         # Build multiple images using director
@@ -147,13 +386,21 @@ class EncodingService(IEncodingService):
             (is_valid, error_message)
         """
         # Check if using unified structure with windows
-        if "windows" in parameters and isinstance(parameters["windows"], dict):
+        if ParameterName.WINDOWS.value in parameters:
+            # Check if windows is a dict (expected format)
+            if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
+                return False, "Parameter 'windows' must be a dictionary mapping window_id to window parameters"
+
             # Validate each window separately
-            for window_id, window_params in parameters["windows"].items():
+            for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
+                # Check if window_params is a dict
+                if not isinstance(window_params, dict):
+                    return False, f"Window '{window_id}' parameters must be a dictionary, got {type(window_params).__name__}"
+
                 # Merge shared params with window params for validation
                 merged_params = {**parameters, **window_params}
                 # Remove windows key from merged params to avoid recursion
-                merged_params.pop("windows", None)
+                merged_params.pop(ParameterName.WINDOWS.value, None)
 
                 is_valid, error_msg = self._validate_flat_parameters(
                     merged_params, model_type, window_id
@@ -165,6 +412,93 @@ class EncodingService(IEncodingService):
         else:
             # Legacy flat structure - validate directly
             return self._validate_flat_parameters(parameters, model_type)
+
+    # Parameters that support clipping (Strategy Pattern)
+    # Format: {param_name: (clip_min, clip_max, reject_below_min)}
+    # - clip_min/max: values to clip to
+    # - reject_below_min: if True, reject values < min instead of clipping
+    _CLIPPING_CONFIG = {
+        "floor_height_above_terrain": (0.0, 10.0, True),        # Reject < 0, clip > 10
+        "height_roof_over_floor": (0.0, 30.0, True),            # Reject <= 0, clip > 30
+        "obstruction_angle_horizon": (0.0, 90.0, False),        # Clip both min and max
+        "obstruction_angle_zenith": (0.0, 70.0, False),         # Clip both min and max
+        # window_sill_height is auto-calculated, no clipping needed
+    }
+
+    def _clip_parameters(self, parameters: Dict[str, Any]) -> None:
+        """
+        Clip parameters that support clipping instead of validation errors.
+
+        Uses Strategy Pattern with _CLIPPING_CONFIG map.
+
+        Clipping rules:
+        - floor_height_above_terrain: values > 10.0 clipped to 10.0, values < 0.0 rejected
+        - height_roof_over_floor: values > 30.0 clipped to 30.0, values <= 0.0 rejected
+        - obstruction_angle_horizon: values clipped to [0.0, 90.0] range
+        - obstruction_angle_zenith: values clipped to [0.0, 70.0] range
+
+        Args:
+            parameters: Parameters to clip (modified in place)
+
+        Raises:
+            ValueError: If parameter value cannot be processed or is rejected
+        """
+        for param_name, (min_val, max_val, reject_below_min) in self._CLIPPING_CONFIG.items():
+            if param_name not in parameters:
+                continue
+
+            try:
+                param_value = parameters[param_name]
+
+                # Skip arrays (obstruction angles can be arrays)
+                # These are handled separately in validation
+                if isinstance(param_value, (list, np.ndarray)):
+                    continue
+
+                value = float(param_value)
+                original_value = value
+                clipped = False
+
+                # Handle minimum bound
+                # Special case for height_roof_over_floor: must be > 0, not >= 0
+                if param_name == "height_roof_over_floor":
+                    if value <= min_val:
+                        raise ValueError(
+                            f"Parameter '{param_name}' value {value} not supported. "
+                            f"Must be greater than {min_val}. "
+                            f"Values <= {min_val} are not supported."
+                        )
+                elif value < min_val:
+                    if reject_below_min:
+                        raise ValueError(
+                            f"Parameter '{param_name}' value {value} not supported. "
+                            f"Valid range is [{min_val}, {max_val}]. "
+                            f"Values below {min_val} are not supported."
+                        )
+                    else:
+                        value = min_val
+                        clipped = True
+
+                # Handle maximum bound
+                if value > max_val:
+                    value = max_val
+                    clipped = True
+
+                # Update parameter if clipped
+                if clipped:
+                    self._logger.warning(
+                        f"Parameter '{param_name}' value {original_value} outside range [{min_val}, {max_val}]. "
+                        f"Value will be clipped to {value}."
+                    )
+                    parameters[param_name] = value
+
+            except (TypeError, ValueError) as e:
+                if "not supported" in str(e):
+                    raise
+                raise ValueError(
+                    f"Parameter '{param_name}' has invalid value: {parameters.get(param_name)}. "
+                    f"Error: {str(e)}"
+                )
 
     def _validate_flat_parameters(
         self,
@@ -183,6 +517,21 @@ class EncodingService(IEncodingService):
         Returns:
             (is_valid, error_message)
         """
+        # Calculate derived parameters first
+        # This modifies parameters dict in place by adding calculated values
+        # Pass logger to log warnings instead of failing
+        calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(
+            parameters,
+            logger=self._logger
+        )
+        parameters.update(calculated_params)
+
+        # Clip parameters before validation
+        try:
+            self._clip_parameters(parameters)
+        except ValueError as e:
+            # Clipping rejected a parameter (e.g., negative value where not allowed)
+            return False, str(e)
         # Helper to check if parameter exists (supports both new and legacy names)
         def has_param(new_name: str, legacy_name: str = None) -> bool:
             if new_name in parameters:
@@ -197,12 +546,14 @@ class EncodingService(IEncodingService):
         # All models need base parameters
         if not has_param("height_roof_over_floor", "height_roof_over_floor"):
             missing.append("height_roof_over_floor")
-        if not has_param("window_sill_height", "window_sill_height"):
-            missing.append("window_sill_height")
+        # window_sill_height is now auto-calculated from window geometry
+        # if not has_param("window_sill_height", "window_sill_height"):
+        #     missing.append("window_sill_height")
         if not has_param("window_frame_ratio", "window_frame_ratio"):
             missing.append("window_frame_ratio")
-        if not has_param("window_height"):
-            missing.append("window_height")
+        # window_height is now auto-calculated from window geometry (z1, z2)
+        # if not has_param("window_height"):
+        #     missing.append("window_height")
         if not has_param("floor_height_above_terrain", "floor_height_above_terrain"):
             missing.append("floor_height_above_terrain")
         if not has_param("obstruction_angle_horizon", "obstruction_angle_horizon"):
@@ -239,14 +590,70 @@ class EncodingService(IEncodingService):
                 actual_min = min(min_val, max_val)
                 actual_max = max(min_val, max_val)
 
-                if not (actual_min <= float(value) <= actual_max):
+                # Skip validation for parameters with clipping enabled
+                # They are already validated and clipped in _clip_parameters
+                if param_name in self._CLIPPING_CONFIG:
+                    continue
+
+                # For other parameters, validate normally
+                try:
+                    float_value = float(value)
+                except (TypeError, ValueError) as e:
+                    return False, (
+                        f"Parameter '{param_name}' has invalid value type: {type(value).__name__}. "
+                        f"Expected numeric value, got: {value}. Error: {str(e)}"
+                    )
+
+                if not (actual_min <= float_value <= actual_max):
                     return False, (
                         f"Parameter '{param_name}' value {value} "
                         f"outside valid range [{min_val}, {max_val}]"
                     )
-            except ValueError:
+            except ValueError as e:
                 # Unknown parameter - skip (might be for future use)
-                continue
+                if "Unknown parameter" in str(e):
+                    continue
+                # Re-raise if it's a different ValueError
+                return False, f"Error validating parameter '{param_name}': {str(e)}"
+            except Exception as e:
+                # Catch any unexpected errors and report them with context
+                return False, (
+                    f"Unexpected error validating parameter '{param_name}' with value {value}: "
+                    f"{type(e).__name__}: {str(e)}"
+                )
+
+        # Validate window geometry placement (if window coordinates and room_polygon are present)
+        room_polygon = parameters.get("room_polygon")
+
+        # Check if we have window coordinates (either as nested object or flat)
+        has_window_coords = (
+            "window_geometry" in parameters or
+            all(k in parameters for k in ["x1", "y1", "z1", "x2", "y2", "z2"])
+        )
+
+        if has_window_coords and room_polygon:
+            # Validate window is on polygon border
+            is_valid, error_msg = WindowBorderValidator.validate_from_dict(
+                window_data=parameters,
+                polygon_data=room_polygon
+            )
+            if not is_valid:
+                return False, f"Window geometry validation failed: {error_msg}"
+
+            # Validate window height is between floor and roof
+            floor_height = parameters.get("floor_height_above_terrain")
+            height_roof_over_floor = parameters.get("height_roof_over_floor")
+
+            if floor_height is not None and height_roof_over_floor is not None:
+                roof_height = floor_height + height_roof_over_floor
+
+                is_valid, error_msg = WindowHeightValidator.validate_from_parameters(
+                    window_geometry_data=parameters.get("window_geometry") or parameters,
+                    floor_height=floor_height,
+                    roof_height=roof_height
+                )
+                if not is_valid:
+                    return False, f"Window height validation failed: {error_msg}"
 
         return True, ""
 

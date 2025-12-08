@@ -16,10 +16,10 @@
         "window_height": 1.5,
         "x1": -0.6,
         "y1": 0.0,
-        "z1": 0.9,
+        "z1": 2.1,
         "x2": 0.6,
         "y2": 0.0,
-        "z2": 2.4,
+        "z2": 3.4,
         "obstruction_angle_horizon": 45.0,
         "obstruction_angle_zenith": 30.0
       }

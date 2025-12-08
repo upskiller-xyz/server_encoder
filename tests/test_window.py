@@ -435,9 +435,10 @@ class TestWindowParameterValidation(unittest.TestCase):
             self.encoder.encode_region(self.image, {}, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('window_sill_height', error_msg)
+        # window_sill_height and window_height are now auto-calculated from window geometry
+        # Only window_frame_ratio and window geometry are required
         self.assertIn('window_frame_ratio', error_msg)
-        self.assertIn('window_height', error_msg)
+        self.assertIn('window geometry', error_msg.lower())
 
     def test_missing_sill_height(self):
         """Test error when sill_height is missing"""
@@ -470,19 +471,20 @@ class TestWindowParameterValidation(unittest.TestCase):
         self.assertIn('window_frame_ratio', error_msg)
 
     def test_missing_window_height(self):
-        """Test error when window_height is missing"""
+        """Test that window_height is auto-calculated when missing (no error expected)"""
         parameters = {
             'window_sill_height': 0.9,
             'window_frame_ratio': 0.8,
             'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            'x2': 0.6, 'y2': 0.0, 'z2': 2.4,
+            'floor_height_above_terrain': 0.0  # Required for auto-calculation
         }
 
-        with self.assertRaises(ValueError) as context:
-            self.encoder.encode_region(self.image, parameters, self.model_type)
+        # Should NOT raise an error - window_height is auto-calculated
+        result_image = self.encoder.encode_region(self.image, parameters, self.model_type)
 
-        error_msg = str(context.exception)
-        self.assertIn('window_height', error_msg)
+        # Verify encoding succeeded
+        self.assertIsNotNone(result_image)
 
     def test_missing_geometry(self):
         """Test error when window geometry is missing"""
