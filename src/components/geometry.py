@@ -472,7 +472,6 @@ class RoomPolygon:
         res = [w_edge for w_edge in w_edges if rotated_room_poly.boundary.buffer(tolerance).contains(w_edge)]
 
         window_center_rotated = Point2D((window_x1 + window_x2) / 2, (window_y1 + window_y2) / 2)
-        print("RESULT", len(res))
         if len(res)>0:
             edge_on_boundary = res[0]
             edge_coords = list(edge_on_boundary.coords)
@@ -946,12 +945,6 @@ class WindowGeometry:
             calculated_angle = res[0]
             
         calculated_angle = GeometryOps.normalize_angle(calculated_angle)
-        
-
-        print(f"EXPERIMENTAL: Calculated direction_angle = {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
-        print(f"  Polygon edge: ({v1[0]:.2f}, {v1[1]:.2f}) -> ({v2[0]:.2f}, {v2[1]:.2f})")
-        print(f"  Edge angle: {edge_angle * 180 / math.pi:.2f}°")
-        print(f"  Window edge coords: ({edge_coords})")
 
         return calculated_angle
     

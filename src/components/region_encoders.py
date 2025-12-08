@@ -67,8 +67,7 @@ class BaseRegionEncoder(IRegionEncoder):
         channel_map = REGION_CHANNEL_MAPPING[self._region_type]
 
         _extra_params = self._get_extra(image, parameters)
-        
-        # print("window area",y_start,y_end, x_start,x_end )
+
         image[mask] = self._encode_all_channels(parameters, channel_map, *_extra_params)
 
         return image

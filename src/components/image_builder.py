@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import copy
 import math
 import numpy as np
@@ -73,6 +73,177 @@ class RoomImageBuilder(IImageBuilder):
             raise RuntimeError("Image not initialized. Call reset() first.")
 
 
+class WindowParameterExtractor:
+    """
+    Extracts window parameters from parameter dictionaries (Single Responsibility)
+
+    Handles both direct parameters and WindowGeometry objects
+    """
+
+    @staticmethod
+    def extract_window_coordinates(
+        window_params: Dict[str, Any]
+    ) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float], Optional[float]]:
+        """
+        Extract window coordinates and direction angle from parameters
+
+        Args:
+            window_params: Window parameter dictionary
+
+        Returns:
+            Tuple of (x1, y1, x2, y2, direction_angle)
+        """
+        window_x1 = window_params.get(ParameterName.X1.value)
+        window_y1 = window_params.get(ParameterName.Y1.value)
+        window_x2 = window_params.get(ParameterName.X2.value)
+        window_y2 = window_params.get(ParameterName.Y2.value)
+        direction_angle = window_params.get(ParameterName.DIRECTION_ANGLE.value)
+
+        # Check window_geometry dict if individual coords not found
+        if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in window_params:
+            geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
+            if isinstance(geom, WindowGeometry):
+                window_x1 = geom.x1
+                window_y1 = geom.y1
+                window_x2 = geom.x2
+                window_y2 = geom.y2
+                if direction_angle is None:
+                    direction_angle = geom.direction_angle
+            else:
+                window_x1 = geom.get(ParameterName.X1.value)
+                window_y1 = geom.get(ParameterName.Y1.value)
+                window_x2 = geom.get(ParameterName.X2.value)
+                window_y2 = geom.get(ParameterName.Y2.value)
+                if direction_angle is None:
+                    direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
+
+        return window_x1, window_y1, window_x2, window_y2, direction_angle
+
+
+class DirectionAngleCalculator:
+    """
+    Calculates direction angle from room polygon (Single Responsibility)
+    """
+
+    @staticmethod
+    def calculate_from_polygon(
+        room_params: Dict[str, Any],
+        window_x1: float,
+        window_y1: float,
+        window_x2: float,
+        window_y2: float,
+        current_direction_angle: Optional[float]
+    ) -> Optional[float]:
+        """
+        Calculate direction angle from room polygon if available
+
+        Args:
+            room_params: Room parameter dictionary
+            window_x1, window_y1, window_x2, window_y2: Window coordinates
+            current_direction_angle: Current direction angle (may be None)
+
+        Returns:
+            Calculated or current direction angle
+        """
+        if ParameterName.ROOM_POLYGON.value not in room_params:
+            return current_direction_angle
+
+        polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
+        polygon = polygon_data if isinstance(polygon_data, RoomPolygon) else RoomPolygon.from_dict(polygon_data)
+
+        try:
+            temp_window_geom = WindowGeometry(
+                window_x1, window_y1, 0,
+                window_x2, window_y2, 0,
+                direction_angle=current_direction_angle
+            )
+            calculated_direction = temp_window_geom.calculate_direction_from_polygon(polygon)
+
+            if current_direction_angle is None:
+                return calculated_direction
+        except ValueError:
+            pass
+
+        return current_direction_angle
+
+
+class GeometryRotator:
+    """
+    Rotates window and room geometry (Single Responsibility)
+    """
+
+    @staticmethod
+    def rotate_if_needed(
+        all_parameters: Dict[str, Any],
+        direction_angle: float,
+        window_x1: float,
+        window_y1: float,
+        window_x2: float,
+        window_y2: float
+    ) -> Dict[str, Any]:
+        """
+        Rotate geometry if window is not pointing right (0 degrees)
+
+        Args:
+            all_parameters: All parameters grouped by region
+            direction_angle: Current direction angle in radians
+            window_x1, window_y1, window_x2, window_y2: Window coordinates
+
+        Returns:
+            Parameters with rotated geometry
+        """
+        rotation_angle = direction_angle * 180 / math.pi  # Convert to degrees
+
+        # If already pointing right (within tolerance), no rotation needed
+        if abs(rotation_angle) < 0.01:
+            return all_parameters
+
+        origin = Point2D(0, 0)
+        temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
+
+        # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
+        wall_thickness_m = temp_window_geom.wall_thickness
+
+        # Make a deep copy of parameters to avoid modifying original
+        rotated_params = copy.deepcopy(all_parameters)
+
+        # Rotate window geometry
+        rotated_window = temp_window_geom.rotate(rotation_angle, origin)
+        window_params_copy = rotated_params[RegionType.WINDOW.value]
+
+        GeometryRotator._update_window_coords(window_params_copy, rotated_window, wall_thickness_m)
+
+        # Rotate room polygon if present
+        room_params = rotated_params.get(RegionType.ROOM.value, {})
+        if ParameterName.ROOM_POLYGON.value in room_params:
+            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
+            polygon = polygon_data if isinstance(polygon_data, RoomPolygon) else RoomPolygon.from_dict(polygon_data)
+
+            rotated_polygon = polygon.rotate(rotation_angle, origin)
+            room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
+
+            GeometryRotator._update_window_coords(room_params, rotated_window, wall_thickness_m)
+
+            # Set direction_angle to 0 after rotation (window now points right)
+            room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
+
+        # Set direction_angle to 0 after rotation (window now points right)
+        if RegionType.WINDOW.value in rotated_params:
+            rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value] = 0.0
+
+        return rotated_params
+
+    @staticmethod
+    def _update_window_coords(param_dict: dict, window: WindowGeometry, thickness: float) -> dict:
+        """Update parameter dict with window coordinates and thickness"""
+        param_dict[ParameterName.X1.value] = window.x1
+        param_dict[ParameterName.Y1.value] = window.y1
+        param_dict[ParameterName.X2.value] = window.x2
+        param_dict[ParameterName.Y2.value] = window.y2
+        param_dict[ParameterName.WALL_THICKNESS.value] = thickness
+        return param_dict
+
+
 class RoomImageDirector:
     """
     Director class for orchestrating image building (Director Pattern)
@@ -124,130 +295,36 @@ class RoomImageDirector:
         """
         Rotate room polygon and window coordinates if window is not on south facade
 
+        Uses helper classes to maintain Single Responsibility Principle
+
         Args:
             all_parameters: Parameters grouped by region
 
         Returns:
             Parameters with rotated geometry
         """
-        
-
         # Get window parameters
         window_params = all_parameters.get(RegionType.WINDOW.value, {})
         if not window_params:
             return all_parameters
 
-        # Get window coordinates and direction_angle
-        window_x1 = window_params.get(ParameterName.X1.value)
-        window_y1 = window_params.get(ParameterName.Y1.value)
-        window_x2 = window_params.get(ParameterName.X2.value)
-        window_y2 = window_params.get(ParameterName.Y2.value)
-        direction_angle = window_params.get(ParameterName.DIRECTION_ANGLE.value)
-
-        # Check window_geometry dict if individual coords not found
-        if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in window_params:
-            geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
-            if isinstance(geom, WindowGeometry):
-                window_x1 = geom.x1
-                window_y1 = geom.y1
-                window_x2 = geom.x2
-                window_y2 = geom.y2
-                if direction_angle is None:
-                    direction_angle = geom.direction_angle
-            else:
-                window_x1 = geom.get(ParameterName.X1.value)
-                window_y1 = geom.get(ParameterName.Y1.value)
-                window_x2 = geom.get(ParameterName.X2.value)
-                window_y2 = geom.get(ParameterName.Y2.value)
-                if direction_angle is None:
-                    direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
+        # Extract window coordinates using WindowParameterExtractor
+        window_x1, window_y1, window_x2, window_y2, direction_angle = \
+            WindowParameterExtractor.extract_window_coordinates(window_params)
 
         if window_x1 is None:
             return all_parameters
 
-        # EXPERIMENTAL: Calculate direction_angle from room polygon if available
+        # Calculate direction_angle from room polygon if available
         room_params = all_parameters.get(RegionType.ROOM.value, {})
-        if ParameterName.ROOM_POLYGON.value in room_params:
-            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
-            polygon = polygon_data
-            if not isinstance(polygon_data, RoomPolygon):
-                polygon = RoomPolygon.from_dict(polygon_data)
+        direction_angle = DirectionAngleCalculator.calculate_from_polygon(
+            room_params, window_x1, window_y1, window_x2, window_y2, direction_angle
+        )
 
-            # Calculate direction from polygon
-            try:
-                temp_window_geom = WindowGeometry(
-                    window_x1, window_y1, 0,
-                    window_x2, window_y2, 0,
-                    direction_angle=direction_angle
-                )
-                calculated_direction = temp_window_geom.calculate_direction_from_polygon(polygon)
-
-                if direction_angle is not None:
-                    print(f"  Input direction_angle = {direction_angle:.4f} rad ({direction_angle * 180 / math.pi:.2f}°)")
-                    diff = abs(calculated_direction - direction_angle)
-                    # Handle wraparound (e.g., 359° vs 1°)
-                    if diff > math.pi:
-                        diff = 2 * math.pi - diff
-                    print(f"  Difference = {diff:.4f} rad ({diff * 180 / math.pi:.2f}°)")
-                else:
-                    print(f"  No input direction_angle provided, using calculated value")
-                direction_angle = calculated_direction
-            except ValueError as e:
-                print(f"  Could not calculate direction from polygon: {e}")
-
-        rotation_angle = direction_angle * 180 / math.pi  # Convert to degrees
-
-        # If already pointing right (within tolerance), no rotation needed
-        if abs(rotation_angle) < 0.01:
-            return all_parameters
-            
-
-        origin = Point2D(0, 0)
-        temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
-
-        # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
-        wall_thickness_m = temp_window_geom.wall_thickness
-
-        # Make a deep copy of parameters to avoid modifying original
-        rotated_params = copy.deepcopy(all_parameters)
-
-        # Rotate window geometry
-        rotated_window = temp_window_geom.rotate(rotation_angle, origin)
-        window_params_copy = rotated_params[RegionType.WINDOW.value]
-
-        room_params = self.update_window_coords(window_params_copy, rotated_window, wall_thickness_m)
-
-        # Rotate room polygon if present
-        room_params = rotated_params.get(RegionType.ROOM.value, {})
-        if ParameterName.ROOM_POLYGON.value in room_params:
-            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
-            polygon = polygon_data
-            if not isinstance(polygon_data, RoomPolygon):
-                polygon = RoomPolygon.from_dict(polygon_data)
-
-            rotated_polygon = polygon.rotate(rotation_angle, origin)
-            room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
-
-            room_params = self.update_window_coords(room_params, rotated_window, wall_thickness_m)
-
-            # Set direction_angle to 0 after rotation (window now points right)
-            # This prevents re-calculation in to_pixel_array()
-            room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
-
-        # Set direction_angle to 0 after rotation (window now points right)
-        if RegionType.WINDOW.value in rotated_params:
-            rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value] = 0.0
-
-        return rotated_params
-    
-    @staticmethod
-    def update_window_coords(param_dict:dict, window:WindowGeometry, thickness:float):
-        param_dict[ParameterName.X1.value] = window.x1
-        param_dict[ParameterName.Y1.value] = window.y1
-        param_dict[ParameterName.X2.value] = window.x2
-        param_dict[ParameterName.Y2.value] = window.y2
-        param_dict[ParameterName.WALL_THICKNESS.value] = thickness
-        return param_dict
+        # Rotate geometry using GeometryRotator
+        return GeometryRotator.rotate_if_needed(
+            all_parameters, direction_angle, window_x1, window_y1, window_x2, window_y2
+        )
 
     def construct_from_flat_parameters(
         self,

@@ -68,11 +68,12 @@ The **Room Encoding Server** transforms 3D room geometry and physical parameters
 
 **Key Features:**
 - Encode room geometry, materials, and environmental context into RGBA images
-- Support for single and multi-window rooms
-- Automatic facade rotation for windows on different orientations
+- Support for single and multi-window rooms with complex polygons
+- Automatic facade rotation and direction angle calculation from room geometry
 - Multiple model types: DF/DA with default or custom materials
-- RESTful API with comprehensive validation
-- Object-oriented design following SOLID principles
+- RESTful API with comprehensive validation and error handling
+- Object-oriented design following SOLID principles and design patterns
+- Structured logging with proper error reporting
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
