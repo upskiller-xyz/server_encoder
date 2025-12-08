@@ -69,6 +69,7 @@ class ServerApplication:
         """Setup Flask routes"""
         self._app.add_url_rule("/", "get_status", self._get_status, methods=["GET"])
         self._app.add_url_rule("/encode", "encode", self._encode_room, methods=["POST"])
+        self._app.add_url_rule("/calculate-direction", "calculate_direction", self._calculate_direction, methods=["POST"])
 
     def _extract_model_type_prefix(self, model_type_str: str) -> str:
         """
@@ -236,6 +237,91 @@ class ServerApplication:
             )
             return jsonify({
                 "error": f"Encoding failed: {str(e)}",
+                "error_type": type(e).__name__
+            }), HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+    def _calculate_direction(self):
+        """
+        Calculate direction_angle for window(s) from room polygon and window coordinates
+
+        Expected JSON payload:
+        {
+            "parameters": {
+                "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+                "windows": {
+                    "window1": {
+                        "x1": -0.6, "y1": 0.0,
+                        "x2": 0.6, "y2": 0.0
+                    },
+                    "window2": {
+                        ... (optional additional windows)
+                    }
+                }
+            }
+        }
+
+        Returns:
+            JSON with direction_angle for each window:
+            {
+                "direction_angles": {
+                    "window1": 3.14159,  # radians
+                    "window2": 1.5708
+                },
+                "direction_angles_degrees": {
+                    "window1": 180.0,
+                    "window2": 90.0
+                }
+            }
+        """
+        try:
+            # Get JSON data
+            data = request.get_json()
+            if not data:
+                raise BadRequest("No JSON data provided")
+
+            # Validate required fields
+            if "parameters" not in data:
+                raise BadRequest("Missing 'parameters' field")
+
+            parameters = data["parameters"]
+
+            # Calculate direction angles
+            direction_angles_rad = self._encoding_service.calculate_direction_angle(parameters)
+
+            # Convert to degrees for convenience
+            import math
+            direction_angles_deg = {
+                window_id: angle * 180 / math.pi
+                for window_id, angle in direction_angles_rad.items()
+            }
+
+            # Log success
+            self._logger.info(
+                f"Direction angle calculation successful - "
+                f"window_count: {len(direction_angles_rad)}"
+            )
+
+            return jsonify({
+                "direction_angles": direction_angles_rad,
+                "direction_angles_degrees": direction_angles_deg
+            }), HTTPStatus.OK.value
+
+        except BadRequest:
+            raise
+        except ValueError as e:
+            # Log validation error
+            self._logger.error(f"Direction angle calculation error: {str(e)}")
+            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
+        except Exception as e:
+            # Log unexpected error with traceback
+            error_trace = traceback.format_exc()
+            self._logger.error(
+                f"Direction angle calculation failed: {str(e)}\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Traceback:\n{error_trace}"
+            )
+            return jsonify({
+                "error": f"Direction angle calculation failed: {str(e)}",
                 "error_type": type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 

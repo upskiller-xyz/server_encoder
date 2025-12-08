@@ -526,12 +526,6 @@ class EncodingService(IEncodingService):
         )
         parameters.update(calculated_params)
 
-        # Clip parameters before validation
-        try:
-            self._clip_parameters(parameters)
-        except ValueError as e:
-            # Clipping rejected a parameter (e.g., negative value where not allowed)
-            return False, str(e)
         # Helper to check if parameter exists (supports both new and legacy names)
         def has_param(new_name: str, legacy_name: str = None) -> bool:
             if new_name in parameters:
@@ -655,7 +649,89 @@ class EncodingService(IEncodingService):
                 if not is_valid:
                     return False, f"Window height validation failed: {error_msg}"
 
+        # Clip parameters AFTER validation so validation uses original values
+        # This ensures window height validation uses the actual floor/roof heights
+        # before they are clipped for encoding
+        try:
+            self._clip_parameters(parameters)
+        except ValueError as e:
+            # Clipping rejected a parameter (e.g., negative value where not allowed)
+            return False, str(e)
+
         return True, ""
+
+    def calculate_direction_angle(
+        self,
+        parameters: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """
+        Calculate direction_angle for window(s) from room polygon and window coordinates
+
+        Args:
+            parameters: Dictionary containing:
+                - room_polygon: List of [x, y] coordinates defining the room
+                - windows: Dictionary of window_id -> window parameters
+                    Each window must have: x1, y1, x2, y2
+
+        Returns:
+            Dictionary mapping window_id -> direction_angle (in radians)
+
+        Raises:
+            ValueError: If required parameters are missing or calculation fails
+        """
+        from src.components.geometry import WindowGeometry, RoomPolygon
+
+        # Validate required parameters
+        if "room_polygon" not in parameters:
+            raise ValueError("Missing required parameter: 'room_polygon'")
+
+        if "windows" not in parameters:
+            raise ValueError("Missing required parameter: 'windows'")
+
+        if not isinstance(parameters["windows"], dict):
+            raise ValueError("'windows' must be a dictionary")
+
+        # Create room polygon
+        try:
+            room_polygon = RoomPolygon.from_dict(parameters["room_polygon"])
+        except Exception as e:
+            raise ValueError(f"Invalid room_polygon: {str(e)}")
+
+        # Calculate direction_angle for each window
+        results = {}
+        for window_id, window_params in parameters["windows"].items():
+            try:
+                # Validate window has required coordinates
+                required_coords = ["x1", "y1", "x2", "y2"]
+                missing = [coord for coord in required_coords if coord not in window_params]
+                if missing:
+                    raise ValueError(f"Window '{window_id}' missing required coordinates: {', '.join(missing)}")
+
+                # Create window geometry (z coordinates not needed for direction calculation)
+                window_geom = WindowGeometry(
+                    x1=window_params["x1"],
+                    y1=window_params["y1"],
+                    z1=window_params.get("z1", 0.0),  # Default z values if not provided
+                    x2=window_params["x2"],
+                    y2=window_params["y2"],
+                    z2=window_params.get("z2", 1.0)
+                )
+
+                # Calculate direction angle
+                direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                results[window_id] = direction_angle
+
+                self._logger.info(
+                    f"Calculated direction_angle for '{window_id}': {direction_angle:.4f} rad "
+                    f"({direction_angle * 180 / 3.14159:.2f}°)"
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to calculate direction_angle for window '{window_id}': {str(e)}"
+                self._logger.error(error_msg)
+                raise ValueError(error_msg)
+
+        return results
 
 
 class EncodingServiceFactory:
