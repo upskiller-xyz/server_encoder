@@ -5,7 +5,7 @@ import numpy as np
 from src.components.interfaces import IImageBuilder
 from src.components.enums import ModelType, RegionType, ParameterName, PARAMETER_REGIONS
 from src.components.region_encoders import RegionEncoderFactory
-
+from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
 
 class RoomImageBuilder(IImageBuilder):
     """
@@ -130,8 +130,7 @@ class RoomImageDirector:
         Returns:
             Parameters with rotated geometry
         """
-        from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
-        from src.components.enums import FACADE_ROTATION_MAP
+        
 
         # Get window parameters
         window_params = all_parameters.get(RegionType.WINDOW.value, {})
@@ -166,69 +165,89 @@ class RoomImageDirector:
         if window_x1 is None:
             return all_parameters
 
-        # If direction_angle is provided, use it for rotation
-        # Otherwise fall back to old facade orientation logic
-        if direction_angle is not None:
-            # direction_angle is in radians, shows where window is currently pointing
-            # We want it to point right (0 radians), so rotation = -direction_angle
-            rotation_angle = -direction_angle * 180 / math.pi  # Convert to degrees
+        # EXPERIMENTAL: Calculate direction_angle from room polygon if available
+        room_params = all_parameters.get(RegionType.ROOM.value, {})
+        if ParameterName.ROOM_POLYGON.value in room_params:
+            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
+            polygon = polygon_data
+            if not isinstance(polygon_data, RoomPolygon):
+                polygon = RoomPolygon.from_dict(polygon_data)
 
-            # If already pointing right (within tolerance), no rotation needed
-            if abs(rotation_angle) < 0.01:
-                return all_parameters
-        else:
-            # Fallback: use old facade orientation logic
-            window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0)
-            facade_angle = window_geom.get_facade_orientation()
+            # Calculate direction from polygon
+            try:
+                temp_window_geom = WindowGeometry(
+                    window_x1, window_y1, 0,
+                    window_x2, window_y2, 0,
+                    direction_angle=direction_angle
+                )
+                calculated_direction = temp_window_geom.calculate_direction_from_polygon(polygon)
 
-            if abs(facade_angle) < 0.01:  # Already south-facing
-                return all_parameters
+                if direction_angle is not None:
+                    print(f"  Input direction_angle = {direction_angle:.4f} rad ({direction_angle * 180 / math.pi:.2f}°)")
+                    diff = abs(calculated_direction - direction_angle)
+                    # Handle wraparound (e.g., 359° vs 1°)
+                    if diff > math.pi:
+                        diff = 2 * math.pi - diff
+                    print(f"  Difference = {diff:.4f} rad ({diff * 180 / math.pi:.2f}°)")
+                else:
+                    print(f"  No input direction_angle provided, using calculated value")
+                direction_angle = calculated_direction
+            except ValueError as e:
+                print(f"  Could not calculate direction from polygon: {e}")
 
-            # Get rotation angle from map
-            rotation_angle = FACADE_ROTATION_MAP.get(facade_angle, 0.0)
+        rotation_angle = direction_angle * 180 / math.pi  # Convert to degrees
+
+        # If already pointing right (within tolerance), no rotation needed
+        if abs(rotation_angle) < 0.01:
+            return all_parameters
+            
 
         origin = Point2D(0, 0)
-        window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
+        temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
+
+        # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
+        wall_thickness_m = temp_window_geom.wall_thickness
 
         # Make a deep copy of parameters to avoid modifying original
         rotated_params = copy.deepcopy(all_parameters)
 
         # Rotate window geometry
-        rotated_window = window_geom.rotate(rotation_angle, origin)
+        rotated_window = temp_window_geom.rotate(rotation_angle, origin)
         window_params_copy = rotated_params[RegionType.WINDOW.value]
-        window_params_copy[ParameterName.X1.value] = rotated_window.x1
-        window_params_copy[ParameterName.Y1.value] = rotated_window.y1
-        window_params_copy[ParameterName.X2.value] = rotated_window.x2
-        window_params_copy[ParameterName.Y2.value] = rotated_window.y2
+
+        room_params = self.update_window_coords(window_params_copy, rotated_window, wall_thickness_m)
 
         # Rotate room polygon if present
         room_params = rotated_params.get(RegionType.ROOM.value, {})
         if ParameterName.ROOM_POLYGON.value in room_params:
             polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
-            if isinstance(polygon_data, RoomPolygon):
-                polygon = polygon_data
-            else:
+            polygon = polygon_data
+            if not isinstance(polygon_data, RoomPolygon):
                 polygon = RoomPolygon.from_dict(polygon_data)
 
             rotated_polygon = polygon.rotate(rotation_angle, origin)
             room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
 
-            # Also update window coordinates in room parameters
-            room_params[ParameterName.X1.value] = rotated_window.x1
-            room_params[ParameterName.Y1.value] = rotated_window.y1
-            room_params[ParameterName.X2.value] = rotated_window.x2
-            room_params[ParameterName.Y2.value] = rotated_window.y2
+            room_params = self.update_window_coords(room_params, rotated_window, wall_thickness_m)
 
-            # Remove direction_angle from room params since we've already applied the rotation
-            # This prevents double-rotation in to_pixel_array()
-            if ParameterName.DIRECTION_ANGLE.value in room_params:
-                del room_params[ParameterName.DIRECTION_ANGLE.value]
+            # Set direction_angle to 0 after rotation (window now points right)
+            # This prevents re-calculation in to_pixel_array()
+            room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
 
-        # Remove direction_angle from window params since we've already applied the rotation
-        if ParameterName.DIRECTION_ANGLE.value in rotated_params.get(RegionType.WINDOW.value, {}):
-            del rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value]
+        # Set direction_angle to 0 after rotation (window now points right)
+        if RegionType.WINDOW.value in rotated_params:
+            rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value] = 0.0
 
         return rotated_params
+    
+    @staticmethod
+    def update_window_coords(param_dict:dict, window:WindowGeometry, thickness:float):
+        param_dict[ParameterName.X1.value] = window.x1
+        param_dict[ParameterName.Y1.value] = window.y1
+        param_dict[ParameterName.X2.value] = window.x2
+        param_dict[ParameterName.Y2.value] = window.y2
+        param_dict[ParameterName.WALL_THICKNESS.value] = thickness
+        return param_dict
 
     def construct_from_flat_parameters(
         self,
@@ -328,7 +347,8 @@ class RoomImageDirector:
         # Copy window geometry to room
         coord_keys = [ParameterName.X1.value, ParameterName.Y1.value,
                       ParameterName.X2.value, ParameterName.Y2.value,
-                      ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value]
+                      ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value,
+                      ParameterName.WALL_THICKNESS.value]
 
         [grouped[room_key].update({k: grouped[window_key][k]})
          for k in coord_keys if k in grouped[window_key]]

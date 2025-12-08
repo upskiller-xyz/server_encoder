@@ -35,6 +35,11 @@ class ImageGraphicsConstants:
     ROOM_FACADE_OFFSET_PX: int = 1  # pixels offset from window for C-frame adjacency
 
     @classmethod
+    def get_pixel_value(cls, value:float, 
+                        image_size:int=BASE_IMAGE_SIZE_PX):
+        return round(value / cls.get_resolution(image_size))
+
+    @classmethod
     def get_resolution(cls, image_size: int) -> float:
         """
         Calculate resolution (meters per pixel) for given image size

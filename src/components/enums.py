@@ -129,6 +129,7 @@ class ParameterName(Enum):
     Y2 = "y2"
     Z2 = "z2"
     DIRECTION_ANGLE = "direction_angle"
+    WALL_THICKNESS = "wall_thickness"
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)
@@ -185,6 +186,7 @@ PARAMETER_REGIONS = {
     ParameterName.Y2.value: RegionType.WINDOW,
     ParameterName.Z2.value: RegionType.WINDOW,
     ParameterName.DIRECTION_ANGLE.value: RegionType.WINDOW,
+    ParameterName.WALL_THICKNESS.value: RegionType.WINDOW,
 
     # Obstruction bar parameters
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
@@ -202,6 +204,17 @@ class EncoderType(str, Enum):
     LINEAR = "linear"
     ANGLE = "angle"
     REFLECTANCE = "reflectance"
+
+
+class GeometryType(str, Enum):
+    """Shapely geometry type enumeration (Enumerator Pattern)"""
+    POLYGON = "Polygon"
+    MULTI_POLYGON = "MultiPolygon"
+    GEOMETRY_COLLECTION = "GeometryCollection"
+    POINT = "Point"
+    LINE_STRING = "LineString"
+    MULTI_POINT = "MultiPoint"
+    MULTI_LINE_STRING = "MultiLineString"
 
 
 # Default parameter values map (Strategy Pattern)

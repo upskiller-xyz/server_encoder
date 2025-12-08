@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from abc import ABC, abstractmethod
 from src.components.interfaces import IEncodingService
-from src.components.enums import ModelType
+from src.components.enums import ModelType, ParameterName
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.encoders import EncoderFactory
 from src.components.geometry import WindowBorderValidator, WindowHeightValidator
@@ -67,9 +67,9 @@ class WindowSillHeightCalculator(IParameterCalculator):
 
     def can_calculate(self, parameters: Dict[str, Any]) -> bool:
         """Check if we have window geometry and floor height"""
-        has_window_geometry = "window_geometry" in parameters
-        has_z_coords = "z1" in parameters and "z2" in parameters
-        has_floor_height = "floor_height_above_terrain" in parameters
+        has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
+        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
+        has_floor_height = ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters
 
         return (has_window_geometry or has_z_coords) and has_floor_height
 
@@ -88,15 +88,12 @@ class WindowSillHeightCalculator(IParameterCalculator):
         """
         try:
             # Extract Z coordinates
-            if "window_geometry" in parameters:
-                geometry = parameters["window_geometry"]
-                z1 = float(geometry.get("z1"))
-                z2 = float(geometry.get("z2"))
-            else:
-                z1 = float(parameters["z1"])
-                z2 = float(parameters["z2"])
+            if ParameterName.WINDOW_GEOMETRY.value in parameters:
+                parameters: dict = parameters[ParameterName.WINDOW_GEOMETRY.value]
+            z1 = float(parameters.get(ParameterName.Z1.value, 0))
+            z2 = float(parameters.get(ParameterName.Z2.value, 0))
 
-            floor_height = float(parameters["floor_height_above_terrain"])
+            floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
 
             # Calculate: min(z1, z2) - floor_height, capped at 0
             window_bottom = min(z1, z2)
@@ -133,8 +130,8 @@ class WindowHeightCalculator(IParameterCalculator):
 
     def can_calculate(self, parameters: Dict[str, Any]) -> bool:
         """Check if we have window Z coordinates"""
-        has_window_geometry = "window_geometry" in parameters
-        has_z_coords = "z1" in parameters and "z2" in parameters
+        has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
+        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
 
         return has_window_geometry or has_z_coords
 
@@ -154,27 +151,24 @@ class WindowHeightCalculator(IParameterCalculator):
         """
         try:
             # Extract Z coordinates
-            if "window_geometry" in parameters:
-                geometry = parameters["window_geometry"]
-                z1 = float(geometry.get("z1"))
-                z2 = float(geometry.get("z2"))
-            else:
-                z1 = float(parameters["z1"])
-                z2 = float(parameters["z2"])
+            if ParameterName.WINDOW_GEOMETRY.value in parameters:
+                parameters = parameters[ParameterName.WINDOW_GEOMETRY.value]
+                
+            z1 = float(parameters[ParameterName.Z1.value])
+            z2 = float(parameters[ParameterName.Z2.value])
 
             window_bottom = min(z1, z2)
             window_top = max(z1, z2)
 
             # Check if floor height is available
-            if "floor_height_above_terrain" in parameters:
-                floor_height = float(parameters["floor_height_above_terrain"])
-
+            if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters:
+                floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
+                
+                window_height = window_top - window_bottom
                 # If window bottom is below floor, calculate height from floor
                 if window_bottom < floor_height:
                     window_height = window_top - floor_height
-                else:
-                    # Normal case: full window height
-                    window_height = window_top - window_bottom
+                    
             else:
                 # No floor height available, use full window height
                 window_height = abs(z2 - z1)
@@ -339,14 +333,14 @@ class EncodingService(IEncodingService):
             ValueError: If parameters are invalid
         """
         # Check if multiple windows are provided
-        if "windows" not in parameters:
+        if ParameterName.WINDOWS.value not in parameters:
             # Single window case - return as dict for consistency
             single_image = self.encode_room_image(parameters, model_type)
             return {"window_1": single_image}
 
         self._logger.info(
             f"Encoding multi-window images - model_type: {model_type.value}, "
-            f"window_count: {len(parameters['windows'])}"
+            f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
 
         # Build multiple images using director
@@ -392,13 +386,13 @@ class EncodingService(IEncodingService):
             (is_valid, error_message)
         """
         # Check if using unified structure with windows
-        if "windows" in parameters:
+        if ParameterName.WINDOWS.value in parameters:
             # Check if windows is a dict (expected format)
-            if not isinstance(parameters["windows"], dict):
+            if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
                 return False, "Parameter 'windows' must be a dictionary mapping window_id to window parameters"
 
             # Validate each window separately
-            for window_id, window_params in parameters["windows"].items():
+            for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
                 # Check if window_params is a dict
                 if not isinstance(window_params, dict):
                     return False, f"Window '{window_id}' parameters must be a dictionary, got {type(window_params).__name__}"
@@ -406,7 +400,7 @@ class EncodingService(IEncodingService):
                 # Merge shared params with window params for validation
                 merged_params = {**parameters, **window_params}
                 # Remove windows key from merged params to avoid recursion
-                merged_params.pop("windows", None)
+                merged_params.pop(ParameterName.WINDOWS.value, None)
 
                 is_valid, error_msg = self._validate_flat_parameters(
                     merged_params, model_type, window_id
