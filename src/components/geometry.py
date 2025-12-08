@@ -528,15 +528,13 @@ class RoomPolygon:
         return GeometryAdapter.extract_coordinates(clipped, fallback_coords=pixel_coords)
 
     @classmethod
-    def from_dict(cls, data: Union[List[dict], List[List[float]]]) -> 'RoomPolygon':
+    def from_dict(cls, data: List) -> 'RoomPolygon':
         """
-        Create polygon from list of coordinate dictionaries or lists (Factory Method Pattern)
-
-        Uses Strategy Pattern via PolygonParserFactory to select appropriate parser.
+        Create polygon from list of coordinate dictionaries or lists
 
         Args:
             data: List of dicts like [{"x": 0, "y": 0}, {"x": 3, "y": 0}, ...]
-                  OR list of lists like [[0, 0], [3, 0], ...]
+                  OR list of lists/tuples like [[0, 0], [3, 0], ...] or [(0, 0), (3, 0), ...]
 
         Returns:
             RoomPolygon instance
@@ -544,20 +542,24 @@ class RoomPolygon:
         Raises:
             ValueError: If data format is invalid
         """
-        # Validate input type
-        if not isinstance(data, list) or not data:
+        if not data:
+            raise ValueError("Polygon data cannot be empty")
+
+        # Check format of first element to determine data structure
+        first_element = data[0]
+
+        if isinstance(first_element, dict):
+            # List of dictionaries format: [{"x": 0, "y": 0}, ...]
+            vertices = [(point["x"], point["y"]) for point in data]
+        elif isinstance(first_element, (list, tuple)):
+            # List of lists/tuples format: [[0, 0], ...] or [(0, 0), ...]
+            vertices = [(point[0], point[1]) for point in data]
+        else:
             raise ValueError(
-                f"Parameter 'room_polygon' must be a non-empty list. "
-                f"Got type: {type(data).__name__}, value: {data}"
+                f"Invalid polygon data format. Expected list of dicts or list of lists/tuples, "
+                f"but got list of {type(first_element).__name__}"
             )
 
-        # Factory Pattern: Get appropriate parser for data format
-        parser = PolygonParserFactory.get_parser(data)
-
-        # Strategy Pattern: Use selected parser to extract vertices
-        vertices = parser.parse(data)
-
-        # Create and return polygon instance
         return cls(vertices)
 
 class GeometryOps:

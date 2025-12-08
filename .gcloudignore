@@ -1,12 +1,11 @@
 *.png
 saved_model
-*.sh
 # *.keras
+*.h5
 
 *.ipynb
 
 *.csv
-*.json
 .venv/*
 *.pdf
 *.pptx
@@ -14,9 +13,16 @@ saved_model
 *.zip
 .bashrc
 .env
+.env.*
 
 *.xls
 *.DS_Store
+
+# Deployment files
+deployment/
+*.md
+README.md
+docs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
