@@ -941,11 +941,13 @@ class WindowGeometry:
 
         room_poly = ShapelyPolygon(polygon_coords)        
 
+        # Select the perpendicular pointing OUTSIDE the room (not inside)
+        # Windows face outward, away from the room interior
         calculated_angle = perps[0]
-        res = [perp for perp in perps if GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
+        res = [perp for perp in perps if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
         if len(res)>0:
             calculated_angle = res[0]
-            
+
         calculated_angle = GeometryOps.normalize_angle(calculated_angle)
 
         return calculated_angle
