@@ -28,6 +28,7 @@ Encode room geometry and parameters into daylight prediction images.
 ```json
 {
   "model_type": "df_default" | "da_default" | "df_custom" | "da_custom",
+  "encoding_scheme": "hsv" | "rgb" (optional, default: "hsv"),
   "parameters": {
     // See request_schema.md for complete structure
   }
@@ -68,6 +69,15 @@ Encode room geometry and parameters into daylight prediction images.
 | `df_custom` | Daylight Factor with customizable material reflectances |
 | `da_custom` | Daylight Autonomy with customizable material reflectances |
 
+## Encoding Schemes
+
+| Value | Description |
+|-------|-------------|
+| `hsv` | **HSV encoding scheme** (Default) - Parameters mapped to RGBA channels as Hue/Saturation/Value/Alpha. See [docs_internal/hsv_encoding.csv](../docs_internal/hsv_encoding.csv) for complete mapping. |
+| `rgb` | **RGB encoding scheme** (Legacy) - Original parameter-to-channel mapping. |
+
+**Note:** Both schemes use RGBA channels (Red, Green, Blue, Alpha). The "HSV" name refers to the parameter assignment convention (Hue/Saturation/Value), not color space conversion.
+
 ## Examples
 
 ### Single Window Request
@@ -86,7 +96,7 @@ curl -X POST http://localhost:8081/encode \
   -o encoded_room_windows.zip
 ```
 
-### Python Example
+### Python Example (HSV encoding - default)
 ```python
 import requests
 import json
@@ -94,6 +104,7 @@ import json
 url = "http://localhost:8081/encode"
 payload = {
     "model_type": "df_default",
+    "encoding_scheme": "hsv",  # Optional - HSV is default
     "parameters": {
         "height_roof_over_floor": 2.7,
         "floor_height_above_terrain": 3.0,
@@ -119,4 +130,16 @@ if response.status_code == 200:
         f.write(response.content)
 else:
     print(f"Error: {response.json()}")
+```
+
+### Python Example (RGB encoding - legacy)
+```python
+# Same as above, but specify "encoding_scheme": "rgb" for legacy encoding
+payload = {
+    "model_type": "df_default",
+    "encoding_scheme": "rgb",  # Use RGB (legacy) encoding
+    "parameters": {
+        # ... same parameters as above
+    }
+}
 ```
