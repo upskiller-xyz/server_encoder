@@ -177,11 +177,9 @@ class DirectionAngleCalculator:
                 direction_angle=current_direction_angle
             )
             calculated_direction = temp_window_geom.calculate_direction_from_polygon(polygon)
-            print(f"[ROTATION] Calculated direction angle: {calculated_direction:.4f} rad ({calculated_direction * 180 / math.pi:.2f}°)")
-            print(f"[ROTATION] Current direction angle: {current_direction_angle}")
+            
 
             if current_direction_angle is None:
-                print(f"[ROTATION] Using calculated direction angle")
                 return calculated_direction
         except ValueError:
             pass
@@ -215,17 +213,14 @@ class GeometryRotator:
             Parameters with rotated geometry
         """
         direction_angle_degrees = direction_angle * 180 / math.pi  # Convert to degrees
-        print(f"[ROTATION] Direction angle in radians: {direction_angle:.4f}, degrees: {direction_angle_degrees:.2f}°")
 
         # If already pointing right (within tolerance), no rotation needed
         if abs(direction_angle_degrees) < 0.01:
-            print(f"[ROTATION] No rotation needed (already pointing right)")
             return all_parameters
 
         # Rotation angle is negative of direction angle (rotate opposite direction to align to 0°)
         rotation_angle = -direction_angle_degrees
-        print(f"[ROTATION] Rotating geometry by {rotation_angle:.2f}° to align window to point right (from {direction_angle_degrees:.2f}° to 0°)")
-
+        
         origin = Point2D(0, 0)
         temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
 
@@ -236,26 +231,18 @@ class GeometryRotator:
         rotated_params = copy.deepcopy(all_parameters)
 
         # Rotate window geometry
-        print(f"[ROTATION] Before rotation: window ({window_x1:.2f}, {window_y1:.2f}) to ({window_x2:.2f}, {window_y2:.2f})")
         rotated_window = temp_window_geom.rotate(rotation_angle, origin)
-        print(f"[ROTATION] After rotation by {rotation_angle:.2f}°: window ({rotated_window.x1:.2f}, {rotated_window.y1:.2f}) to ({rotated_window.x2:.2f}, {rotated_window.y2:.2f})")
         window_params_copy = rotated_params[RegionType.WINDOW.value]
 
         GeometryRotator._update_window_coords(window_params_copy, rotated_window, wall_thickness_m)
 
         # Rotate room polygon if present
         room_params = rotated_params.get(RegionType.ROOM.value, {})
-        print(f"[ROTATION] Room params present: {room_params is not None and len(room_params) > 0}")
         if ParameterName.ROOM_POLYGON.value in room_params:
             polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
             polygon = polygon_data if isinstance(polygon_data, RoomPolygon) else RoomPolygon.from_dict(polygon_data)
 
-            print(f"[ROTATION] Room polygon before rotation: {len(polygon.vertices)} vertices")
-            print(f"[ROTATION] First 3 vertices: {[(v.x, v.y) for v in polygon.vertices[:3]]}")
-
             rotated_polygon = polygon.rotate(rotation_angle, origin)
-            print(f"[ROTATION] Room polygon after rotation by {rotation_angle:.2f}°: {len(rotated_polygon.vertices)} vertices")
-            print(f"[ROTATION] First 3 rotated vertices: {[(v.x, v.y) for v in rotated_polygon.vertices[:3]]}")
 
             room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
 
@@ -263,9 +250,6 @@ class GeometryRotator:
 
             # Set direction_angle to 0 after rotation (window now points right)
             room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
-            print(f"[ROTATION] Set direction_angle to 0.0 after rotation")
-        else:
-            print(f"[ROTATION] No room polygon found in room_params, keys: {list(room_params.keys())}")
 
         # Set direction_angle to 0 after rotation (window now points right)
         if RegionType.WINDOW.value in rotated_params:
@@ -359,15 +343,12 @@ class RoomImageDirector:
 
         # Calculate direction_angle from room polygon if available
         room_params = all_parameters.get(RegionType.ROOM.value, {})
-        print(f"[ROTATION] all_parameters keys: {list(all_parameters.keys())}")
-        print(f"[ROTATION] room_params keys: {list(room_params.keys()) if room_params else 'None'}")
 
         direction_angle = DirectionAngleCalculator.calculate_from_polygon(
             room_params, window_x1, window_y1, window_x2, window_y2, direction_angle
         )
 
         # Rotate geometry using GeometryRotator
-        print(f"[ROTATION] Calling GeometryRotator.rotate_if_needed with direction_angle: {direction_angle}")
         return GeometryRotator.rotate_if_needed(
             all_parameters, direction_angle, window_x1, window_y1, window_x2, window_y2
         )

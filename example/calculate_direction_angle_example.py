@@ -69,8 +69,6 @@ def calculate_direction_angles():
                 print(f"  Direction angle: {angle_deg:.2f}°")
 
                 # Interpret the angle
-                compass_dir = get_compass_direction(angle_deg)
-                print(f"  Facing: {compass_dir}")
 
             return result
         else:
@@ -85,32 +83,6 @@ def calculate_direction_angles():
     except Exception as e:
         print(f"✗ Error: {str(e)}")
         return None
-
-
-def get_compass_direction(angle_degrees: float) -> str:
-    """Convert angle to compass direction."""
-    # Normalize to 0-360
-    angle = angle_degrees % 360
-
-    # Define compass directions (clockwise from east)
-    # 0° = East, 90° = North, 180° = West, 270° = South
-    if 337.5 <= angle or angle < 22.5:
-        return "East"
-    elif 22.5 <= angle < 67.5:
-        return "Northeast"
-    elif 67.5 <= angle < 112.5:
-        return "North"
-    elif 112.5 <= angle < 157.5:
-        return "Northwest"
-    elif 157.5 <= angle < 202.5:
-        return "West"
-    elif 202.5 <= angle < 247.5:
-        return "Southwest"
-    elif 247.5 <= angle < 292.5:
-        return "South"
-    else:  # 292.5 <= angle < 337.5
-        return "Southeast"
-
 
 def example_with_single_window():
     """Example with a single window."""
@@ -139,7 +111,7 @@ def example_with_single_window():
         if response.status_code == 200:
             result = response.json()
             angle_deg = result["direction_angles_degrees"]["my_window"]
-            print(f"Window orientation: {angle_deg:.2f}° ({get_compass_direction(angle_deg)})")
+           
             return result
         else:
             print(f"Error: {response.status_code}")
