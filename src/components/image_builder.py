@@ -19,6 +19,7 @@ class RoomImageBuilder(IImageBuilder):
         self._model_type: Optional[ModelType] = None
         self._encoding_scheme = encoding_scheme
         self._region_encoder_factory = RegionEncoderFactory()
+        self._room_mask: Optional[np.ndarray] = None
         self.reset()
 
     def reset(self) -> 'RoomImageBuilder':
@@ -26,6 +27,7 @@ class RoomImageBuilder(IImageBuilder):
         # Create 128×128 RGBA image initialized to zeros
         self._image = np.zeros((128, 128, 4), dtype=np.uint8)
         self._model_type = None
+        self._room_mask = None
         return self
 
     def set_model_type(self, model_type: ModelType) -> 'RoomImageBuilder':
@@ -49,6 +51,11 @@ class RoomImageBuilder(IImageBuilder):
         self._validate_state()
         encoder = self._region_encoder_factory.get_encoder(region_type, self._encoding_scheme)
         self._image = encoder.encode_region(self._image, parameters, self._model_type)
+
+        # Capture room mask when encoding room region
+        if region_type == RegionType.ROOM:
+            self._room_mask = encoder.get_last_mask()
+
         return self
 
     def build(self) -> np.ndarray:
@@ -65,6 +72,17 @@ class RoomImageBuilder(IImageBuilder):
         if self._image is None:
             raise RuntimeError("Image not initialized")
         return self._image.copy()
+
+    def get_room_mask(self) -> Optional[np.ndarray]:
+        """
+        Get the room mask (ones in room area, zeros elsewhere)
+
+        Returns:
+            128×128 single-channel mask or None if no room was encoded
+        """
+        if self._room_mask is None:
+            return None
+        return self._room_mask.copy()
 
     def _validate_state(self) -> None:
         """Validate builder state before operations"""
@@ -196,15 +214,17 @@ class GeometryRotator:
         Returns:
             Parameters with rotated geometry
         """
-        rotation_angle = direction_angle * 180 / math.pi  # Convert to degrees
-        print(f"[ROTATION] Direction angle in radians: {direction_angle:.4f}, degrees: {rotation_angle:.2f}°")
+        direction_angle_degrees = direction_angle * 180 / math.pi  # Convert to degrees
+        print(f"[ROTATION] Direction angle in radians: {direction_angle:.4f}, degrees: {direction_angle_degrees:.2f}°")
 
         # If already pointing right (within tolerance), no rotation needed
-        if abs(rotation_angle) < 0.01:
+        if abs(direction_angle_degrees) < 0.01:
             print(f"[ROTATION] No rotation needed (already pointing right)")
             return all_parameters
 
-        print(f"[ROTATION] Rotating geometry by {rotation_angle:.2f}° to align window to point right")
+        # Rotation angle is negative of direction angle (rotate opposite direction to align to 0°)
+        rotation_angle = -direction_angle_degrees
+        print(f"[ROTATION] Rotating geometry by {rotation_angle:.2f}° to align window to point right (from {direction_angle_degrees:.2f}° to 0°)")
 
         origin = Point2D(0, 0)
         temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
@@ -278,7 +298,7 @@ class RoomImageDirector:
         self,
         model_type: ModelType,
         all_parameters: Dict[str, Any]
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Construct a complete encoded image with all regions
 
@@ -287,7 +307,9 @@ class RoomImageDirector:
             all_parameters: All parameters grouped by region
 
         Returns:
-            Complete encoded image
+            Tuple of (encoded_image, room_mask)
+            - encoded_image: Complete encoded image
+            - room_mask: Room mask (ones in room area, zeros elsewhere) or None
         """
         # Reset and configure builder
         self._builder.reset().set_model_type(model_type)
@@ -308,8 +330,8 @@ class RoomImageDirector:
          for region in region_order
          if region.value in all_parameters]
 
-        # Build final image
-        return self._builder.build()
+        # Build final image and get room mask
+        return self._builder.build(), self._builder.get_room_mask()
 
     def _rotate_geometry_if_needed(self, all_parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -354,7 +376,7 @@ class RoomImageDirector:
         self,
         model_type: ModelType,
         parameters: Dict[str, Any]
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Construct image from flat parameter dictionary
 
@@ -366,15 +388,16 @@ class RoomImageDirector:
             parameters: Dictionary of all parameters (flat or with windows)
 
         Returns:
-            Complete encoded image
+            Tuple of (encoded_image, room_mask)
         """
         # Check if using unified structure with windows
         windows_key = ParameterName.WINDOWS.value
         if windows_key in parameters and isinstance(parameters[windows_key], dict):
             # Use multi-window construction which handles merging
-            images_dict = self.construct_multi_window_images(model_type, parameters)
-            # Return the first (and possibly only) image
-            return next(iter(images_dict.values()))
+            images_dict, masks_dict = self.construct_multi_window_images(model_type, parameters)
+            # Return the first (and possibly only) image and mask
+            first_window = next(iter(images_dict.keys()))
+            return images_dict[first_window], masks_dict.get(first_window)
 
         # Legacy flat structure - group and construct directly
         grouped = self._group_parameters(parameters)
@@ -384,7 +407,7 @@ class RoomImageDirector:
         self,
         model_type: ModelType,
         parameters: Dict[str, Any]
-    ) -> Dict[str, np.ndarray]:
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, Optional[np.ndarray]]]:
         """
         Construct multiple images for multiple windows in the same room
 
@@ -396,13 +419,16 @@ class RoomImageDirector:
             parameters: Parameters including 'windows' dict with per-window configs
 
         Returns:
-            Dictionary mapping window_id to encoded image
-            Example: {"window_1": image1, "window_2": image2}
+            Tuple of (images_dict, masks_dict)
+            - images_dict: Dictionary mapping window_id to encoded image
+            - masks_dict: Dictionary mapping window_id to room mask
+            Example: ({"window_1": image1}, {"window_1": mask1})
         """
         windows_key = ParameterName.WINDOWS.value
         if windows_key not in parameters:
             # Single window case - fallback to normal construction
-            return {"window_1": self.construct_from_flat_parameters(model_type, parameters)}
+            image, mask = self.construct_from_flat_parameters(model_type, parameters)
+            return {"window_1": image}, {"window_1": mask}
 
         windows_config = parameters[windows_key]
         if not isinstance(windows_config, dict):
@@ -411,14 +437,18 @@ class RoomImageDirector:
         # Extract shared parameters (everything except windows)
         shared_params = {k: v for k, v in parameters.items() if k != windows_key}
 
-        # Build images using dict comprehension
-        return {
-            window_id: self.construct_from_flat_parameters(
+        # Build images and masks
+        images_dict = {}
+        masks_dict = {}
+        for window_id, window_params in windows_config.items():
+            image, mask = self.construct_from_flat_parameters(
                 model_type,
                 {**shared_params, **window_params}
             )
-            for window_id, window_params in windows_config.items()
-        }
+            images_dict[window_id] = image
+            masks_dict[window_id] = mask
+
+        return images_dict, masks_dict
 
     @staticmethod
     def _group_parameters(parameters: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

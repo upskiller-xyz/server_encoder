@@ -71,7 +71,7 @@ class ServerApplication:
     def _setup_routes(self) -> None:
         """Setup Flask routes"""
         self._app.add_url_rule("/", "get_status", self._get_status, methods=["GET"])
-        self._app.add_url_rule("/encode", "encode", self._encode_room, methods=["POST"])
+        self._app.add_url_rule("/encode", "encode", self._encode_room_arrays, methods=["POST"])
         self._app.add_url_rule("/calculate-direction", "calculate_direction", self._calculate_direction, methods=["POST"])
 
     def _extract_model_type_prefix(self, model_type_str: str) -> str:
@@ -102,38 +102,16 @@ class ServerApplication:
         """Get server status endpoint"""
         return jsonify(self._controller.get_status())
 
-    def _encode_room(self):
+    def _encode_room_arrays(self):
         """
-        Encode room parameters into an image or multiple images (one per window)
+        Encode room parameters into numpy arrays (returns .npz file)
 
-        Expected JSON payload (unified structure):
-        {
-            "model_type": "df_default" | "da_default" | "df_custom" | "da_custom",
-            "encoding_scheme": "hsv" | "rgb" (optional, default: "hsv"),
-            "parameters": {
-                "height_roof_over_floor": 3.0,
-                "floor_height_above_terrain": 2.0,
-                ... (shared room parameters)
-                "windows": {
-                    "window1": {
-                        "window_sill_height": 0.9,
-                        "window_frame_ratio": 0.8,
-                        "window_height": 1.5,
-                        "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                        "x2": 0.6, "y2": 0.0, "z2": 2.4,
-                        "obstruction_angle_horizon": 45.0,
-                        "obstruction_angle_zenith": 30.0,
-                        ... (window-specific parameters)
-                    },
-                    "window2": {
-                        ... (optional additional windows)
-                    }
-                }
-            }
-        }
+        Expected JSON payload: Same as /encode endpoint
 
         Returns:
-            PNG image file (single window) or ZIP file (multiple windows)
+            .npz file containing:
+            - For single window: 'image' and 'mask' arrays
+            - For multi-window: 'window1_image', 'window1_mask', 'window2_image', etc.
         """
         try:
             # Get JSON data
@@ -159,8 +137,6 @@ class ServerApplication:
                 )
 
             # Parse model type
-            # Extract model type prefix (strip version suffix like "_2.0.1")
-            # e.g., "df_default_2.0.1" -> "df_default"
             model_type_str = data["model_type"]
             model_type_prefix = self._extract_model_type_prefix(model_type_str)
 
@@ -195,48 +171,61 @@ class ServerApplication:
 
             # Log request
             self._logger.info(
-                f"{'Single' if is_single_window else 'Multi'}-window encoding request - "
+                f"{'Single' if is_single_window else 'Multi'}-window array encoding request - "
                 f"model_type: {model_type_str}, encoding_scheme: {encoding_scheme_str}, window_count: {window_count}"
             )
 
-            # Encode image(s)
+            # Encode arrays
+            import numpy as np
+
             if is_single_window:
-                # Single window - return PNG file
-                image_bytes = encoding_service.encode_room_image(
+                # Single window
+                image_array, mask_array = encoding_service.encode_room_image_arrays(
                     parameters=parameters,
                     model_type=model_type
                 )
 
+                # Create NPZ file
+                npz_buffer = io.BytesIO()
+                arrays_dict = {'image': image_array}
+                if mask_array is not None:
+                    arrays_dict['mask'] = mask_array
+                np.savez_compressed(npz_buffer, **arrays_dict)
+                npz_buffer.seek(0)
+
                 return send_file(
-                    io.BytesIO(image_bytes),
-                    mimetype='image/png',
+                    npz_buffer,
+                    mimetype='application/octet-stream',
                     as_attachment=True,
-                    download_name='encoded_room.png'
+                    download_name='encoded_room.npz'
                 )
             else:
-                # Multiple windows - return ZIP file
-                image_dict = encoding_service.encode_multi_window_images(
+                # Multiple windows
+                images_dict, masks_dict = encoding_service.encode_multi_window_images_arrays(
                     parameters=parameters,
                     model_type=model_type
                 )
 
-                # Create ZIP file in memory
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for window_id, image_bytes in image_dict.items():
-                        zip_file.writestr(f'{window_id}.png', image_bytes)
+                # Create NPZ file with all arrays
+                npz_buffer = io.BytesIO()
+                arrays_dict = {}
+                for window_id in images_dict.keys():
+                    arrays_dict[f'{window_id}_image'] = images_dict[window_id]
+                    if masks_dict[window_id] is not None:
+                        arrays_dict[f'{window_id}_mask'] = masks_dict[window_id]
 
-                zip_buffer.seek(0)
+                np.savez_compressed(npz_buffer, **arrays_dict)
+                npz_buffer.seek(0)
 
                 self._logger.info(
-                    f"Multi-window encoding complete - {len(image_dict)} images in ZIP"
+                    f"Multi-window array encoding complete - {len(images_dict)} images in NPZ"
                 )
 
                 return send_file(
-                    zip_buffer,
-                    mimetype='application/zip',
+                    npz_buffer,
+                    mimetype='application/octet-stream',
                     as_attachment=True,
-                    download_name='encoded_room_windows.zip'
+                    download_name='encoded_room_windows.npz'
                 )
 
         except BadRequest:
@@ -252,12 +241,12 @@ class ServerApplication:
             # Log encoding error with full traceback
             error_trace = traceback.format_exc()
             self._logger.error(
-                f"Encoding failed: {str(e)}\n"
+                f"Array encoding failed: {str(e)}\n"
                 f"Error type: {type(e).__name__}\n"
                 f"Traceback:\n{error_trace}"
             )
             return jsonify({
-                "error": f"Encoding failed: {str(e)}",
+                "error": f"Array encoding failed: {str(e)}",
                 "error_type": type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 

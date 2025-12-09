@@ -952,15 +952,15 @@ class WindowGeometry:
         print(f"[DIRECTION] Perp {perps[0]:.4f} ({perps[0] * 180 / math.pi:.2f}°) points inside: {perp0_inside}")
         print(f"[DIRECTION] Perp {perps[1]:.4f} ({perps[1] * 180 / math.pi:.2f}°) points inside: {perp1_inside}")
 
-        # Select the perpendicular pointing INSIDE the room (not outside)
-        # Windows should be encoded based on the interior direction
+        # Select the perpendicular pointing OUTSIDE the room (window facing direction)
+        # Windows face outward from the building
         calculated_angle = perps[0]
-        res = [perp for perp in perps if GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
+        res = [perp for perp in perps if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
         if len(res)>0:
             calculated_angle = res[0]
-            print(f"[DIRECTION] Selected inward-facing perpendicular: {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
+            print(f"[DIRECTION] Selected outward-facing perpendicular: {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
         else:
-            print(f"[DIRECTION] Using default perpendicular (both point outside?): {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
+            print(f"[DIRECTION] Using default perpendicular (both point inside?): {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
 
         calculated_angle = GeometryOps.normalize_angle(calculated_angle)
         print(f"[DIRECTION] Final normalized angle: {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
