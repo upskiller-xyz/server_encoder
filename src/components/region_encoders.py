@@ -3,7 +3,7 @@ import math
 import numpy as np
 import cv2
 from src.components.interfaces import IRegionEncoder
-from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING
+from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES
 from src.components.encoders import EncoderFactory
 from src.components.geometry import RoomPolygon,  WindowGeometry
 from src.components.graphics_constants import GRAPHICS_CONSTANTS
@@ -31,13 +31,18 @@ def validate_required_parameters(
 class BaseRegionEncoder(IRegionEncoder):
     """Base class for region encoders with common functionality"""
 
-    def __init__(self, region_type: RegionType):
+    def __init__(self, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
         self._region_type = region_type
         self._encoder_factory = EncoderFactory()
+        self._encoding_scheme = encoding_scheme
 
     def get_region_type(self) -> RegionType:
         """Get the region type"""
         return self._region_type
+
+    def set_encoding_scheme(self, encoding_scheme: EncodingScheme) -> None:
+        """Set the encoding scheme for encoding"""
+        self._encoding_scheme = encoding_scheme
 
     def encode_region(
         self,
@@ -57,18 +62,18 @@ class BaseRegionEncoder(IRegionEncoder):
         Raises:
             ValueError: If required parameters are missing
         """
-        
+
         parameters = self._update_parameters(parameters)
         # Validate required parameters
         self._validate_required_parameters(parameters)
 
         mask = self._get_area_mask(image, parameters, model_type)
-        # Get channel mapping for this region
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
+        # Get channel mapping for this region based on encoding scheme
+        channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
 
         _extra_params = self._get_extra(image, parameters)
 
-        image[mask] = self._encode_all_channels(parameters, channel_map, *_extra_params)
+        image[mask] = self._encode_all_channels(parameters, channel_map, model_type, *_extra_params)
 
         return image
 
@@ -135,7 +140,8 @@ class BaseRegionEncoder(IRegionEncoder):
         self,
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
-        channel_type: ChannelType
+        channel_type: ChannelType,
+        model_type: ModelType = None
     ) -> int | np.ndarray:
         """
         Encode a single channel using the channel mapping (Template Method Pattern)
@@ -144,24 +150,38 @@ class BaseRegionEncoder(IRegionEncoder):
             parameters: Parameter dictionary
             channel_map: Mapping from channel types to parameter names
             channel_type: Channel to encode (RED, GREEN, BLUE, or ALPHA)
+            model_type: Model type (for HSV default overrides)
 
         Returns:
             Encoded pixel intensity [0-255]
         """
         param_name = channel_map[channel_type]
         param_value = self._get_parameter_with_default(parameters, param_name)
+
         if param_value is None:
             raise ValueError(
                 f"{self.__class__} parameter '{param_name.value}' is missing or could not be calculated. "
                 f"Available parameters: {list(parameters.keys())}. "
-                
+
             )
+
+        # Check if this is a default value and HSV encoding with an override
+        is_using_default = param_name.value not in parameters
+        if (is_using_default and
+            self._encoding_scheme == EncodingScheme.HSV and
+            model_type is not None):
+            # Check for HSV pixel override
+            override_key = (self._region_type, channel_type, model_type)
+            if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
+                return HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
+
         return self._encode_parameter(param_name.value, param_value)
 
     def _encode_all_channels(
         self,
         parameters: Dict[str, Any],
-        channel_map: Dict[ChannelType, ParameterName]
+        channel_map: Dict[ChannelType, ParameterName],
+        model_type: ModelType = None
     ) -> List[int | np.ndarray]:
         """
         Encode all 4 channels (RGBA) using list comprehension
@@ -169,12 +189,13 @@ class BaseRegionEncoder(IRegionEncoder):
         Args:
             parameters: Parameter dictionary
             channel_map: Mapping from channel types to parameter names
+            model_type: Model type (for HSV default overrides)
 
         Returns:
             List of 4 encoded values [R, G, B, A]
         """
         return [
-            self._encode_channel(parameters, channel_map, channel_type)
+            self._encode_channel(parameters, channel_map, channel_type, model_type)
             for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
         ]
 
@@ -192,8 +213,8 @@ class BackgroundRegionEncoder(BaseRegionEncoder):
     - Alpha: window_orientation (0-360° → 0-1, default=0° South) [OPTIONAL]
     """
 
-    def __init__(self):
-        super().__init__(RegionType.BACKGROUND)
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+        super().__init__(RegionType.BACKGROUND, encoding_scheme)
 
 
 class RoomRegionEncoder(BaseRegionEncoder):
@@ -213,8 +234,8 @@ class RoomRegionEncoder(BaseRegionEncoder):
     - Alpha: ceiling_reflectance (0.5-1 → 0-1, default=1) [OPTIONAL]
     """
 
-    def __init__(self):
-        super().__init__(RegionType.ROOM)
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+        super().__init__(RegionType.ROOM, encoding_scheme)
 
     def _get_area_mask(
         self,
@@ -341,8 +362,8 @@ class WindowRegionEncoder(BaseRegionEncoder):
     - Alpha: window_frame_reflectance (0-1 input → 0-1 normalized, optional, default=0.8)
     """
 
-    def __init__(self):
-        super().__init__(RegionType.WINDOW)  
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+        super().__init__(RegionType.WINDOW, encoding_scheme)  
     
     def _update_parameters(self, params):
         from src.components.encoding_service import ParameterCalculatorRegistry
@@ -442,8 +463,8 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     - Alpha: balcony_reflectance (0-1 input → 0-1 normalized, default=0.8)
     """
 
-    def __init__(self):
-        super().__init__(RegionType.OBSTRUCTION_BAR)
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+        super().__init__(RegionType.OBSTRUCTION_BAR, encoding_scheme)
 
     def encode_region(
         self,
@@ -468,8 +489,8 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         bar_height = dims.obstruction_bar_height
         actual_bar_height = bar_y_end - bar_y_start
 
-        # Get channel mapping
-        channel_map = REGION_CHANNEL_MAPPING[self._region_type]
+        # Get channel mapping based on encoding scheme
+        channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
         channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
 
         for channel_idx, channel_type in enumerate(channel_order):
@@ -479,11 +500,35 @@ class ObstructionBarEncoder(BaseRegionEncoder):
             if param_value is None:
                 raise ValueError(f"Missing parameter '{param_name.value}' for obstruction bar")
 
+            # Check if using default value for HSV override
+            is_using_default = param_name.value not in parameters
+
             # Alpha channel is constant, RGB channels vary per row
             if channel_type == ChannelType.ALPHA:
+                # Check for HSV pixel override
+                if (is_using_default and
+                    self._encoding_scheme == EncodingScheme.HSV and
+                    model_type is not None):
+                    override_key = (self._region_type, channel_type, model_type)
+                    if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
+                        encoded = HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
+                        image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
+                        continue
+
                 encoded = self._encode_parameter(param_name.value, param_value)
                 image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
             else:
+                # Check for HSV pixel override for RGB channels
+                if (is_using_default and
+                    self._encoding_scheme == EncodingScheme.HSV and
+                    model_type is not None):
+                    override_key = (self._region_type, channel_type, model_type)
+                    if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
+                        px = HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
+                        encoded = np.array([px] * actual_bar_height)[:, np.newaxis]
+                        image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
+                        continue
+
                 # Array values that vary per row
                 normalized_array = self._normalize_parameter(param_value, bar_height)
                 encoded = np.array([
@@ -533,7 +578,10 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     def _encode_all_channels(
         self,
         parameters: Dict[str, Any],
-        channel_map: Dict[ChannelType, ParameterName], bar_height:int=64, actual_bar_height:int=64
+        channel_map: Dict[ChannelType, ParameterName],
+        model_type: ModelType = None,
+        bar_height: int = 64,
+        actual_bar_height: int = 64
     ) -> List[int | np.ndarray]:
         """
         Encode all 4 channels (RGBA) using list comprehension
@@ -541,21 +589,26 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         Args:
             parameters: Parameter dictionary
             channel_map: Mapping from channel types to parameter names
+            model_type: Model type (for HSV default overrides)
+            bar_height: Expected bar height
+            actual_bar_height: Actual bar height
 
         Returns:
             List of 4 encoded values [R, G, B, A]
         """
         return [
-            self._encode_channel(parameters, channel_map, channel_type, bar_height, actual_bar_height)
+            self._encode_channel(parameters, channel_map, channel_type, model_type, bar_height, actual_bar_height)
             for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
         ]
-    
+
     def _encode_channel(
         self,
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
         channel_type: ChannelType,
-        bar_height:int=64, actual_bar_height:int=64
+        model_type: ModelType = None,
+        bar_height: int = 64,
+        actual_bar_height: int = 64
     ) -> np.ndarray:
         """
         Encode a single channel using the channel mapping (Template Method Pattern)
@@ -564,6 +617,9 @@ class ObstructionBarEncoder(BaseRegionEncoder):
             parameters: Parameter dictionary
             channel_map: Mapping from channel types to parameter names
             channel_type: Channel to encode (RED, GREEN, BLUE, or ALPHA)
+            model_type: Model type (for HSV default overrides)
+            bar_height: Expected bar height
+            actual_bar_height: Actual bar height
 
         Returns:
             Encoded pixel intensity [0-255]
@@ -576,12 +632,35 @@ class ObstructionBarEncoder(BaseRegionEncoder):
             DEFAULT_PARAMETER_VALUES.get(param_name, parameters.get(param_name.value))
         )
 
+        # Check if this is a default value and HSV encoding with an override
+        is_using_default = param_name.value not in parameters
+
         # Alpha channel is constant, RGB channels vary per row
         if channel_type == ChannelType.ALPHA:
+            # Check for HSV pixel override for alpha channel
+            if (is_using_default and
+                self._encoding_scheme == EncodingScheme.HSV and
+                model_type is not None):
+                override_key = (self._region_type, channel_type, model_type)
+                if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
+                    px = HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
+                    encoded = np.array([px] * bar_height)
+                    return encoded
+
             # Constant value across entire bar
             px = self._encode_parameter(param_name.value, param_value)
             encoded = np.array([px] * bar_height)
         else:
+            # Check for HSV pixel override for RGB channels (less common, but supported)
+            if (is_using_default and
+                self._encoding_scheme == EncodingScheme.HSV and
+                model_type is not None):
+                override_key = (self._region_type, channel_type, model_type)
+                if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
+                    px = HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
+                    encoded = np.array([px] * actual_bar_height)[:, np.newaxis]
+                    return encoded
+
             # Array values that vary per row
             normalized_array = self._normalize_parameter(param_value, bar_height)
             encoded = np.array([
@@ -666,22 +745,25 @@ class ObstructionBarEncoder(BaseRegionEncoder):
 
 
 class RegionEncoderFactory:
-    """Factory for creating region encoders (Factory Pattern + Singleton)"""
+    """Factory for creating region encoders (Factory Pattern + Singleton per encoding scheme)"""
 
-    _instances: Dict[RegionType, IRegionEncoder] = {}
+    _instances: Dict[tuple, IRegionEncoder] = {}
 
     @classmethod
-    def get_encoder(cls, region_type: RegionType) -> IRegionEncoder:
+    def get_encoder(cls, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.RGB) -> IRegionEncoder:
         """
-        Get encoder for a region type (Singleton pattern)
+        Get encoder for a region type and encoding scheme (Singleton pattern per encoding scheme)
 
         Args:
             region_type: The region type
+            encoding_scheme: The encoding scheme (default: HSV)
 
         Returns:
             Region encoder instance
         """
-        if region_type not in cls._instances:
+        cache_key = (region_type, encoding_scheme)
+
+        if cache_key not in cls._instances:
             encoder_map = {
                 RegionType.BACKGROUND: BackgroundRegionEncoder,
                 RegionType.ROOM: RoomRegionEncoder,
@@ -693,6 +775,6 @@ class RegionEncoderFactory:
             if not encoder_class:
                 raise ValueError(f"Unknown region type: {region_type}")
 
-            cls._instances[region_type] = encoder_class()
+            cls._instances[cache_key] = encoder_class(encoding_scheme=encoding_scheme)
 
-        return cls._instances[region_type]
+        return cls._instances[cache_key]

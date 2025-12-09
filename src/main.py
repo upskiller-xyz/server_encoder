@@ -23,7 +23,7 @@ import traceback
 import re
 
 from src.server.enums import ContentType, HTTPStatus, LogLevel
-from src.components.enums import ModelType, ParameterName
+from src.components.enums import ModelType, ParameterName, EncodingScheme
 from src.components.encoding_service import EncodingServiceFactory
 from src.server.services.logging import StructuredLogger
 from src.server.controllers.base_controller import ServerController
@@ -48,12 +48,15 @@ class ServerApplication:
         # Logger
         self._logger = StructuredLogger("Server", LogLevel.INFO)
 
-        # Encoding service
-        self._encoding_service = EncodingServiceFactory.get_instance(self._logger)
+        # Encoding services (both RGB and HSV)
+        self._encoding_service_hsv = EncodingServiceFactory.get_instance(self._logger, EncodingScheme.HSV)
+        self._encoding_service_rgb = EncodingServiceFactory.get_instance(self._logger, EncodingScheme.RGB)
 
-        # Services dict
+        # Services dict (default to HSV)
         services = {
-            "encoding_service": self._encoding_service
+            "encoding_service": self._encoding_service_hsv,
+            "encoding_service_hsv": self._encoding_service_hsv,
+            "encoding_service_rgb": self._encoding_service_rgb
         }
 
         # Controller
@@ -106,6 +109,7 @@ class ServerApplication:
         Expected JSON payload (unified structure):
         {
             "model_type": "df_default" | "da_default" | "df_custom" | "da_custom",
+            "encoding_scheme": "hsv" | "rgb" (optional, default: "hsv"),
             "parameters": {
                 "height_roof_over_floor": 3.0,
                 "floor_height_above_terrain": 2.0,
@@ -143,6 +147,17 @@ class ServerApplication:
             if "parameters" not in data:
                 raise BadRequest("Missing 'parameters' field")
 
+            # Parse encoding scheme (default to HSV)
+            encoding_scheme_str = data.get("encoding_scheme", "hsv")
+            try:
+                encoding_scheme = EncodingScheme(encoding_scheme_str)
+            except ValueError:
+                valid_schemes = [es.value for es in EncodingScheme]
+                raise BadRequest(
+                    f"Invalid encoding_scheme '{encoding_scheme_str}'. "
+                    f"Valid schemes: {', '.join(valid_schemes)}"
+                )
+
             # Parse model type
             # Extract model type prefix (strip version suffix like "_2.0.1")
             # e.g., "df_default_2.0.1" -> "df_default"
@@ -161,6 +176,12 @@ class ServerApplication:
             # Get parameters
             parameters = data["parameters"]
 
+            # Select encoding service based on encoding scheme
+            encoding_service = (
+                self._encoding_service_hsv if encoding_scheme == EncodingScheme.HSV
+                else self._encoding_service_rgb
+            )
+
             # Validate windows structure
             if ParameterName.WINDOWS.value not in parameters:
                 raise BadRequest("Missing 'windows' field in parameters. At least one window must be provided.")
@@ -175,13 +196,13 @@ class ServerApplication:
             # Log request
             self._logger.info(
                 f"{'Single' if is_single_window else 'Multi'}-window encoding request - "
-                f"model_type: {model_type_str}, window_count: {window_count}"
+                f"model_type: {model_type_str}, encoding_scheme: {encoding_scheme_str}, window_count: {window_count}"
             )
 
             # Encode image(s)
             if is_single_window:
                 # Single window - return PNG file
-                image_bytes = self._encoding_service.encode_room_image(
+                image_bytes = encoding_service.encode_room_image(
                     parameters=parameters,
                     model_type=model_type
                 )
@@ -194,7 +215,7 @@ class ServerApplication:
                 )
             else:
                 # Multiple windows - return ZIP file
-                image_dict = self._encoding_service.encode_multi_window_images(
+                image_dict = encoding_service.encode_multi_window_images(
                     parameters=parameters,
                     model_type=model_type
                 )
@@ -285,8 +306,8 @@ class ServerApplication:
 
             parameters = data["parameters"]
 
-            # Calculate direction angles
-            direction_angles_rad = self._encoding_service.calculate_direction_angle(parameters)
+            # Calculate direction angles (use HSV service, but doesn't matter which)
+            direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
 
             # Convert to degrees for convenience
             import math

@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from abc import ABC, abstractmethod
 from src.components.interfaces import IEncodingService
-from src.components.enums import ModelType, ParameterName
+from src.components.enums import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.encoders import EncoderFactory
 from src.components.geometry import WindowBorderValidator, WindowHeightValidator
@@ -254,15 +254,17 @@ class EncodingService(IEncodingService):
     Follows Dependency Injection and Single Responsibility principles
     """
 
-    def __init__(self, logger: StructuredLogger):
+    def __init__(self, logger: StructuredLogger, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
         """
         Initialize encoding service
 
         Args:
             logger: Logger instance for structured logging
+            encoding_scheme: Encoding scheme to use (default: HSV)
         """
         self._logger = logger
-        self._builder = RoomImageBuilder()
+        self._encoding_scheme = encoding_scheme
+        self._builder = RoomImageBuilder(encoding_scheme=encoding_scheme)
         self._director = RoomImageDirector(self._builder)
         self._encoder_factory = EncoderFactory()
 
@@ -735,26 +737,35 @@ class EncodingService(IEncodingService):
 
 
 class EncodingServiceFactory:
-    """Factory for creating encoding service instances (Singleton Pattern)"""
+    """Factory for creating encoding service instances (Singleton Pattern per encoding scheme)"""
 
-    _instance: EncodingService = None
+    _instances: Dict[EncodingScheme, EncodingService] = {}
 
     @classmethod
-    def get_instance(cls, logger: StructuredLogger) -> EncodingService:
+    def get_instance(cls, logger: StructuredLogger, encoding_scheme: EncodingScheme = EncodingScheme.RGB) -> EncodingService:
         """
-        Get singleton instance of encoding service
+        Get singleton instance of encoding service for specified encoding scheme
 
         Args:
             logger: Logger instance
+            encoding_scheme: Encoding scheme to use (default: HSV)
 
         Returns:
             EncodingService instance
         """
-        if cls._instance is None:
-            cls._instance = EncodingService(logger)
-        return cls._instance
+        if encoding_scheme not in cls._instances:
+            cls._instances[encoding_scheme] = EncodingService(logger, encoding_scheme)
+        return cls._instances[encoding_scheme]
 
     @classmethod
-    def reset_instance(cls) -> None:
-        """Reset singleton instance (useful for testing)"""
-        cls._instance = None
+    def reset_instance(cls, encoding_scheme: EncodingScheme = None) -> None:
+        """
+        Reset singleton instance(s) (useful for testing)
+
+        Args:
+            encoding_scheme: If specified, reset only that scheme's instance. Otherwise, reset all.
+        """
+        if encoding_scheme is None:
+            cls._instances = {}
+        else:
+            cls._instances.pop(encoding_scheme, None)
