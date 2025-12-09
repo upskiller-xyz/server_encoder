@@ -35,6 +35,7 @@ class BaseRegionEncoder(IRegionEncoder):
         self._region_type = region_type
         self._encoder_factory = EncoderFactory()
         self._encoding_scheme = encoding_scheme
+        self._last_mask: np.ndarray = None
 
     def get_region_type(self) -> RegionType:
         """Get the region type"""
@@ -43,6 +44,10 @@ class BaseRegionEncoder(IRegionEncoder):
     def set_encoding_scheme(self, encoding_scheme: EncodingScheme) -> None:
         """Set the encoding scheme for encoding"""
         self._encoding_scheme = encoding_scheme
+
+    def get_last_mask(self) -> np.ndarray:
+        """Get the last generated mask"""
+        return self._last_mask
 
     def encode_region(
         self,
@@ -68,6 +73,9 @@ class BaseRegionEncoder(IRegionEncoder):
         self._validate_required_parameters(parameters)
 
         mask = self._get_area_mask(image, parameters, model_type)
+        # Store the mask for later retrieval
+        self._last_mask = mask.astype(np.uint8)
+
         # Get channel mapping for this region based on encoding scheme
         channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
 

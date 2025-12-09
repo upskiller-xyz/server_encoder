@@ -67,13 +67,14 @@
 The **Room Encoding Server** transforms 3D room geometry and physical parameters into 2D encoded images for use with Daylight Factor (DF) and Daylight Autonomy (DA) prediction models.
 
 **Key Features:**
-- Encode room geometry, materials, and environmental context into RGBA images
+- Encode room geometry into NumPy arrays (RGBA images + binary masks)
 - Support for single and multi-window rooms with complex polygons
-- Automatic facade rotation and direction angle calculation from room geometry
+- Automatic facade rotation to align windows to east-facing (0°)
+- Direction angle calculated from room polygon (outward-facing)
 - Multiple model types: DF/DA with default or custom materials
+- Room mask generation (1=room area, 0=background)
 - RESTful API with comprehensive validation and error handling
 - Object-oriented design following SOLID principles and design patterns
-- Structured logging with proper error reporting
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -159,7 +160,9 @@ export PORT=8081  # Default: 8081
 
 ```python
 import requests
-import json
+import numpy as np
+import io
+import matplotlib.pyplot as plt
 
 url = "http://localhost:8081/encode"
 
@@ -167,13 +170,12 @@ payload = {
     "model_type": "df_default",
     "parameters": {
         "height_roof_over_floor": 2.7,
-        "floor_height_above_terrain": 3.0,
+        "floor_height_above_terrain": 0.0,
         "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
         "windows": {
             "main_window": {
                 "window_sill_height": 0.9,
                 "window_frame_ratio": 0.15,
-                "window_height": 1.5,
                 "x1": -0.6, "y1": 0.0, "z1": 0.9,
                 "x2": 0.6, "y2": 0.0, "z2": 2.4,
                 "obstruction_angle_horizon": 15.0,
@@ -185,9 +187,16 @@ payload = {
 
 response = requests.post(url, json=payload)
 
-# Save the encoded image
-with open("encoded_room.png", "wb") as f:
-    f.write(response.content)
+# Load NumPy arrays from response
+npz_data = np.load(io.BytesIO(response.content))
+
+# Get image and mask (window ID is "main_window")
+image = npz_data['main_window_image']  # (128, 128, 4) RGBA
+mask = npz_data['main_window_mask']    # (128, 128) binary
+
+# Display
+plt.imshow(image)
+plt.show()
 ```
 
 ### API Endpoints
@@ -205,15 +214,22 @@ Health check endpoint.
 ```
 
 #### `POST /encode`
-Encode room geometry and parameters into image(s).
+Encode room geometry and parameters into NumPy arrays.
 
 **Request:** JSON with `model_type` and `parameters`
 
-**Response:**
-- Single window: PNG image
-- Multiple windows: ZIP archive with one PNG per window
+**Response:** NPZ file containing:
+- `{window_id}_image`: (128, 128, 4) RGBA encoded image
+- `{window_id}_mask`: (128, 128) binary room mask (1=room, 0=other)
 
-See [API Reference](docs/api_reference.md) for complete documentation.
+#### `POST /calculate-direction`
+Calculate direction angle for windows from room polygon.
+
+**Request:** JSON with `room_polygon` and `windows` (x1, y1, x2, y2 only)
+
+**Response:** Direction angles in radians and degrees
+
+See [API Reference](docs/api_reference.md) and [Room Mask Feature](docs/ROOM_MASK_FEATURE.md) for details.
 
 ### Model Types
 

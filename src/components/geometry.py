@@ -934,36 +934,26 @@ class WindowGeometry:
         # Edge angle (direction along the edge)
         edge_angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
 
-        print(f"[DIRECTION] Window ({self.x1:.2f}, {self.y1:.2f}) to ({self.x2:.2f}, {self.y2:.2f})")
-        print(f"[DIRECTION] Found on polygon edge {i}: v1=({v1[0]:.2f}, {v1[1]:.2f}), v2=({v2[0]:.2f}, {v2[1]:.2f})")
-        print(f"[DIRECTION] Edge angle: {edge_angle:.4f} rad ({edge_angle * 180 / math.pi:.2f}°)")
 
         perps = [edge_angle + math.pi / 2, edge_angle - math.pi / 2]
-        print(f"[DIRECTION] Perpendicular options: {perps[0]:.4f} rad ({perps[0] * 180 / math.pi:.2f}°), {perps[1]:.4f} rad ({perps[1] * 180 / math.pi:.2f}°)")
-
         # Get center point of the window edge that's on the polygon boundary
         edge_coords = list(edge.coords)
 
         room_poly = ShapelyPolygon(polygon_coords)
 
         # Test which perpendiculars point inside
-        perp0_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[0])
-        perp1_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[1])
-        print(f"[DIRECTION] Perp {perps[0]:.4f} ({perps[0] * 180 / math.pi:.2f}°) points inside: {perp0_inside}")
-        print(f"[DIRECTION] Perp {perps[1]:.4f} ({perps[1] * 180 / math.pi:.2f}°) points inside: {perp1_inside}")
+        # perp0_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[0])
+        # perp1_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[1])
 
-        # Select the perpendicular pointing INSIDE the room (not outside)
-        # Windows should be encoded based on the interior direction
+        # Select the perpendicular pointing OUTSIDE the room (window facing direction)
+        # Windows face outward from the building
         calculated_angle = perps[0]
-        res = [perp for perp in perps if GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
+        res = [perp for perp in perps if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
         if len(res)>0:
             calculated_angle = res[0]
-            print(f"[DIRECTION] Selected inward-facing perpendicular: {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
-        else:
-            print(f"[DIRECTION] Using default perpendicular (both point outside?): {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
 
         calculated_angle = GeometryOps.normalize_angle(calculated_angle)
-        print(f"[DIRECTION] Final normalized angle: {calculated_angle:.4f} rad ({calculated_angle * 180 / math.pi:.2f}°)")
+        
 
         return calculated_angle
     

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Tuple, Union
+from typing import Dict, Any, Tuple, Union, Optional
 import numpy as np
 import cv2
 from abc import ABC, abstractmethod
@@ -268,11 +268,56 @@ class EncodingService(IEncodingService):
         self._director = RoomImageDirector(self._builder)
         self._encoder_factory = EncoderFactory()
 
+    def encode_room_image_arrays(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """
+        Encode room parameters into numpy arrays
+
+        Args:
+            parameters: Dictionary of encoding parameters
+            model_type: The model type to use
+
+        Returns:
+            Tuple of (image_array, mask_array)
+            - image_array: 128×128 RGBA numpy array (uint8)
+            - mask_array: 128×128 binary mask array (uint8) or None
+
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        # Validate parameters
+        is_valid, error_msg = self.validate_parameters(parameters, model_type)
+        if not is_valid:
+            self._logger.error(f"Parameter validation failed: {error_msg}")
+            raise ValueError(error_msg)
+
+        self._logger.info(
+            f"Encoding room image arrays - model_type: {model_type.value}, "
+            f"param_count: {len(parameters)}"
+        )
+
+        # Build image using director
+        image_array, mask_array = self._director.construct_from_flat_parameters(
+            model_type,
+            parameters
+        )
+
+        image_array = image_array.astype(np.uint8)
+
+        self._logger.info(f"Room image arrays encoded successfully - shape: {image_array.shape}")
+        if mask_array is not None:
+            self._logger.info(f"Room mask array encoded successfully - shape: {mask_array.shape}")
+
+        return image_array, mask_array
+
     def encode_room_image(
         self,
         parameters: Dict[str, Any],
         model_type: ModelType
-    ) -> bytes:
+    ) -> Tuple[bytes, Optional[bytes]]:
         """
         Encode room parameters into PNG image bytes
 
@@ -281,7 +326,9 @@ class EncodingService(IEncodingService):
             model_type: The model type to use
 
         Returns:
-            PNG image as bytes
+            Tuple of (image_bytes, mask_bytes)
+            - image_bytes: PNG image as bytes
+            - mask_bytes: PNG mask as bytes or None
 
         Raises:
             ValueError: If parameters are invalid
@@ -298,11 +345,11 @@ class EncodingService(IEncodingService):
         )
 
         # Build image using director
-        image_array = self._director.construct_from_flat_parameters(
+        image_array, mask_array = self._director.construct_from_flat_parameters(
             model_type,
             parameters
         )
-        
+
         image_array = image_array.astype(np.uint8)
         # Convert RGBA to BGRA for OpenCV
         image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
@@ -313,13 +360,71 @@ class EncodingService(IEncodingService):
 
         self._logger.info(f"Room image encoded successfully - size: {len(buffer)} bytes")
 
-        return buffer.tobytes()
+        # Encode mask if available
+        mask_bytes = None
+        if mask_array is not None:
+            success_mask, mask_buffer = cv2.imencode('.png', mask_array)
+            if success_mask:
+                mask_bytes = mask_buffer.tobytes()
+                self._logger.info(f"Room mask encoded successfully - size: {len(mask_buffer)} bytes")
+
+        return buffer.tobytes(), mask_bytes
+
+    def encode_multi_window_images_arrays(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, Optional[np.ndarray]]]:
+        """
+        Encode multiple room images (one per window) into numpy arrays
+
+        Args:
+            parameters: Dictionary of encoding parameters including 'windows' dict
+            model_type: The model type to use
+
+        Returns:
+            Tuple of (images_dict, masks_dict)
+            - images_dict: Dictionary mapping window_id to RGBA image array
+            - masks_dict: Dictionary mapping window_id to binary mask array
+            Example: ({"window_1": array1}, {"window_1": mask_array1})
+
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        # Check if multiple windows are provided
+        if ParameterName.WINDOWS.value not in parameters:
+            # Single window case - return as dict for consistency
+            single_image, single_mask = self.encode_room_image_arrays(parameters, model_type)
+            return {"window_1": single_image}, {"window_1": single_mask}
+
+        self._logger.info(
+            f"Encoding multi-window image arrays - model_type: {model_type.value}, "
+            f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
+        )
+
+        # Build multiple images using director
+        image_arrays, mask_arrays = self._director.construct_multi_window_images(
+            model_type,
+            parameters
+        )
+
+        # Convert to uint8
+        result_images = {
+            window_id: image_array.astype(np.uint8)
+            for window_id, image_array in image_arrays.items()
+        }
+
+        self._logger.info(
+            f"Multi-window image arrays encoded successfully - count: {len(result_images)}"
+        )
+
+        return result_images, mask_arrays
 
     def encode_multi_window_images(
         self,
         parameters: Dict[str, Any],
         model_type: ModelType
-    ) -> Dict[str, bytes]:
+    ) -> Tuple[Dict[str, bytes], Dict[str, Optional[bytes]]]:
         """
         Encode multiple room images (one per window) into PNG image bytes
 
@@ -328,8 +433,10 @@ class EncodingService(IEncodingService):
             model_type: The model type to use
 
         Returns:
-            Dictionary mapping window_id to PNG image bytes
-            Example: {"window_1": bytes1, "window_2": bytes2}
+            Tuple of (images_dict, masks_dict)
+            - images_dict: Dictionary mapping window_id to PNG image bytes
+            - masks_dict: Dictionary mapping window_id to PNG mask bytes
+            Example: ({"window_1": bytes1}, {"window_1": mask_bytes1})
 
         Raises:
             ValueError: If parameters are invalid
@@ -337,8 +444,8 @@ class EncodingService(IEncodingService):
         # Check if multiple windows are provided
         if ParameterName.WINDOWS.value not in parameters:
             # Single window case - return as dict for consistency
-            single_image = self.encode_room_image(parameters, model_type)
-            return {"window_1": single_image}
+            single_image, single_mask = self.encode_room_image(parameters, model_type)
+            return {"window_1": single_image}, {"window_1": single_mask}
 
         self._logger.info(
             f"Encoding multi-window images - model_type: {model_type.value}, "
@@ -346,13 +453,14 @@ class EncodingService(IEncodingService):
         )
 
         # Build multiple images using director
-        image_arrays = self._director.construct_multi_window_images(
+        image_arrays, mask_arrays = self._director.construct_multi_window_images(
             model_type,
             parameters
         )
 
-        # Convert each image to PNG bytes
-        result = {}
+        # Convert each image and mask to PNG bytes
+        result_images = {}
+        result_masks = {}
         for window_id, image_array in image_arrays.items():
             # Convert RGBA to BGRA for OpenCV
             image_array = image_array.astype(np.uint8)
@@ -364,13 +472,24 @@ class EncodingService(IEncodingService):
             if not success:
                 raise RuntimeError(f"Failed to encode image to PNG for window {window_id}")
 
-            result[window_id] = buffer.tobytes()
+            result_images[window_id] = buffer.tobytes()
+
+            # Encode mask if available
+            mask_array = mask_arrays.get(window_id)
+            if mask_array is not None:
+                success_mask, mask_buffer = cv2.imencode('.png', mask_array)
+                if success_mask:
+                    result_masks[window_id] = mask_buffer.tobytes()
+                else:
+                    result_masks[window_id] = None
+            else:
+                result_masks[window_id] = None
 
         self._logger.info(
-            f"Multi-window images encoded successfully - count: {len(result)}"
+            f"Multi-window images encoded successfully - count: {len(result_images)}"
         )
 
-        return result
+        return result_images, result_masks
 
     def validate_parameters(
         self,
