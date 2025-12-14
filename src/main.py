@@ -17,10 +17,12 @@ sys.path.insert(0, str(project_root))
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
+import math
 import io
 import zipfile
 import traceback
 import re
+import numpy as np
 
 from src.server.enums import ContentType, HTTPStatus, LogLevel
 from src.components.enums import ModelType, ParameterName, EncodingScheme
@@ -176,8 +178,6 @@ class ServerApplication:
             )
 
             # Encode arrays
-            import numpy as np
-
             if is_single_window:
                 # Single window
                 image_array, mask_array = encoding_service.encode_room_image_arrays(
@@ -201,7 +201,7 @@ class ServerApplication:
                 )
             else:
                 # Multiple windows
-                images_dict, masks_dict = encoding_service.encode_multi_window_images_arrays(
+                result = encoding_service.encode_multi_window_images_arrays(
                     parameters=parameters,
                     model_type=model_type
                 )
@@ -209,16 +209,17 @@ class ServerApplication:
                 # Create NPZ file with all arrays
                 npz_buffer = io.BytesIO()
                 arrays_dict = {}
-                for window_id in images_dict.keys():
-                    arrays_dict[f'{window_id}_image'] = images_dict[window_id]
-                    if masks_dict[window_id] is not None:
-                        arrays_dict[f'{window_id}_mask'] = masks_dict[window_id]
+                for window_id in result.window_ids():
+                    arrays_dict[f'{window_id}_image'] = result.get_image(window_id)
+                    mask = result.get_mask(window_id)
+                    if mask is not None:
+                        arrays_dict[f'{window_id}_mask'] = mask
 
                 np.savez_compressed(npz_buffer, **arrays_dict)
                 npz_buffer.seek(0)
 
                 self._logger.info(
-                    f"Multi-window array encoding complete - {len(images_dict)} images in NPZ"
+                    f"Multi-window array encoding complete - {len(result.images)} images in NPZ"
                 )
 
                 return send_file(
@@ -299,7 +300,7 @@ class ServerApplication:
             direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
 
             # Convert to degrees for convenience
-            import math
+            
             direction_angles_deg = {
                 window_id: angle * 180 / math.pi
                 for window_id, angle in direction_angles_rad.items()

@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional, Tuple
 import copy
 import math
 import numpy as np
-from src.components.interfaces import IImageBuilder
+from src.components.interfaces import IImageBuilder, EncodingResult, EncodingParameters, RegionParameters
 from src.components.enums import ModelType, RegionType, ParameterName, PARAMETER_REGIONS, EncodingScheme
 from src.components.region_encoders import RegionEncoderFactory
 from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
@@ -92,99 +92,67 @@ class RoomImageBuilder(IImageBuilder):
             raise RuntimeError("Image not initialized. Call reset() first.")
 
 
-class WindowParameterExtractor:
+class ParameterNormalizer:
     """
-    Extracts window parameters from parameter dictionaries (Single Responsibility)
+    Normalizes parameters by converting dicts to proper geometry classes
 
-    Handles both direct parameters and WindowGeometry objects
+    Ensures we always work with WindowGeometry and RoomPolygon classes, not dicts
     """
 
     @staticmethod
-    def extract_window_coordinates(
-        window_params: Dict[str, Any]
-    ) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float], Optional[float]]:
+    def normalize_window_geometry(window_params: Dict[str, Any]) -> Optional[WindowGeometry]:
         """
-        Extract window coordinates and direction angle from parameters
+        Extract or create WindowGeometry from parameters
 
         Args:
             window_params: Window parameter dictionary
 
         Returns:
-            Tuple of (x1, y1, x2, y2, direction_angle)
+            WindowGeometry object or None if no geometry found
         """
-        window_x1 = window_params.get(ParameterName.X1.value)
-        window_y1 = window_params.get(ParameterName.Y1.value)
-        window_x2 = window_params.get(ParameterName.X2.value)
-        window_y2 = window_params.get(ParameterName.Y2.value)
-        direction_angle = window_params.get(ParameterName.DIRECTION_ANGLE.value)
-
-        # Check window_geometry dict if individual coords not found
-        if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in window_params:
+        # Check if window_geometry exists
+        if ParameterName.WINDOW_GEOMETRY.value in window_params:
             geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
             if isinstance(geom, WindowGeometry):
-                window_x1 = geom.x1
-                window_y1 = geom.y1
-                window_x2 = geom.x2
-                window_y2 = geom.y2
-                if direction_angle is None:
-                    direction_angle = geom.direction_angle
-            else:
-                window_x1 = geom.get(ParameterName.X1.value)
-                window_y1 = geom.get(ParameterName.Y1.value)
-                window_x2 = geom.get(ParameterName.X2.value)
-                window_y2 = geom.get(ParameterName.Y2.value)
-                if direction_angle is None:
-                    direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
+                return geom
+            # Convert dict to WindowGeometry
+            return WindowGeometry.from_dict(geom)
 
-        return window_x1, window_y1, window_x2, window_y2, direction_angle
+        # Check if individual coordinates exist
+        if all(k in window_params for k in [
+            ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value,
+            ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value
+        ]):
+            return WindowGeometry(
+                x1=window_params[ParameterName.X1.value],
+                y1=window_params[ParameterName.Y1.value],
+                z1=window_params[ParameterName.Z1.value],
+                x2=window_params[ParameterName.X2.value],
+                y2=window_params[ParameterName.Y2.value],
+                z2=window_params[ParameterName.Z2.value],
+                direction_angle=window_params.get(ParameterName.DIRECTION_ANGLE.value)
+            )
 
-
-class DirectionAngleCalculator:
-    """
-    Calculates direction angle from room polygon (Single Responsibility)
-    """
+        return None
 
     @staticmethod
-    def calculate_from_polygon(
-        room_params: Dict[str, Any],
-        window_x1: float,
-        window_y1: float,
-        window_x2: float,
-        window_y2: float,
-        current_direction_angle: Optional[float]
-    ) -> Optional[float]:
+    def normalize_room_polygon(room_params: Dict[str, Any]) -> Optional[RoomPolygon]:
         """
-        Calculate direction angle from room polygon if available
+        Extract or create RoomPolygon from parameters
 
         Args:
             room_params: Room parameter dictionary
-            window_x1, window_y1, window_x2, window_y2: Window coordinates
-            current_direction_angle: Current direction angle (may be None)
 
         Returns:
-            Calculated or current direction angle
+            RoomPolygon object or None if no polygon found
         """
         if ParameterName.ROOM_POLYGON.value not in room_params:
-            return current_direction_angle
+            return None
 
-        polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
-        polygon = polygon_data if isinstance(polygon_data, RoomPolygon) else RoomPolygon.from_dict(polygon_data)
-
-        try:
-            temp_window_geom = WindowGeometry(
-                window_x1, window_y1, 0,
-                window_x2, window_y2, 0,
-                direction_angle=current_direction_angle
-            )
-            calculated_direction = temp_window_geom.calculate_direction_from_polygon(polygon)
-            
-
-            if current_direction_angle is None:
-                return calculated_direction
-        except ValueError:
-            pass
-
-        return current_direction_angle
+        polygon = room_params[ParameterName.ROOM_POLYGON.value]
+        if isinstance(polygon, RoomPolygon):
+            return polygon
+        return RoomPolygon.from_dict(polygon)
 
 
 class GeometryRotator:
@@ -195,24 +163,23 @@ class GeometryRotator:
     @staticmethod
     def rotate_if_needed(
         all_parameters: Dict[str, Any],
-        direction_angle: float,
-        window_x1: float,
-        window_y1: float,
-        window_x2: float,
-        window_y2: float
+        window_geom: WindowGeometry,
+        room_polygon: Optional[RoomPolygon]
     ) -> Dict[str, Any]:
         """
         Rotate geometry if window is not pointing right (0 degrees)
 
         Args:
             all_parameters: All parameters grouped by region
-            direction_angle: Current direction angle in radians
-            window_x1, window_y1, window_x2, window_y2: Window coordinates
+            window_geom: WindowGeometry object with direction_angle set
+            room_polygon: RoomPolygon object or None
 
         Returns:
             Parameters with rotated geometry
         """
-        direction_angle_degrees = direction_angle * 180 / math.pi  # Convert to degrees
+        
+        direction_angle_degrees = window_geom.direction_angle * 180 / math.pi  # Convert to degrees
+        all_parameters[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
 
         # If already pointing right (within tolerance), no rotation needed
         if abs(direction_angle_degrees) < 0.01:
@@ -220,40 +187,30 @@ class GeometryRotator:
 
         # Rotation angle is negative of direction angle (rotate opposite direction to align to 0°)
         rotation_angle = -direction_angle_degrees
-        
         origin = Point2D(0, 0)
-        temp_window_geom = WindowGeometry(window_x1, window_y1, 0, window_x2, window_y2, 0, direction_angle)
 
         # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
-        wall_thickness_m = temp_window_geom.wall_thickness
-
+        
         # Make a deep copy of parameters to avoid modifying original
         rotated_params = copy.deepcopy(all_parameters)
 
         # Rotate window geometry
-        rotated_window = temp_window_geom.rotate(rotation_angle, origin)
+        rotated_window = window_geom.rotate(rotation_angle, origin)
         window_params_copy = rotated_params[RegionType.WINDOW.value]
 
-        GeometryRotator._update_window_coords(window_params_copy, rotated_window, wall_thickness_m)
+        GeometryRotator._update_window_coords(window_params_copy, rotated_window, window_geom.wall_thickness)
 
         # Rotate room polygon if present
-        room_params = rotated_params.get(RegionType.ROOM.value, {})
-        if ParameterName.ROOM_POLYGON.value in room_params:
-            polygon_data = room_params[ParameterName.ROOM_POLYGON.value]
-            polygon = polygon_data if isinstance(polygon_data, RoomPolygon) else RoomPolygon.from_dict(polygon_data)
+        if room_polygon is not None:
+            rotated_polygon = room_polygon.rotate(rotation_angle, origin)
 
-            rotated_polygon = polygon.rotate(rotation_angle, origin)
-
+            room_params = rotated_params.get(RegionType.ROOM.value, {})
             room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
 
-            GeometryRotator._update_window_coords(room_params, rotated_window, wall_thickness_m)
+            GeometryRotator._update_window_coords(room_params, rotated_window, window_geom.wall_thickness)
 
             # Set direction_angle to 0 after rotation (window now points right)
             room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
-
-        # Set direction_angle to 0 after rotation (window now points right)
-        if RegionType.WINDOW.value in rotated_params:
-            rotated_params[RegionType.WINDOW.value][ParameterName.DIRECTION_ANGLE.value] = 0.0
 
         return rotated_params
 
@@ -268,7 +225,7 @@ class GeometryRotator:
         return param_dict
 
 
-class RoomImageDirector:
+class RoomImageDirector: 
     """
     Director class for orchestrating image building (Director Pattern)
 
@@ -294,13 +251,13 @@ class RoomImageDirector:
             Tuple of (encoded_image, room_mask)
             - encoded_image: Complete encoded image
             - room_mask: Room mask (ones in room area, zeros elsewhere) or None
-        """
+        """ 
         # Reset and configure builder
         self._builder.reset().set_model_type(model_type)
 
         # Rotate geometry if window is not on south facade
         all_parameters = self._rotate_geometry_if_needed(all_parameters)
-
+        
         # Define region encoding order (list-based iteration)
         region_order = [
             RegionType.BACKGROUND,
@@ -308,7 +265,7 @@ class RoomImageDirector:
             RegionType.WINDOW,
             RegionType.OBSTRUCTION_BAR
         ]
-
+        
         # Encode regions in order using list comprehension
         [self._builder.encode_region(region, all_parameters[region.value])
          for region in region_order
@@ -329,29 +286,42 @@ class RoomImageDirector:
         Returns:
             Parameters with rotated geometry
         """
-        # Get window parameters
+        # Get window parameters and normalize to WindowGeometry
         window_params = all_parameters.get(RegionType.WINDOW.value, {})
         if not window_params:
             return all_parameters
 
-        # Extract window coordinates using WindowParameterExtractor
-        window_x1, window_y1, window_x2, window_y2, direction_angle = \
-            WindowParameterExtractor.extract_window_coordinates(window_params)
-
-        if window_x1 is None:
+        window_geom = ParameterNormalizer.normalize_window_geometry(window_params)
+        if window_geom is None:
             return all_parameters
 
-        # Calculate direction_angle from room polygon if available
+        # Get room polygon
         room_params = all_parameters.get(RegionType.ROOM.value, {})
+        room_polygon = ParameterNormalizer.normalize_room_polygon(room_params) if room_params else None
 
-        direction_angle = DirectionAngleCalculator.calculate_from_polygon(
-            room_params, window_x1, window_y1, window_x2, window_y2, direction_angle
-        )
+        # Calculate direction_angle from room polygon if available and not already set
+        if window_geom.direction_angle is None and room_polygon is not None:
+            try:
+                calculated_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                # Create new WindowGeometry with updated direction_angle
+                window_geom = WindowGeometry(
+                    x1=window_geom.x1, y1=window_geom.y1, z1=window_geom.z1,
+                    x2=window_geom.x2, y2=window_geom.y2, z2=window_geom.z2,
+                    direction_angle=calculated_angle
+                )
+            except ValueError:
+                pass
+
+        direction_angle = window_geom.direction_angle
+
+        # Propagate direction_angle to all relevant regions
+        all_parameters[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+        window_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+        if room_params:
+            room_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
 
         # Rotate geometry using GeometryRotator
-        return GeometryRotator.rotate_if_needed(
-            all_parameters, direction_angle, window_x1, window_y1, window_x2, window_y2
-        )
+        return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)
 
     def construct_from_flat_parameters(
         self,
@@ -375,20 +345,20 @@ class RoomImageDirector:
         windows_key = ParameterName.WINDOWS.value
         if windows_key in parameters and isinstance(parameters[windows_key], dict):
             # Use multi-window construction which handles merging
-            images_dict, masks_dict = self.construct_multi_window_images(model_type, parameters)
+            result = self.construct_multi_window_images(model_type, parameters)
             # Return the first (and possibly only) image and mask
-            first_window = next(iter(images_dict.keys()))
-            return images_dict[first_window], masks_dict.get(first_window)
+            return result.get_first_image(), result.get_first_mask()
 
         # Legacy flat structure - group and construct directly
         grouped = self._group_parameters(parameters)
+        
         return self.construct_full_image(model_type, grouped)
 
     def construct_multi_window_images(
         self,
         model_type: ModelType,
         parameters: Dict[str, Any]
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, Optional[np.ndarray]]]:
+    ) -> EncodingResult:
         """
         Construct multiple images for multiple windows in the same room
 
@@ -400,16 +370,16 @@ class RoomImageDirector:
             parameters: Parameters including 'windows' dict with per-window configs
 
         Returns:
-            Tuple of (images_dict, masks_dict)
-            - images_dict: Dictionary mapping window_id to encoded image
-            - masks_dict: Dictionary mapping window_id to room mask
-            Example: ({"window_1": image1}, {"window_1": mask1})
+            EncodingResult containing images and masks for all windows
         """
+        result = EncodingResult()
+
         windows_key = ParameterName.WINDOWS.value
         if windows_key not in parameters:
             # Single window case - fallback to normal construction
             image, mask = self.construct_from_flat_parameters(model_type, parameters)
-            return {"window_1": image}, {"window_1": mask}
+            result.add_window("window_1", image, mask)
+            return result
 
         windows_config = parameters[windows_key]
         if not isinstance(windows_config, dict):
@@ -419,42 +389,62 @@ class RoomImageDirector:
         shared_params = {k: v for k, v in parameters.items() if k != windows_key}
 
         # Build images and masks
-        images_dict = {}
-        masks_dict = {}
         for window_id, window_params in windows_config.items():
             image, mask = self.construct_from_flat_parameters(
                 model_type,
                 {**shared_params, **window_params}
             )
-            images_dict[window_id] = image
-            masks_dict[window_id] = mask
+            result.add_window(window_id, image, mask)
 
-        return images_dict, masks_dict
+        return result
 
     @staticmethod
-    def _group_parameters(parameters: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    def _group_parameters(parameters: Dict[str, Any]) -> EncodingParameters:
         """
-        Group flat parameters by region using map (Strategy Pattern)
+        Group flat parameters by region and normalize all geometry to proper classes
 
         Args:
             parameters: Flat parameter dictionary
 
         Returns:
-            Parameters grouped by region
+            EncodingParameters with normalized geometry
         """
-        # Initialize grouped parameters
-        grouped = {region.value: {} for region in RegionType}
+        # Initialize encoding parameters
+        encoding_params = EncodingParameters()
 
-        # Group parameters using map
+        # Group parameters by region
         for key, value in parameters.items():
             region = PARAMETER_REGIONS.get(key)
             if region:
-                grouped[region.value][key] = value
+                encoding_params.get_region(region)[key] = value
 
-        # Room positioning depends on window coordinates - copy using list comprehension
-        room_key = RegionType.ROOM.value
-        window_key = RegionType.WINDOW.value
-        background_key = RegionType.BACKGROUND.value
+        # NORMALIZE GEOMETRY: Convert dicts to proper classes at entry point
+        # This ensures we ALWAYS work with WindowGeometry and RoomPolygon classes internally
+
+        # Normalize WindowGeometry
+        window_params = encoding_params.window.parameters
+        if window_params:
+            window_geom = ParameterNormalizer.normalize_window_geometry(window_params)
+            if window_geom:
+                # Replace dict data with WindowGeometry object
+                window_params[ParameterName.WINDOW_GEOMETRY.value] = window_geom
+                # Also set individual coords for backwards compatibility
+                window_params[ParameterName.X1.value] = window_geom.x1
+                window_params[ParameterName.Y1.value] = window_geom.y1
+                window_params[ParameterName.Z1.value] = window_geom.z1
+                window_params[ParameterName.X2.value] = window_geom.x2
+                window_params[ParameterName.Y2.value] = window_geom.y2
+                window_params[ParameterName.Z2.value] = window_geom.z2
+                if window_geom.direction_angle is not None:
+                    window_params[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
+
+        # Normalize RoomPolygon
+        room_params = encoding_params.room.parameters
+        if room_params:
+            room_polygon = ParameterNormalizer.normalize_room_polygon(room_params)
+            if room_polygon:
+                # Replace dict data with RoomPolygon object
+                room_params[ParameterName.ROOM_POLYGON.value] = room_polygon
 
         # Copy window geometry to room
         coord_keys = [ParameterName.X1.value, ParameterName.Y1.value,
@@ -462,13 +452,15 @@ class RoomImageDirector:
                       ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value,
                       ParameterName.WALL_THICKNESS.value]
 
-        [grouped[room_key].update({k: grouped[window_key][k]})
-         for k in coord_keys if k in grouped[window_key]]
+        for k in coord_keys:
+            if k in window_params:
+                room_params[k] = window_params[k]
 
         # Window sill height calculation depends on floor_height_above_terrain from background
         # Copy it to window region for calculator access
-        if "floor_height_above_terrain" in grouped[background_key]:
-            grouped[window_key]["floor_height_above_terrain"] = grouped[background_key]["floor_height_above_terrain"]
+        background_params = encoding_params.background.parameters
+        if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params:
+            window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
 
-        return grouped
+        return encoding_params
     

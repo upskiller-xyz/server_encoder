@@ -430,8 +430,7 @@ class RoomPolygon:
         window_y1: float = None,
         window_x2: float = None,
         window_y2: float = None,
-        direction_angle: float = None,
-        wall_thickness: float = None
+        direction_angle: float = None
     ) -> np.ndarray:
         """
         Convert polygon to pixel coordinates for drawing on image
@@ -744,8 +743,8 @@ class WindowGeometry:
     
     @property
     def niche_center(self)->Point2D:
-        return Point2D((self.x1 + self.x2) / 2, 
-                       (self.y1 + self.y2) / 2)
+        return Point2D((self.x1 + self.x2) *0.5, 
+                       (self.y1 + self.y2) *0.5)
 
     @property
     def direction_angle(self) -> float:
@@ -913,13 +912,6 @@ class WindowGeometry:
         # # Find which polygon edge contains one of the window edges
         polygon_coords =  room_polygon.get_coords()
 
-        # poly_edges = [ShapelyLine([
-        #     polygon_coords[i], 
-        #     polygon_coords[(i + 1) % len(polygon_coords)]]) for i in range(len(polygon_coords))]
-        
-        # res = [(edge.buffer(tolerance).contains(w_edge), i, j) for i,edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges)]
-        # res = [e for e in res if e[0]==True]
-
         res = self.get_room_edge(room_polygon, tolerance)
         if len(res)<1:
             raise ValueError(
@@ -940,11 +932,7 @@ class WindowGeometry:
         edge_coords = list(edge.coords)
 
         room_poly = ShapelyPolygon(polygon_coords)
-
-        # Test which perpendiculars point inside
-        # perp0_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[0])
-        # perp1_inside = GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perps[1])
-
+        
         # Select the perpendicular pointing OUTSIDE the room (window facing direction)
         # Windows face outward from the building
         calculated_angle = perps[0]

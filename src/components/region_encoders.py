@@ -5,8 +5,9 @@ import cv2
 from src.components.interfaces import IRegionEncoder
 from src.components.enums import ParameterName, RegionType, ModelType, ChannelType, ImageDimensions, REQUIRED_PARAMETERS, DEFAULT_PARAMETER_VALUES, REGION_CHANNEL_MAPPING, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES
 from src.components.encoders import EncoderFactory
-from src.components.geometry import RoomPolygon,  WindowGeometry
+from src.components.geometry import RoomPolygon, WindowGeometry
 from src.components.graphics_constants import GRAPHICS_CONSTANTS
+from src.components.parameter_calculators import ParameterCalculatorRegistry
 
 
 def validate_required_parameters(
@@ -67,11 +68,9 @@ class BaseRegionEncoder(IRegionEncoder):
         Raises:
             ValueError: If required parameters are missing
         """
-
         parameters = self._update_parameters(parameters)
         # Validate required parameters
         self._validate_required_parameters(parameters)
-
         mask = self._get_area_mask(image, parameters, model_type)
         # Store the mask for later retrieval
         self._last_mask = mask.astype(np.uint8)
@@ -271,15 +270,10 @@ class RoomRegionEncoder(BaseRegionEncoder):
             Boolean mask array where True indicates room area
         """
         height, width = image.shape[:2]
-
-        # If room_polygon provided, use it
+        # If room_polygon provided, use it (already normalized to RoomPolygon class at entry point)
         room_polygon_key = ParameterName.ROOM_POLYGON.value
         if room_polygon_key in parameters and parameters[room_polygon_key]:
-            polygon_data = parameters[room_polygon_key]
-
-            polygon = polygon_data
-            if not isinstance(polygon_data, RoomPolygon):
-                polygon = RoomPolygon.from_dict(polygon_data)
+            polygon: RoomPolygon = parameters[room_polygon_key]
 
             # Get window coordinates for positioning
             window_x1 = parameters.get(ParameterName.X1.value)
@@ -287,25 +281,17 @@ class RoomRegionEncoder(BaseRegionEncoder):
             window_x2 = parameters.get(ParameterName.X2.value)
             window_y2 = parameters.get(ParameterName.Y2.value)
             direction_angle = parameters.get(ParameterName.DIRECTION_ANGLE.value)
-            wall_thickness = parameters.get(ParameterName.WALL_THICKNESS.value)
 
-            # Also check window_geometry dict
+            # Also check window_geometry (already normalized to WindowGeometry class at entry point)
             if window_x1 is None and ParameterName.WINDOW_GEOMETRY.value in parameters:
-                geom = parameters[ParameterName.WINDOW_GEOMETRY.value]
-                if isinstance(geom, WindowGeometry):
-                    window_x1 = geom.x1
-                    window_y1 = geom.y1
-                    window_x2 = geom.x2
-                    window_y2 = geom.y2
-                    if direction_angle is None:
-                        direction_angle = geom.direction_angle
-                else:
-                    window_x1 = geom.get(ParameterName.X1.value)
-                    window_y1 = geom.get(ParameterName.Y1.value)
-                    window_x2 = geom.get(ParameterName.X2.value)
-                    window_y2 = geom.get(ParameterName.Y2.value)
-                    if direction_angle is None:
-                        direction_angle = geom.get(ParameterName.DIRECTION_ANGLE.value)
+                geom: WindowGeometry = parameters[ParameterName.WINDOW_GEOMETRY.value]
+                window_x1 = geom.x1
+                window_y1 = geom.y1
+                window_x2 = geom.x2
+                window_y2 = geom.y2
+                if direction_angle is None:
+                    direction_angle = geom.calculate_direction_from_polygon(polygon)
+
 
             # Note: Rotation is handled at a higher level (in image builder)
             # so polygon and window coordinates here are already rotated if needed
@@ -318,8 +304,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 window_y1=window_y1,
                 window_x2=window_x2,
                 window_y2=window_y2,
-                direction_angle=direction_angle,
-                wall_thickness=wall_thickness
+                direction_angle=direction_angle
             )
             
             cv2.fillPoly(mask, pixel_coords, 1)
@@ -374,7 +359,6 @@ class WindowRegionEncoder(BaseRegionEncoder):
         super().__init__(RegionType.WINDOW, encoding_scheme)  
     
     def _update_parameters(self, params):
-        from src.components.encoding_service import ParameterCalculatorRegistry
         calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(
             params,
             logger=None  # Strict mode: raise on failure
@@ -428,13 +412,9 @@ class WindowRegionEncoder(BaseRegionEncoder):
         """
         height, width = image.shape[:2]
 
-        # Get window geometry
+        # Get window geometry (already normalized to WindowGeometry class at entry point)
         if ParameterName.WINDOW_GEOMETRY.value in parameters:
-            geom_data = parameters[ParameterName.WINDOW_GEOMETRY.value]
-            
-            window_geom = geom_data
-            if not isinstance(geom_data, WindowGeometry):
-                window_geom = WindowGeometry.from_dict(geom_data)
+            window_geom: WindowGeometry = parameters[ParameterName.WINDOW_GEOMETRY.value]
         else:
             # Create from individual coordinates
             window_geom = WindowGeometry(
