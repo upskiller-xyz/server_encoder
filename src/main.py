@@ -257,16 +257,14 @@ class ServerApplication:
 
         Expected JSON payload:
         {
-            "parameters": {
-                "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
-                "windows": {
-                    "window1": {
-                        "x1": -0.6, "y1": 0.0,
-                        "x2": 0.6, "y2": 0.0
-                    },
-                    "window2": {
-                        ... (optional additional windows)
-                    }
+            "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+            "windows": {
+                "window1": {
+                    "x1": -0.6, "y1": 0.0,
+                    "x2": 0.6, "y2": 0.0
+                },
+                "window2": {
+                    ... (optional additional windows)
                 }
             }
         }
@@ -277,10 +275,6 @@ class ServerApplication:
                 "direction_angle": {
                     "window1": 3.14159,  # radians
                     "window2": 1.5708
-                },
-                "direction_angles_degree": {
-                    "window1": 180.0,
-                    "window2": 90.0
                 }
             }
         """
@@ -290,14 +284,9 @@ class ServerApplication:
             if not data:
                 raise BadRequest("No JSON data provided")
 
-            # Validate required fields
-            if "parameters" not in data:
-                raise BadRequest("Missing 'parameters' field")
-
-            parameters = data["parameters"]
-
             # Calculate direction angles (use HSV service, but doesn't matter which)
-            direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
+            direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(data)
+
             # Log success
             self._logger.info(
                 f"Direction angle calculation successful - "
@@ -333,16 +322,14 @@ class ServerApplication:
 
         Expected JSON payload:
         {
-            "parameters": {
-                "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
-                "windows": {
-                    "window1": {
-                        "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                        "x2": 0.6, "y2": 0.0, "z2": 2.5
-                    },
-                    "window2": {
-                        ... (optional additional windows)
-                    }
+            "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+            "windows": {
+                "window1": {
+                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
+                    "x2": 0.6, "y2": 0.0, "z2": 2.5
+                },
+                "window2": {
+                    ... (optional additional windows)
                 }
             }
         }
@@ -362,14 +349,8 @@ class ServerApplication:
             if not data:
                 raise BadRequest("No JSON data provided")
 
-            # Validate required fields
-            if "parameters" not in data:
-                raise BadRequest("Missing 'parameters' field")
-
-            parameters = data["parameters"]
-
             # Calculate reference points (use HSV service, but doesn't matter which)
-            reference_points = self._encoding_service_hsv.calculate_reference_point(parameters)
+            reference_points = self._encoding_service_hsv.calculate_reference_point(data)
 
             # Log success
             self._logger.info(
