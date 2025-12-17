@@ -270,10 +270,15 @@ class RoomRegionEncoder(BaseRegionEncoder):
             Boolean mask array where True indicates room area
         """
         height, width = image.shape[:2]
-        # If room_polygon provided, use it (already normalized to RoomPolygon class at entry point)
+        # If room_polygon provided, use it
         room_polygon_key = ParameterName.ROOM_POLYGON.value
         if room_polygon_key in parameters and parameters[room_polygon_key]:
-            polygon: RoomPolygon = parameters[room_polygon_key]
+            polygon_data = parameters[room_polygon_key]
+            # Normalize to RoomPolygon if not already
+            if isinstance(polygon_data, RoomPolygon):
+                polygon: RoomPolygon = polygon_data
+            else:
+                polygon: RoomPolygon = RoomPolygon.from_dict(polygon_data)
 
             # Get window coordinates for positioning
             window_x1 = parameters.get(ParameterName.X1.value)

@@ -885,6 +885,44 @@ class WindowGeometry:
         res = [(edge, i, j) for i,edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges) if edge.buffer(tolerance).contains(w_edge)]
         return res
 
+    def calculate_reference_point_from_polygon(
+        self,
+        room_polygon: 'RoomPolygon',
+        tolerance: float = 0.01
+    ) -> Point3D:
+        """
+        Calculate window reference point from room polygon edge
+
+        The reference point is the center of the window edge that lies on the room boundary.
+
+        Args:
+            room_polygon: The room polygon containing this window
+            tolerance: Distance tolerance for edge matching (meters)
+
+        Returns:
+            Point3D with (x, y, z) coordinates where z is the vertical center of the window
+
+        Raises:
+            ValueError: If window is not on any polygon edge
+        """
+
+        res = self.get_room_edge(room_polygon, tolerance)
+        if len(res) < 1:
+            raise ValueError(
+                f"Window at ({self.x1:.2f}, {self.y1:.2f}) to ({self.x2:.2f}, {self.y2:.2f}) "
+                f"does not lie on any polygon edge"
+            )
+
+        edge, i, j = res[0]
+        edge_coords = list(edge.coords)
+
+        # Calculate center of the window edge on the boundary
+        ref_x = (edge_coords[0][0] + edge_coords[1][0]) * 0.5
+        ref_y = (edge_coords[0][1] + edge_coords[1][1]) * 0.5
+        ref_z = (self.z1 + self.z2) * 0.5  # Vertical center
+
+        return Point3D(ref_x, ref_y, ref_z)
+
     def calculate_direction_from_polygon(
         self,
         room_polygon: 'RoomPolygon',
@@ -906,8 +944,8 @@ class WindowGeometry:
         Raises:
             ValueError: If window is not on any polygon edge
         """
-        
-        
+
+
         # w_edges = self.get_candidate_edges()
         # # Find which polygon edge contains one of the window edges
         polygon_coords =  room_polygon.get_coords()
@@ -932,7 +970,7 @@ class WindowGeometry:
         edge_coords = list(edge.coords)
 
         room_poly = ShapelyPolygon(polygon_coords)
-        
+
         # Select the perpendicular pointing OUTSIDE the room (window facing direction)
         # Windows face outward from the building
         calculated_angle = perps[0]
@@ -941,7 +979,7 @@ class WindowGeometry:
             calculated_angle = res[0]
 
         calculated_angle = GeometryOps.normalize_angle(calculated_angle)
-        
+
 
         return calculated_angle
     

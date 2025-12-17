@@ -610,6 +610,90 @@ class EncodingService(IEncodingService):
 
         return results
 
+    def calculate_reference_point(
+        self,
+        parameters: Dict[str, Any]
+    ) -> Dict[str, Dict[str, float]]:
+        """
+        Calculate reference point for window(s) from room polygon and window coordinates
+
+        The reference point is the center of the window edge that lies on the room boundary.
+
+        Args:
+            parameters: Dictionary containing:
+                - room_polygon: List of [x, y] coordinates defining the room
+                - windows: Dictionary of window_id -> window parameters
+                    Each window must have: x1, y1, z1, x2, y2, z2
+
+        Returns:
+            Dictionary mapping window_id -> {"x": float, "y": float, "z": float}
+
+        Raises:
+            ValueError: If required parameters are missing or calculation fails
+        """
+        # Validate required parameters
+        if ParameterName.ROOM_POLYGON.value not in parameters:
+            raise ValueError(f"Missing required parameter: '{ParameterName.ROOM_POLYGON.value}'")
+
+        if ParameterName.WINDOWS.value not in parameters:
+            raise ValueError(f"Missing required parameter: '{ParameterName.WINDOWS.value}'")
+
+        if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
+            raise ValueError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
+
+        # Create room polygon
+        try:
+            room_polygon = RoomPolygon.from_dict(parameters[ParameterName.ROOM_POLYGON.value])
+        except Exception as e:
+            raise ValueError(f"Invalid room_polygon: {str(e)}")
+
+        # Calculate reference point for each window
+        results = {}
+        for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
+            try:
+                # Validate window has required coordinates
+                required_coords = [
+                    ParameterName.X1.value,
+                    ParameterName.Y1.value,
+                    ParameterName.Z1.value,
+                    ParameterName.X2.value,
+                    ParameterName.Y2.value,
+                    ParameterName.Z2.value
+                ]
+                missing = [coord for coord in required_coords if coord not in window_params]
+                if missing:
+                    raise ValueError(f"Window '{window_id}' missing required coordinates: {', '.join(missing)}")
+
+                # Create window geometry
+                window_geom = WindowGeometry(
+                    x1=window_params[ParameterName.X1.value],
+                    y1=window_params[ParameterName.Y1.value],
+                    z1=window_params[ParameterName.Z1.value],
+                    x2=window_params[ParameterName.X2.value],
+                    y2=window_params[ParameterName.Y2.value],
+                    z2=window_params[ParameterName.Z2.value]
+                )
+
+                # Calculate reference point
+                ref_point = window_geom.calculate_reference_point_from_polygon(room_polygon)
+                results[window_id] = {
+                    "x": ref_point.x,
+                    "y": ref_point.y,
+                    "z": ref_point.z
+                }
+
+                self._logger.info(
+                    f"Calculated reference_point for '{window_id}': "
+                    f"({ref_point.x:.4f}, {ref_point.y:.4f}, {ref_point.z:.4f})"
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to calculate reference_point for window '{window_id}': {str(e)}"
+                self._logger.error(error_msg)
+                raise ValueError(error_msg)
+
+        return results
+
 
 class EncodingServiceFactory:
     """Factory for creating encoding service instances (Singleton Pattern per encoding scheme)"""

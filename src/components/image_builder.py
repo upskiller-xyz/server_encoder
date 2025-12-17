@@ -152,6 +152,12 @@ class ParameterNormalizer:
         polygon = room_params[ParameterName.ROOM_POLYGON.value]
         if isinstance(polygon, RoomPolygon):
             return polygon
+        # RoomPolygon.from_dict() actually expects a list, not a dict (despite the name)
+        if isinstance(polygon, (list, tuple)):
+            return RoomPolygon.from_dict(polygon)
+        # If it's a dict, it might be a serialized RoomPolygon
+        if isinstance(polygon, dict) and 'vertices' in polygon:
+            return RoomPolygon.from_dict(polygon['vertices'])
         return RoomPolygon.from_dict(polygon)
 
 
@@ -162,10 +168,10 @@ class GeometryRotator:
 
     @staticmethod
     def rotate_if_needed(
-        all_parameters: Dict[str, Any],
+        all_parameters: EncodingParameters,
         window_geom: WindowGeometry,
         room_polygon: Optional[RoomPolygon]
-    ) -> Dict[str, Any]:
+    ) -> EncodingParameters:
         """
         Rotate geometry if window is not pointing right (0 degrees)
 
@@ -179,7 +185,7 @@ class GeometryRotator:
         """
         
         direction_angle_degrees = window_geom.direction_angle * 180 / math.pi  # Convert to degrees
-        all_parameters[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
+        all_parameters.set_global(ParameterName.DIRECTION_ANGLE.value, window_geom.direction_angle)
 
         # If already pointing right (within tolerance), no rotation needed
         if abs(direction_angle_degrees) < 0.01:
@@ -190,13 +196,13 @@ class GeometryRotator:
         origin = Point2D(0, 0)
 
         # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
-        
+
         # Make a deep copy of parameters to avoid modifying original
         rotated_params = copy.deepcopy(all_parameters)
 
         # Rotate window geometry
         rotated_window = window_geom.rotate(rotation_angle, origin)
-        window_params_copy = rotated_params[RegionType.WINDOW.value]
+        window_params_copy = rotated_params.window.parameters
 
         GeometryRotator._update_window_coords(window_params_copy, rotated_window, window_geom.wall_thickness)
 
@@ -204,7 +210,7 @@ class GeometryRotator:
         if room_polygon is not None:
             rotated_polygon = room_polygon.rotate(rotation_angle, origin)
 
-            room_params = rotated_params.get(RegionType.ROOM.value, {})
+            room_params = rotated_params.room.parameters
             room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
 
             GeometryRotator._update_window_coords(room_params, rotated_window, window_geom.wall_thickness)
@@ -238,7 +244,7 @@ class RoomImageDirector:
     def construct_full_image(
         self,
         model_type: ModelType,
-        all_parameters: Dict[str, Any]
+        all_parameters: EncodingParameters
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Construct a complete encoded image with all regions
@@ -267,14 +273,14 @@ class RoomImageDirector:
         ]
         
         # Encode regions in order using list comprehension
-        [self._builder.encode_region(region, all_parameters[region.value])
+        [self._builder.encode_region(region, all_parameters.get_region(region).parameters)
          for region in region_order
-         if region.value in all_parameters]
+         if all_parameters.get_region(region).parameters]
 
         # Build final image and get room mask
         return self._builder.build(), self._builder.get_room_mask()
 
-    def _rotate_geometry_if_needed(self, all_parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def _rotate_geometry_if_needed(self, all_parameters: EncodingParameters) -> EncodingParameters:
         """
         Rotate room polygon and window coordinates if window is not on south facade
 
@@ -287,17 +293,15 @@ class RoomImageDirector:
             Parameters with rotated geometry
         """
         # Get window parameters and normalize to WindowGeometry
-        window_params = all_parameters.get(RegionType.WINDOW.value, {})
-        if not window_params:
+        if not all_parameters.window.parameters:
             return all_parameters
 
-        window_geom = ParameterNormalizer.normalize_window_geometry(window_params)
+        window_geom = ParameterNormalizer.normalize_window_geometry(all_parameters.window.parameters)
         if window_geom is None:
             return all_parameters
 
         # Get room polygon
-        room_params = all_parameters.get(RegionType.ROOM.value, {})
-        room_polygon = ParameterNormalizer.normalize_room_polygon(room_params) if room_params else None
+        room_polygon = ParameterNormalizer.normalize_room_polygon(all_parameters.room.parameters) if all_parameters.room.parameters else None
 
         # Calculate direction_angle from room polygon if available and not already set
         if window_geom.direction_angle is None and room_polygon is not None:
@@ -315,10 +319,10 @@ class RoomImageDirector:
         direction_angle = window_geom.direction_angle
 
         # Propagate direction_angle to all relevant regions
-        all_parameters[ParameterName.DIRECTION_ANGLE.value] = direction_angle
-        window_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
-        if room_params:
-            room_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+        all_parameters.set_global(ParameterName.DIRECTION_ANGLE.value, direction_angle)
+        all_parameters.window[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+        if all_parameters.room.parameters:
+            all_parameters.room[ParameterName.DIRECTION_ANGLE.value] = direction_angle
 
         # Rotate geometry using GeometryRotator
         return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)

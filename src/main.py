@@ -75,6 +75,7 @@ class ServerApplication:
         self._app.add_url_rule("/", "get_status", self._get_status, methods=["GET"])
         self._app.add_url_rule("/encode", "encode", self._encode_room_arrays, methods=["POST"])
         self._app.add_url_rule("/calculate-direction", "calculate_direction", self._calculate_direction, methods=["POST"])
+        self._app.add_url_rule("/get-reference-point", "get_reference_point", self._get_reference_point, methods=["POST"])
 
     def _extract_model_type_prefix(self, model_type_str: str) -> str:
         """
@@ -122,10 +123,9 @@ class ServerApplication:
                 raise BadRequest("No JSON data provided")
 
             # Validate required fields
-            if "model_type" not in data:
-                raise BadRequest("Missing 'model_type' field")
-            if "parameters" not in data:
-                raise BadRequest("Missing 'parameters' field")
+            for pp in [ParameterName.MODEL_TYPE, ParameterName.PARAMETERS]:
+                if pp.value not in data:
+                    raise BadRequest("Missing {} field".format(pp.value))
 
             # Parse encoding scheme (default to HSV)
             encoding_scheme_str = data.get("encoding_scheme", "hsv")
@@ -139,7 +139,7 @@ class ServerApplication:
                 )
 
             # Parse model type
-            model_type_str = data["model_type"]
+            model_type_str = data[ParameterName.MODEL_TYPE.value]
             model_type_prefix = self._extract_model_type_prefix(model_type_str)
 
             try:
@@ -197,7 +197,7 @@ class ServerApplication:
                     npz_buffer,
                     mimetype='application/octet-stream',
                     as_attachment=True,
-                    download_name='encoded_room.npz'
+                    download_name='result.npz'
                 )
             else:
                 # Multiple windows
@@ -226,7 +226,7 @@ class ServerApplication:
                     npz_buffer,
                     mimetype='application/octet-stream',
                     as_attachment=True,
-                    download_name='encoded_room_windows.npz'
+                    download_name='result.npz'
                 )
 
         except BadRequest:
@@ -274,11 +274,11 @@ class ServerApplication:
         Returns:
             JSON with direction_angle for each window:
             {
-                "direction_angles": {
+                "direction_angle": {
                     "window1": 3.14159,  # radians
                     "window2": 1.5708
                 },
-                "direction_angles_degrees": {
+                "direction_angles_degree": {
                     "window1": 180.0,
                     "window2": 90.0
                 }
@@ -298,14 +298,6 @@ class ServerApplication:
 
             # Calculate direction angles (use HSV service, but doesn't matter which)
             direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
-
-            # Convert to degrees for convenience
-            
-            direction_angles_deg = {
-                window_id: angle * 180 / math.pi
-                for window_id, angle in direction_angles_rad.items()
-            }
-
             # Log success
             self._logger.info(
                 f"Direction angle calculation successful - "
@@ -313,8 +305,7 @@ class ServerApplication:
             )
 
             return jsonify({
-                "direction_angles": direction_angles_rad,
-                "direction_angles_degrees": direction_angles_deg
+                ParameterName.DIRECTION_ANGLE.value: direction_angles_rad
             }), HTTPStatus.OK.value
 
         except BadRequest:
@@ -333,6 +324,79 @@ class ServerApplication:
             )
             return jsonify({
                 "error": f"Direction angle calculation failed: {str(e)}",
+                "error_type": type(e).__name__
+            }), HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+    def _get_reference_point(self):
+        """
+        Calculate reference point for window(s) from room polygon and window coordinates
+
+        Expected JSON payload:
+        {
+            "parameters": {
+                "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+                "windows": {
+                    "window1": {
+                        "x1": -0.6, "y1": 0.0, "z1": 1.0,
+                        "x2": 0.6, "y2": 0.0, "z2": 2.5
+                    },
+                    "window2": {
+                        ... (optional additional windows)
+                    }
+                }
+            }
+        }
+
+        Returns:
+            JSON with reference_point for each window:
+            {
+                "reference_point": {
+                    "window1": {"x": 0.0, "y": 0.0, "z": 1.75},
+                    "window2": {"x": 2.0, "y": 1.0, "z": 1.5}
+                }
+            }
+        """
+        try:
+            # Get JSON data
+            data = request.get_json()
+            if not data:
+                raise BadRequest("No JSON data provided")
+
+            # Validate required fields
+            if "parameters" not in data:
+                raise BadRequest("Missing 'parameters' field")
+
+            parameters = data["parameters"]
+
+            # Calculate reference points (use HSV service, but doesn't matter which)
+            reference_points = self._encoding_service_hsv.calculate_reference_point(parameters)
+
+            # Log success
+            self._logger.info(
+                f"Reference point calculation successful - "
+                f"window_count: {len(reference_points)}"
+            )
+
+            return jsonify({
+                "reference_point": reference_points
+            }), HTTPStatus.OK.value
+
+        except BadRequest:
+            raise
+        except ValueError as e:
+            # Log validation error
+            self._logger.error(f"Reference point calculation error: {str(e)}")
+            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
+        except Exception as e:
+            # Log unexpected error with traceback
+            error_trace = traceback.format_exc()
+            self._logger.error(
+                f"Reference point calculation failed: {str(e)}\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Traceback:\n{error_trace}"
+            )
+            return jsonify({
+                "error": f"Reference point calculation failed: {str(e)}",
                 "error_type": type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 

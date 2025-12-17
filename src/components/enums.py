@@ -96,6 +96,8 @@ class ParameterName(Enum):
 
     # Room geometry parameters
     ROOM_POLYGON = "room_polygon"
+    MODEL_TYPE = "model_type"
+    PARAMETERS = "parameters"
 
     # Window parameters
     WINDOW_FRAME_REFLECTANCE = "window_frame_reflectance"
