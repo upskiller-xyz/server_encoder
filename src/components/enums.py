@@ -96,6 +96,8 @@ class ParameterName(Enum):
 
     # Room geometry parameters
     ROOM_POLYGON = "room_polygon"
+    MODEL_TYPE = "model_type"
+    PARAMETERS = "parameters"
 
     # Window parameters
     WINDOW_FRAME_REFLECTANCE = "window_frame_reflectance"
@@ -253,10 +255,10 @@ HSV_DEFAULT_PIXEL_OVERRIDES = {
     # Background region defaults (alpha=windowOrientation, hue=facadeReflectance, sat=floorHeight, val=terrainReflectance)
     (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_DEFAULT): 190,  # window_orientation
     (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_CUSTOM): 190,   # window_orientation
-    (RegionType.BACKGROUND, ChannelType.RED, ModelType.DF_DEFAULT): 190,    # facade_reflectance (hue)
-    (RegionType.BACKGROUND, ChannelType.RED, ModelType.DA_DEFAULT): 200,    # facade_reflectance (hue)
-    (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DF_DEFAULT): 190,   # terrain_reflectance (value)
-    (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DA_DEFAULT): 200,   # terrain_reflectance (value)
+    (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DF_DEFAULT): 190,    # facade_reflectance (hue)
+    (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DA_DEFAULT): 200,    # facade_reflectance (hue)
+    (RegionType.BACKGROUND, ChannelType.RED, ModelType.DF_DEFAULT): 190,   # terrain_reflectance (value)
+    (RegionType.BACKGROUND, ChannelType.RED, ModelType.DA_DEFAULT): 200,   # terrain_reflectance (value)
 
     # Obstruction bar defaults (alpha=balconyReflectance, hue=obstructionAngleHorizon, sat=contextReflectance, val=obstructionAngleZenith)
     (RegionType.OBSTRUCTION_BAR, ChannelType.ALPHA, ModelType.DF_DEFAULT): 210,   # balcony_reflectance
@@ -277,10 +279,10 @@ HSV_DEFAULT_PIXEL_OVERRIDES = {
     (RegionType.ROOM, ChannelType.GREEN, ModelType.DA_DEFAULT): 220,    # floor_reflectance (saturation)
     (RegionType.ROOM, ChannelType.GREEN, ModelType.DF_CUSTOM): 220,     # floor_reflectance (saturation)
     (RegionType.ROOM, ChannelType.GREEN, ModelType.DA_CUSTOM): 220,     # floor_reflectance (saturation)
-    (RegionType.ROOM, ChannelType.BLUE, ModelType.DF_DEFAULT): 220,     # wall_reflectance (value)
-    (RegionType.ROOM, ChannelType.BLUE, ModelType.DA_DEFAULT): 220,     # wall_reflectance (value)
-    (RegionType.ROOM, ChannelType.BLUE, ModelType.DF_CUSTOM): 220,      # wall_reflectance (value)
-    (RegionType.ROOM, ChannelType.BLUE, ModelType.DA_CUSTOM): 220,      # wall_reflectance (value)
+    (RegionType.ROOM, ChannelType.RED, ModelType.DF_DEFAULT): 220,     # wall_reflectance (value)
+    (RegionType.ROOM, ChannelType.RED, ModelType.DA_DEFAULT): 220,     # wall_reflectance (value)
+    (RegionType.ROOM, ChannelType.RED, ModelType.DF_CUSTOM): 220,      # wall_reflectance (value)
+    (RegionType.ROOM, ChannelType.RED, ModelType.DA_CUSTOM): 220,      # wall_reflectance (value)
 
     # Window defaults (alpha=frameReflectance, hue=sillHeight, sat=frameRatio, val=windowHeight)
     (RegionType.WINDOW, ChannelType.ALPHA, ModelType.DF_DEFAULT): 230,  # window_frame_reflectance
@@ -294,27 +296,27 @@ HSV_DEFAULT_PIXEL_OVERRIDES = {
 # RGB Color Space Mapping (Legacy)
 REGION_CHANNEL_MAPPING_RGB = {
     RegionType.BACKGROUND: {
-        ChannelType.RED: ParameterName.FACADE_REFLECTANCE,
+        ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,
         ChannelType.GREEN: ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
-        ChannelType.BLUE: ParameterName.TERRAIN_REFLECTANCE,
+        ChannelType.RED: ParameterName.TERRAIN_REFLECTANCE,
         ChannelType.ALPHA: ParameterName.WINDOW_ORIENTATION,
     },
     RegionType.ROOM: {
-        ChannelType.RED: ParameterName.HEIGHT_ROOF_OVER_FLOOR,
+        ChannelType.BLUE: ParameterName.HEIGHT_ROOF_OVER_FLOOR,
         ChannelType.GREEN: ParameterName.FLOOR_REFLECTANCE,
-        ChannelType.BLUE: ParameterName.WALL_REFLECTANCE,
+        ChannelType.RED: ParameterName.WALL_REFLECTANCE,
         ChannelType.ALPHA: ParameterName.CEILING_REFLECTANCE,
     },
     RegionType.WINDOW: {
-        ChannelType.RED: ParameterName.WINDOW_SILL_HEIGHT,
+        ChannelType.BLUE: ParameterName.WINDOW_SILL_HEIGHT,
         ChannelType.GREEN: ParameterName.WINDOW_FRAME_RATIO,
-        ChannelType.BLUE: ParameterName.WINDOW_HEIGHT,
+        ChannelType.RED: ParameterName.WINDOW_HEIGHT,
         ChannelType.ALPHA: ParameterName.WINDOW_FRAME_REFLECTANCE,
     },
     RegionType.OBSTRUCTION_BAR: {
-        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_HORIZON,
+        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_HORIZON,
         ChannelType.GREEN: ParameterName.CONTEXT_REFLECTANCE,
-        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_ZENITH,
+        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_ZENITH,
         ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,
     },
 }
@@ -325,27 +327,27 @@ REGION_CHANNEL_MAPPING_RGB = {
 REGION_CHANNEL_MAPPING_HSV = {
     RegionType.BACKGROUND: {
         ChannelType.ALPHA: ParameterName.WINDOW_ORIENTATION,  # alpha channel
-        ChannelType.RED: ParameterName.FACADE_REFLECTANCE,  # hue → red channel
+        ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,  # hue → red channel
         ChannelType.GREEN: ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,  # saturation → green channel
-        ChannelType.BLUE: ParameterName.TERRAIN_REFLECTANCE,  # value → blue channel
+        ChannelType.RED: ParameterName.TERRAIN_REFLECTANCE,  # value → blue channel
     },
     RegionType.ROOM: {
         ChannelType.ALPHA: ParameterName.CEILING_REFLECTANCE,  # alpha channel
-        ChannelType.RED: ParameterName.HEIGHT_ROOF_OVER_FLOOR,  # hue → red channel
+        ChannelType.BLUE: ParameterName.HEIGHT_ROOF_OVER_FLOOR,  # hue → red channel
         ChannelType.GREEN: ParameterName.FLOOR_REFLECTANCE,  # saturation → green channel
-        ChannelType.BLUE: ParameterName.WALL_REFLECTANCE,  # value → blue channel
+        ChannelType.RED: ParameterName.WALL_REFLECTANCE,  # value → blue channel
     },
     RegionType.WINDOW: {
         ChannelType.ALPHA: ParameterName.WINDOW_FRAME_REFLECTANCE,  # alpha channel
-        ChannelType.RED: ParameterName.WINDOW_SILL_HEIGHT,  # hue → red channel
+        ChannelType.BLUE: ParameterName.WINDOW_SILL_HEIGHT,  # hue → red channel
         ChannelType.GREEN: ParameterName.WINDOW_FRAME_RATIO,  # saturation → green channel
-        ChannelType.BLUE: ParameterName.WINDOW_HEIGHT,  # value → blue channel
+        ChannelType.RED: ParameterName.WINDOW_HEIGHT,  # value → blue channel
     },
     RegionType.OBSTRUCTION_BAR: {
         ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,  # alpha channel
-        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_HORIZON,  # hue → red channel
+        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_HORIZON,  # hue → red channel
         ChannelType.GREEN: ParameterName.CONTEXT_REFLECTANCE,  # saturation → green channel
-        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_ZENITH,  # value → blue channel
+        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_ZENITH,  # value → blue channel
     },
 }
 
