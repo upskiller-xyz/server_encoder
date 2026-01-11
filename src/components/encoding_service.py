@@ -297,7 +297,7 @@ class EncodingService(IEncodingService):
     # - reject_below_min: if True, reject values < min instead of clipping
     _CLIPPING_CONFIG = {
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: (0.0, 10.0, True),        # Reject < 0, clip > 10
-        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (12.0, 30.0, True),           # Reject <= 0, clip < 12 or > 30
+        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (15.0, 30.0, True),           # Reject <= 0, clip < 12 or > 30
         ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: (0.0, 90.0, False),        # Clip both min and max
         ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: (0.0, 70.0, False),         # Clip both min and max
     }
