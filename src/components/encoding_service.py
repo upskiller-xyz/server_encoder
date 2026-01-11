@@ -292,6 +292,13 @@ class EncodingService(IEncodingService):
                     if param_name in merged_params:
                         window_params[param_name] = merged_params[param_name]
 
+                # Write back clipped shared parameters to main parameters dict
+                # This ensures clipped values are available when constructing images
+                for param_name in self._CLIPPING_CONFIG.keys():
+                    if param_name in merged_params and param_name not in window_params:
+                        # This is a shared parameter that was clipped
+                        parameters[param_name] = merged_params[param_name]
+
             return True, ""
         else:
             # Legacy flat structure - validate directly
