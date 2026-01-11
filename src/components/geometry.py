@@ -907,9 +907,7 @@ class WindowGeometry:
         """
 
         # Calculate center of the window bounding box
-        center_x = (self._x_min + self._x_max) * 0.5
-        center_y = (self._y_min + self._y_max) * 0.5
-        window_center = ShapelyPoint(center_x, center_y)
+        window_center = ShapelyPoint(self.niche_center.x, self.niche_center.y)
 
         # Create polygon boundary
         poly_boundary = ShapelyLine(room_polygon.get_coords() + [room_polygon.get_coords()[0]])
