@@ -8,7 +8,7 @@ Tests all cases for window_sill_height and window_height calculations:
 """
 
 import unittest
-from src.components.encoding_service import (
+from src.components.parameter_calculators import (
     WindowHeightCalculator,
     WindowSillHeightCalculator,
     ParameterCalculatorRegistry
