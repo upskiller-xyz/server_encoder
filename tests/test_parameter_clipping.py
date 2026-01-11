@@ -3,7 +3,7 @@ Unit tests for parameter clipping functionality
 
 Tests clipping behavior for all parameters with clipping rules:
 - floor_height_above_terrain: reject < 0, clip > 10
-- height_roof_over_floor: reject <= 0, clip > 30
+- height_roof_over_floor: reject <= 0, clip < 12 to 12, clip > 30 to 30
 - obstruction_angle_horizon: clip to [0, 90]
 - obstruction_angle_zenith: clip to [0, 70]
 """
@@ -163,7 +163,7 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
         self.assertIn("height_roof_over_floor", error_msg)
 
     def test_height_small_positive_accepted(self):
-        """Test small positive height is accepted"""
+        """Test small positive height is clipped to minimum of 12"""
         parameters = {
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 0.1,
@@ -178,7 +178,7 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["height_roof_over_floor"], 0.1)
+        self.assertEqual(parameters["height_roof_over_floor"], 12.0)
 
     def test_height_within_range_accepted(self):
         """Test height within range (0, 30] is accepted"""

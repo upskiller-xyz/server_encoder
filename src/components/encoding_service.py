@@ -297,7 +297,7 @@ class EncodingService(IEncodingService):
     # - reject_below_min: if True, reject values < min instead of clipping
     _CLIPPING_CONFIG = {
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: (0.0, 10.0, True),        # Reject < 0, clip > 10
-        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (0.0, 30.0, True),            # Reject <= 0, clip > 30
+        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (12.0, 30.0, True),           # Reject <= 0, clip < 12 or > 30
         ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: (0.0, 90.0, False),        # Clip both min and max
         ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: (0.0, 70.0, False),         # Clip both min and max
     }
@@ -310,7 +310,7 @@ class EncodingService(IEncodingService):
 
         Clipping rules:
         - floor_height_above_terrain: values > 10.0 clipped to 10.0, values < 0.0 rejected
-        - height_roof_over_floor: values > 30.0 clipped to 30.0, values <= 0.0 rejected
+        - height_roof_over_floor: values > 30.0 clipped to 30.0, values < 12.0 clipped to 12.0, values <= 0.0 rejected
         - obstruction_angle_horizon: values clipped to [0.0, 90.0] range
         - obstruction_angle_zenith: values clipped to [0.0, 70.0] range
 
@@ -337,14 +337,17 @@ class EncodingService(IEncodingService):
                 clipped = False
 
                 # Handle minimum bound
-                # Special case for height_roof_over_floor: must be > 0, not >= 0
+                # Special case for height_roof_over_floor: must be > 0, clip to min if < min
                 if param_name == ParameterName.HEIGHT_ROOF_OVER_FLOOR.value:
-                    if value <= min_val:
+                    if value <= 0.0:
                         raise ValueError(
                             f"Parameter '{param_name}' value {value} not supported. "
-                            f"Must be greater than {min_val}. "
-                            f"Values <= {min_val} are not supported."
+                            f"Must be greater than 0. "
+                            f"Values <= 0 are not supported."
                         )
+                    elif value < min_val:
+                        value = min_val
+                        clipped = True
                 elif value < min_val:
                     if reject_below_min:
                         raise ValueError(
