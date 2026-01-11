@@ -286,6 +286,12 @@ class EncodingService(IEncodingService):
                 if not is_valid:
                     return False, f"Window '{window_id}': {error_msg}"
 
+                # Write back clipped values to window_params
+                # Only write back parameters that were in window_params originally
+                for param_name in list(window_params.keys()):
+                    if param_name in merged_params:
+                        window_params[param_name] = merged_params[param_name]
+
             return True, ""
         else:
             # Legacy flat structure - validate directly
@@ -297,7 +303,7 @@ class EncodingService(IEncodingService):
     # - reject_below_min: if True, reject values < min instead of clipping
     _CLIPPING_CONFIG = {
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: (0.0, 10.0, True),        # Reject < 0, clip > 10
-        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (15.0, 30.0, True),           # Reject <= 0, clip < 12 or > 30
+        ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (15.0, 30.0, True),           # Reject <= 0, clip < 15 or > 30
         ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: (0.0, 90.0, False),        # Clip both min and max
         ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: (0.0, 70.0, False),         # Clip both min and max
     }
@@ -310,7 +316,7 @@ class EncodingService(IEncodingService):
 
         Clipping rules:
         - floor_height_above_terrain: values > 10.0 clipped to 10.0, values < 0.0 rejected
-        - height_roof_over_floor: values > 30.0 clipped to 30.0, values < 12.0 clipped to 12.0, values <= 0.0 rejected
+        - height_roof_over_floor: values > 30.0 clipped to 30.0, values < 15.0 clipped to 15.0, values <= 0.0 rejected
         - obstruction_angle_horizon: values clipped to [0.0, 90.0] range
         - obstruction_angle_zenith: values clipped to [0.0, 70.0] range
 
