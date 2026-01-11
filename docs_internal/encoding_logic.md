@@ -14,7 +14,7 @@ This document explains the complete logic for encoding room geometry and paramet
 ## 2. Coordinate System
 
 ### Reference Point
-- **Origin:** Center of the window, aligned with outer plane of the façade wall
+- **Origin:** Center of the window (projected onto room boundary), aligned with outer plane of the façade wall
 - **Position:** 12 pixels from right edge, vertically centered
 - **Orientation:** Window normal vector always points toward right edge of image
 

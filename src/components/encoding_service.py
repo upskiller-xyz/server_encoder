@@ -677,9 +677,9 @@ class EncodingService(IEncodingService):
                 # Calculate reference point
                 ref_point = window_geom.calculate_reference_point_from_polygon(room_polygon)
                 results[window_id] = {
-                    "x": ref_point.x,
-                    "y": ref_point.y,
-                    "z": ref_point.z
+                    "x": round(ref_point.x, 4),
+                    "y": round(ref_point.y, 4),
+                    "z": round(ref_point.z, 4)
                 }
 
                 self._logger.info(
