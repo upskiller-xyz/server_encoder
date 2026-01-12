@@ -137,7 +137,7 @@ The **Room Encoding Server** transforms 3D room geometry and physical parameters
 
 3. Install dependencies
    ```sh
-   pip install flask flask-cors numpy opencv-python-headless shapely
+   pip install -r requirements.txt
    ```
 
 4. Run the server

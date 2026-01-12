@@ -893,7 +893,7 @@ class WindowGeometry:
         """
         Calculate window reference point from room polygon edge
 
-        The reference point is the center of the window edge that lies on the room boundary.
+        The reference point is the center of the window bounding box projected onto the room boundary. This ensures accurate positioning even for windows on diagonal or curved walls.
 
         Args:
             room_polygon: The room polygon containing this window
@@ -906,22 +906,22 @@ class WindowGeometry:
             ValueError: If window is not on any polygon edge
         """
 
-        res = self.get_room_edge(room_polygon, tolerance)
-        if len(res) < 1:
-            raise ValueError(
-                f"Window at ({self.x1:.2f}, {self.y1:.2f}) to ({self.x2:.2f}, {self.y2:.2f}) "
-                f"does not lie on any polygon edge"
-            )
+        # Calculate center of the window bounding box
+        window_center = ShapelyPoint(self.niche_center.x, self.niche_center.y)
 
-        edge, i, j = res[0]
-        edge_coords = list(edge.coords)
+        # Create polygon boundary
+        poly_boundary = ShapelyLine(room_polygon.get_coords() + [room_polygon.get_coords()[0]])
 
-        # Calculate center of the window edge on the boundary
-        ref_x = (edge_coords[0][0] + edge_coords[1][0]) * 0.5
-        ref_y = (edge_coords[0][1] + edge_coords[1][1]) * 0.5
-        ref_z = (self.z1 + self.z2) * 0.5  # Vertical center
+        # Project window center onto the closest point on the boundary
+        # project() returns the distance along the line
+        dist_along = poly_boundary.project(window_center)
+        # interpolate() returns the point at that distance
+        closest_point = poly_boundary.interpolate(dist_along)
 
-        return Point3D(ref_x, ref_y, ref_z)
+        # Calculate Z center
+        ref_z = (self.z1 + self.z2) * 0.5
+
+        return Point3D(closest_point.x, closest_point.y, ref_z)
 
     def calculate_direction_from_polygon(
         self,
