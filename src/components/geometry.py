@@ -885,6 +885,49 @@ class WindowGeometry:
         res = [(edge, i, j) for i,edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges) if edge.buffer(tolerance).contains(w_edge)]
         return res
 
+    def _project_to_polygon_edge(
+        self,
+        room_polygon: 'RoomPolygon',
+        tolerance: float = 0.01
+    ) -> tuple:
+        """
+        Project window center onto the polygon boundary and find the containing edge.
+
+        This is a shared helper for calculate_reference_point_from_polygon and
+        calculate_direction_from_polygon.
+
+        Args:
+            room_polygon: The room polygon containing this window
+            tolerance: Distance tolerance for edge matching (meters)
+
+        Returns:
+            Tuple of (projected_point: ShapelyPoint, edge_index: int, edge: ShapelyLine)
+
+        Raises:
+            ValueError: If projected point is not on any polygon edge
+        """
+        # Calculate center of the window bounding box
+        window_center = ShapelyPoint(self.niche_center.x, self.niche_center.y)
+
+        # Create polygon boundary as closed line
+        poly_boundary = ShapelyLine(room_polygon.get_coords() + [room_polygon.get_coords()[0]])
+
+        # Project window center onto the closest point on the boundary
+        dist_along = poly_boundary.project(window_center)
+        projected_point = poly_boundary.interpolate(dist_along)
+
+        # Find which edge contains the projected point
+        poly_edges = room_polygon.get_edges()
+        for i, edge in enumerate(poly_edges):
+            if edge.buffer(tolerance).contains(projected_point):
+                return (projected_point, i, edge)
+
+        # No edge found - raise error
+        raise ValueError(
+            f"Projected point ({projected_point.x:.2f}, {projected_point.y:.2f}) "
+            f"does not lie on any polygon edge (tolerance: {tolerance}m)"
+        )
+
     def calculate_reference_point_from_polygon(
         self,
         room_polygon: 'RoomPolygon',
@@ -893,7 +936,9 @@ class WindowGeometry:
         """
         Calculate window reference point from room polygon edge
 
-        The reference point is the center of the window bounding box projected onto the room boundary. This ensures accurate positioning even for windows on diagonal or curved walls.
+        The reference point is the center of the window bounding box projected onto
+        the room boundary. This ensures accurate positioning even for windows on
+        diagonal or curved walls.
 
         Args:
             room_polygon: The room polygon containing this window
@@ -901,27 +946,13 @@ class WindowGeometry:
 
         Returns:
             Point3D with (x, y, z) coordinates where z is the vertical center of the window
-
-        Raises:
-            ValueError: If window is not on any polygon edge
         """
-
-        # Calculate center of the window bounding box
-        window_center = ShapelyPoint(self.niche_center.x, self.niche_center.y)
-
-        # Create polygon boundary
-        poly_boundary = ShapelyLine(room_polygon.get_coords() + [room_polygon.get_coords()[0]])
-
-        # Project window center onto the closest point on the boundary
-        # project() returns the distance along the line
-        dist_along = poly_boundary.project(window_center)
-        # interpolate() returns the point at that distance
-        closest_point = poly_boundary.interpolate(dist_along)
+        projected_point, _, _ = self._project_to_polygon_edge(room_polygon, tolerance)
 
         # Calculate Z center
         ref_z = (self.z1 + self.z2) * 0.5
 
-        return Point3D(closest_point.x, closest_point.y, ref_z)
+        return Point3D(projected_point.x, projected_point.y, ref_z)
 
     def calculate_direction_from_polygon(
         self,
@@ -940,48 +971,31 @@ class WindowGeometry:
 
         Returns:
             direction_angle in radians (0 = pointing right/east, π/2 = pointing up/north)
-
-        Raises:
-            ValueError: If window is not on any polygon edge
         """
+        projected_point, edge_index, edge = self._project_to_polygon_edge(room_polygon, tolerance)
 
-
-        # w_edges = self.get_candidate_edges()
-        # # Find which polygon edge contains one of the window edges
-        polygon_coords =  room_polygon.get_coords()
-
-        res = self.get_room_edge(room_polygon, tolerance)
-        if len(res)<1:
-            raise ValueError(
-            f"Window at ({self.x1:.2f}, {self.y1:.2f}) to ({self.x2:.2f}, {self.y2:.2f}) "
-            f"does not lie on any polygon edge"
-        )
-
-        edge, i, j = res[0]
-        v1 = polygon_coords[i]
-        v2 = polygon_coords[(i + 1) % len(polygon_coords)]
+        polygon_coords = room_polygon.get_coords()
+        v1 = polygon_coords[edge_index]
+        v2 = polygon_coords[(edge_index + 1) % len(polygon_coords)]
 
         # Edge angle (direction along the edge)
         edge_angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
 
-
+        # Two possible perpendiculars
         perps = [edge_angle + math.pi / 2, edge_angle - math.pi / 2]
-        # Get center point of the window edge that's on the polygon boundary
-        edge_coords = list(edge.coords)
 
+        # Get center point of the edge for inside/outside check
+        edge_coords = list(edge.coords)
         room_poly = ShapelyPolygon(polygon_coords)
 
         # Select the perpendicular pointing OUTSIDE the room (window facing direction)
-        # Windows face outward from the building
         calculated_angle = perps[0]
-        res = [perp for perp in perps if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp)]
-        if len(res)>0:
-            calculated_angle = res[0]
+        for perp in perps:
+            if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp):
+                calculated_angle = perp
+                break
 
-        calculated_angle = GeometryOps.normalize_angle(calculated_angle)
-
-
-        return calculated_angle
+        return GeometryOps.normalize_angle(calculated_angle)
     
 
 class WindowBorderValidator:
