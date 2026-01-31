@@ -930,8 +930,8 @@ class TestWindowIntegration(unittest.TestCase):
 
         all_params = {
             'obstruction_bar': {
-                'obstruction_angle_horizon': 45.0,
-                'obstruction_angle_zenith': 30.0
+                'horizon': 45.0,
+                'zenith': 30.0
             },
             'window': {
                 'window_sill_height': 0.9,

@@ -58,14 +58,14 @@ Parameters for each window, placed inside `windows.<window_id>` object.
 | `window_sill_height` | float | 0-5 | m | ✓ | - | Height of window sill (z1) |
 | `window_frame_ratio` | float | 0-1 | - | ✓ | - | Frame-to-glass ratio |
 | `window_height` | float | 0.2-5 | m | ✓ | - | Window height (z2-z1) |
-| `obstruction_angle_horizon` | float/array | 0-90 | deg | ✓ | - | Horizon obstruction angle(s) |
-| `obstruction_angle_zenith` | float/array | 0-70 | deg | ✓ | - | Zenith obstruction angle(s) |
+| `horizon` | float/array | 0-90 | deg | ✓ | - | Horizon obstruction angle(s) |
+| `zenith` | float/array | 0-70 | deg | ✓ | - | Zenith obstruction angle(s) |
 | `window_frame_reflectance` | float | 0-1 | - | - | 0.8 | Frame material reflectance |
 | `context_reflectance` | float/array | 0.1-0.6 | - | - | 1.0 | External context reflectance |
 | `balcony_reflectance` | float | 0-1 | - | - | 0.8 | Balcony material reflectance |
 
 **Array Parameters:**
-`obstruction_angle_horizon`, `obstruction_angle_zenith`, and `context_reflectance` can be:
+`horizon`, `zenith`, and `context_reflectance` can be:
 - Single float (applied to all 64 analysis directions)
 - Array of 64 floats (one per direction)
 
@@ -123,8 +123,8 @@ Used as:
         "window_sill_height": 0.9,
         "window_frame_ratio": 0.15,
         "window_height": 1.5,
-        "obstruction_angle_horizon": 15.0,
-        "obstruction_angle_zenith": 10.0
+        "horizon": 15.0,
+        "zenith": 10.0
       }
     }
   }
@@ -150,8 +150,8 @@ Used as:
         "window_sill_height": 0.9,
         "window_frame_ratio": 0.15,
         "window_height": 1.5,
-        "obstruction_angle_horizon": 15.0,
-        "obstruction_angle_zenith": 10.0,
+        "horizon": 15.0,
+        "zenith": 10.0,
         "window_frame_reflectance": 0.7
       },
       "west_window": {
@@ -160,8 +160,8 @@ Used as:
         "window_sill_height": 1.0,
         "window_frame_ratio": 0.2,
         "window_height": 1.0,
-        "obstruction_angle_horizon": 25.0,
-        "obstruction_angle_zenith": 15.0,
+        "horizon": 25.0,
+        "zenith": 15.0,
         "context_reflectance": 0.3
       }
     }
@@ -188,8 +188,8 @@ Used as:
         "window_sill_height": 0.8,
         "window_frame_ratio": 0.1,
         "window_height": 1.4,
-        "obstruction_angle_horizon": [10, 12, 15, ...],
-        "obstruction_angle_zenith": [8, 9, 10, ...],
+        "horizon": [10, 12, 15, ...],
+        "zenith": [8, 9, 10, ...],
         "context_reflectance": [0.2, 0.25, 0.3, ...]
       }
     }

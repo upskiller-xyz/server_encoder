@@ -90,8 +90,8 @@ class TestModelTypeIntegration:
                 "height_roof_over_floor": 3.0,
                 "floor_height_above_terrain": 0.3,
                 "room_polygon": [[0, 0], [0, -5], [-3, -5], [-3, 0]],
-                "obstruction_angle_horizon": [30, 45],
-                "obstruction_angle_zenith": [20, 35],
+                "horizon": [30, 45],
+                "zenith": [20, 35],
                 "windows": {
                     "window_1": {
                         "window_frame_ratio": 0.8,
@@ -131,8 +131,8 @@ class TestModelTypeIntegration:
                 "height_roof_over_floor": 3.0,
                 "floor_height_above_terrain": 0.3,
                 "room_polygon": [[0, 0], [0, -5], [-3, -5], [-3, 0]],
-                "obstruction_angle_horizon": [30, 45],
-                "obstruction_angle_zenith": [20, 35],
+                "horizon": [30, 45],
+                "zenith": [20, 35],
                 "windows": {
                     "window_1": {
                         "window_frame_ratio": 0.8,
@@ -156,8 +156,8 @@ class TestModelTypeIntegration:
                 "height_roof_over_floor": 3.0,
                 "floor_height_above_terrain": 0.3,
                 "room_polygon": [[0, 0], [0, -5], [-3, -5], [-3, 0]],
-                "obstruction_angle_horizon": [30, 45],
-                "obstruction_angle_zenith": [20, 35],
+                "horizon": [30, 45],
+                "zenith": [20, 35],
                 "windows": {
                     "window_1": {
                         "window_frame_ratio": 0.8,

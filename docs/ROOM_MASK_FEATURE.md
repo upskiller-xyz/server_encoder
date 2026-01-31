@@ -47,8 +47,8 @@ response = requests.post('http://localhost:8082/encode', json={
                 "window_frame_ratio": 0.8,
                 "x1": -0.6, "y1": 0.0, "z1": 2.1,
                 "x2": 0.6, "y2": 0.0, "z2": 3.4,
-                "obstruction_angle_horizon": 45.0,
-                "obstruction_angle_zenith": 30.0
+                "horizon": 45.0,
+                "zenith": 30.0
             }
         }
     }

@@ -113,9 +113,9 @@ class ParameterName(Enum):
 
     # Obstruction bar parameters
     BALCONY_REFLECTANCE = "balcony_reflectance"
-    OBSTRUCTION_ANGLE_HORIZON = "obstruction_angle_horizon"
+    HORIZON = "horizon"
     CONTEXT_REFLECTANCE = "context_reflectance"
-    OBSTRUCTION_ANGLE_ZENITH = "obstruction_angle_zenith"
+    ZENITH = "zenith"
     
     
 
@@ -150,8 +150,8 @@ REQUIRED_PARAMETERS = {
         ParameterName.WINDOW_FRAME_RATIO,
     ],
     RegionType.OBSTRUCTION_BAR: [
-        ParameterName.OBSTRUCTION_ANGLE_HORIZON,
-        ParameterName.OBSTRUCTION_ANGLE_ZENITH
+        ParameterName.HORIZON,
+        ParameterName.ZENITH
     ]
 }
 
@@ -193,11 +193,11 @@ PARAMETER_REGIONS = {
     # Obstruction bar parameters
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
-    ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: RegionType.OBSTRUCTION_BAR,
+    ParameterName.HORIZON.value: RegionType.OBSTRUCTION_BAR,
    
     ParameterName.CONTEXT_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
     "context_reflectance": RegionType.OBSTRUCTION_BAR,
-    ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: RegionType.OBSTRUCTION_BAR
+    ParameterName.ZENITH.value: RegionType.OBSTRUCTION_BAR
 }
 
 
@@ -314,9 +314,9 @@ REGION_CHANNEL_MAPPING_RGB = {
         ChannelType.ALPHA: ParameterName.WINDOW_FRAME_REFLECTANCE,
     },
     RegionType.OBSTRUCTION_BAR: {
-        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_HORIZON,
+        ChannelType.BLUE: ParameterName.HORIZON,
         ChannelType.GREEN: ParameterName.CONTEXT_REFLECTANCE,
-        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_ZENITH,
+        ChannelType.RED: ParameterName.ZENITH,
         ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,
     },
 }
@@ -345,9 +345,9 @@ REGION_CHANNEL_MAPPING_HSV = {
     },
     RegionType.OBSTRUCTION_BAR: {
         ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,  # alpha channel
-        ChannelType.BLUE: ParameterName.OBSTRUCTION_ANGLE_HORIZON,  # hue → red channel
+        ChannelType.BLUE: ParameterName.HORIZON,  # hue → red channel
         ChannelType.GREEN: ParameterName.CONTEXT_REFLECTANCE,  # saturation → green channel
-        ChannelType.RED: ParameterName.OBSTRUCTION_ANGLE_ZENITH,  # value → blue channel
+        ChannelType.RED: ParameterName.ZENITH,  # value → blue channel
     },
 }
 

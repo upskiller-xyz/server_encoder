@@ -178,8 +178,8 @@ payload = {
                 "window_frame_ratio": 0.15,
                 "x1": -0.6, "y1": 0.0, "z1": 0.9,
                 "x2": 0.6, "y2": 0.0, "z2": 2.4,
-                "obstruction_angle_horizon": 15.0,
-                "obstruction_angle_zenith": 10.0
+                "horizon": 15.0,
+                "zenith": 10.0
             }
         }
     }

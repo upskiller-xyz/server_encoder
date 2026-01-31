@@ -560,9 +560,10 @@ class TestRoomPolygonGeometry(unittest.TestCase):
 
         polygon = RoomPolygon(vertices)
         pixel_coords = polygon.to_pixel_array(
-            image_size=128,
+            
             window_x1=-0.6, window_y1=0.0,
-            window_x2=0.6, window_y2=0.0
+            window_x2=0.6, window_y2=0.0,
+            image_size=128
         )
 
         # Should return array with shape (1, 4, 2) - 4 vertices
@@ -583,9 +584,10 @@ class TestRoomPolygonGeometry(unittest.TestCase):
 
         polygon = RoomPolygon(vertices)
         pixel_coords = polygon.to_pixel_array(
-            image_size=128,
+            
             window_x1=-0.6, window_y1=0.0,
-            window_x2=0.6, window_y2=0.0
+            window_x2=0.6, window_y2=0.0,
+            image_size=128
         )
 
         # Should return array with shape (1, 6, 2) - 6 vertices

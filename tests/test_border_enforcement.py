@@ -172,8 +172,8 @@ class TestBorderEnforcement(unittest.TestCase):
 
         # Encode obstruction bar
         obstruction_params = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
         image = self.obstruction_encoder.encode_region(
             image, obstruction_params, self.model_type
@@ -240,8 +240,8 @@ class TestBorderEnforcementAllRegions(unittest.TestCase):
         # Encode obstruction bar
         obstruction_encoder = ObstructionBarEncoder()
         obstruction_params = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
         image = obstruction_encoder.encode_region(image, obstruction_params, model_type)
 
@@ -342,8 +342,8 @@ class TestBorderEnforcementIntegration(unittest.TestCase):
                      'x2': 0.6, 'y2': 0.0, 'z2': 2.4
                  })
                  .encode_region(RegionType.OBSTRUCTION_BAR, {
-                     'obstruction_angle_zenith': 35.0,
-                     'obstruction_angle_horizon': 45.0
+                     'zenith': 35.0,
+                     'horizon': 45.0
                  })
                  .build())
 
