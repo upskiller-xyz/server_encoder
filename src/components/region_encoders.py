@@ -36,7 +36,7 @@ class BaseRegionEncoder(IRegionEncoder):
         self._region_type = region_type
         self._encoder_factory = EncoderFactory()
         self._encoding_scheme = encoding_scheme
-        self._last_mask: np.ndarray = None
+        self._last_mask: np.ndarray = np.array([])
 
     def get_region_type(self) -> RegionType:
         """Get the region type"""
@@ -148,7 +148,7 @@ class BaseRegionEncoder(IRegionEncoder):
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
         channel_type: ChannelType,
-        model_type: ModelType = None
+        model_type: ModelType = ModelType.DF_DEFAULT
     ) -> int | np.ndarray:
         """
         Encode a single channel using the channel mapping (Template Method Pattern)
@@ -188,7 +188,7 @@ class BaseRegionEncoder(IRegionEncoder):
         self,
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
-        model_type: ModelType = None
+        model_type: ModelType = ModelType.DF_DEFAULT
     ) -> List[int | np.ndarray]:
         """
         Encode all 4 channels (RGBA) using list comprehension
@@ -304,11 +304,11 @@ class RoomRegionEncoder(BaseRegionEncoder):
             # Create mask
             mask = np.zeros((height, width), dtype=np.uint8)
             pixel_coords = polygon.to_pixel_array(
-                image_size=width,
                 window_x1=window_x1,
                 window_y1=window_y1,
                 window_x2=window_x2,
                 window_y2=window_y2,
+                image_size=width,
                 direction_angle=direction_angle
             )
             
@@ -429,7 +429,7 @@ class WindowRegionEncoder(BaseRegionEncoder):
                 x2=parameters[ParameterName.X2.value],
                 y2=parameters[ParameterName.Y2.value],
                 z2=parameters[ParameterName.Z2.value],
-                direction_angle=parameters.get(ParameterName.DIRECTION_ANGLE.value)
+                direction_angle=parameters.get(ParameterName.DIRECTION_ANGLE.value, 0)
             )
 
         # Get pixel bounds from geometry
@@ -450,9 +450,9 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     Encodes obstruction bar region parameters
 
     CORRECTED CHANNEL MAPPINGS:
-    - Red: obstruction_angle_horizon (0-90° input → 0-1 normalized)
+    - Red: horizon (0-90° input → 0-1 normalized)
     - Green: context_reflectance (0.1-0.6 input → 0-1 normalized, default=1 if unobstructed)
-    - Blue: obstruction_angle_zenith (0-70° input → 0.2-0.8 normalized)
+    - Blue: zenith (0-70° input → 0.2-0.8 normalized)
     - Alpha: balcony_reflectance (0-1 input → 0-1 normalized, default=0.8)
     """
 

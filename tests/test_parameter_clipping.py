@@ -4,8 +4,8 @@ Unit tests for parameter clipping functionality
 Tests clipping behavior for all parameters with clipping rules:
 - floor_height_above_terrain: reject < 0, clip > 10
 - height_roof_over_floor: reject <= 0, clip < 12 to 12, clip > 30 to 30
-- obstruction_angle_horizon: clip to [0, 90]
-- obstruction_angle_zenith: clip to [0, 70]
+- horizon: clip to [0, 90]
+- zenith: clip to [0, 70]
 """
 
 import unittest
@@ -28,8 +28,8 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "floor_height_above_terrain": -1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 1.0,
             "z2": 3.0
@@ -48,8 +48,8 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "floor_height_above_terrain": 0.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 1.0,
             "z2": 3.0
@@ -66,8 +66,8 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "floor_height_above_terrain": 5.5,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 6.0,
             "z2": 8.0
@@ -84,8 +84,8 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "floor_height_above_terrain": 10.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 11.0,
             "z2": 13.0
@@ -102,8 +102,8 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "floor_height_above_terrain": 15.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 16.0,
             "z2": 18.0
@@ -131,8 +131,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": -2.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -150,8 +150,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 0.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -168,8 +168,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 0.1,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -186,8 +186,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 15.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -204,8 +204,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 30.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -222,8 +222,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 50.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -242,8 +242,8 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 100.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -256,7 +256,7 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
 
 
 class TestObstructionAngleHorizonClipping(unittest.TestCase):
-    """Test clipping for obstruction_angle_horizon parameter"""
+    """Test clipping for horizon parameter"""
 
     def setUp(self):
         """Set up encoding service with mock logger"""
@@ -269,8 +269,8 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": -15.0,
-            "obstruction_angle_zenith": [30.0],
+            "horizon": -15.0,
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -279,7 +279,7 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 0.0)
+        self.assertEqual(parameters["horizon"], 0.0)
 
     def test_horizon_angle_zero_accepted(self):
         """Test horizon angle of 0 is accepted"""
@@ -287,8 +287,8 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": 0.0,
-            "obstruction_angle_zenith": [30.0],
+            "horizon": 0.0,
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -297,7 +297,7 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 0.0)
+        self.assertEqual(parameters["horizon"], 0.0)
 
     def test_horizon_angle_within_range_accepted(self):
         """Test horizon angle within [0, 90] is accepted"""
@@ -305,8 +305,8 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": [30.0],
+            "horizon": 45.0,
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -315,7 +315,7 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 45.0)
+        self.assertEqual(parameters["horizon"], 45.0)
 
     def test_horizon_angle_at_max_accepted(self):
         """Test horizon angle at max (90) is accepted"""
@@ -323,8 +323,8 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": 90.0,
-            "obstruction_angle_zenith": [30.0],
+            "horizon": 90.0,
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -333,7 +333,7 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 90.0)
+        self.assertEqual(parameters["horizon"], 90.0)
 
     def test_horizon_angle_above_max_clipped(self):
         """Test horizon angle > 90 is clipped to 90"""
@@ -341,8 +341,8 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": 120.0,
-            "obstruction_angle_zenith": [30.0],
+            "horizon": 120.0,
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -351,11 +351,11 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 90.0)
+        self.assertEqual(parameters["horizon"], 90.0)
 
 
 class TestObstructionAngleZenithClipping(unittest.TestCase):
-    """Test clipping for obstruction_angle_zenith parameter"""
+    """Test clipping for zenith parameter"""
 
     def setUp(self):
         """Set up encoding service with mock logger"""
@@ -368,8 +368,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": -10.0,
+            "horizon": [45.0],
+            "zenith": -10.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -378,7 +378,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 0.0)
+        self.assertEqual(parameters["zenith"], 0.0)
 
     def test_zenith_angle_zero_accepted(self):
         """Test zenith angle of 0 is accepted"""
@@ -386,8 +386,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": 0.0,
+            "horizon": [45.0],
+            "zenith": 0.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -396,7 +396,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 0.0)
+        self.assertEqual(parameters["zenith"], 0.0)
 
     def test_zenith_angle_within_range_accepted(self):
         """Test zenith angle within [0, 70] is accepted"""
@@ -404,8 +404,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": 35.0,
+            "horizon": [45.0],
+            "zenith": 35.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -414,7 +414,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 35.0)
+        self.assertEqual(parameters["zenith"], 35.0)
 
     def test_zenith_angle_at_max_accepted(self):
         """Test zenith angle at max (70) is accepted"""
@@ -422,8 +422,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": 70.0,
+            "horizon": [45.0],
+            "zenith": 70.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -432,7 +432,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 70.0)
+        self.assertEqual(parameters["zenith"], 70.0)
 
     def test_zenith_angle_above_max_clipped(self):
         """Test zenith angle > 70 is clipped to 70"""
@@ -440,8 +440,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": 85.0,
+            "horizon": [45.0],
+            "zenith": 85.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -450,7 +450,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 70.0)
+        self.assertEqual(parameters["zenith"], 70.0)
 
     def test_zenith_angle_significantly_above_max_clipped(self):
         """Test zenith angle >> 70 is clipped to 70"""
@@ -458,8 +458,8 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "floor_height_above_terrain": 1.0,
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": 180.0,
+            "horizon": [45.0],
+            "zenith": 180.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0
@@ -468,7 +468,7 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
         is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
 
         self.assertTrue(is_valid)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 70.0)
+        self.assertEqual(parameters["zenith"], 70.0)
 
 
 class TestMultipleParametersClipping(unittest.TestCase):
@@ -485,8 +485,8 @@ class TestMultipleParametersClipping(unittest.TestCase):
             "floor_height_above_terrain": 15.0,     # Will clip to 10
             "height_roof_over_floor": 50.0,         # Will clip to 30
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": 120.0,     # Will clip to 90
-            "obstruction_angle_zenith": 85.0,       # Will clip to 70
+            "horizon": 120.0,     # Will clip to 90
+            "zenith": 85.0,       # Will clip to 70
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 16.0,
             "z2": 18.0
@@ -497,8 +497,8 @@ class TestMultipleParametersClipping(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 10.0)
         self.assertEqual(parameters["height_roof_over_floor"], 30.0)
-        self.assertEqual(parameters["obstruction_angle_horizon"], 90.0)
-        self.assertEqual(parameters["obstruction_angle_zenith"], 70.0)
+        self.assertEqual(parameters["horizon"], 90.0)
+        self.assertEqual(parameters["zenith"], 70.0)
 
     def test_some_parameters_rejected_some_clipped(self):
         """Test that rejection takes precedence over clipping"""
@@ -506,8 +506,8 @@ class TestMultipleParametersClipping(unittest.TestCase):
             "floor_height_above_terrain": -1.0,     # Will be rejected
             "height_roof_over_floor": 50.0,         # Would clip but doesn't matter
             "window_frame_ratio": 0.8,
-            "obstruction_angle_horizon": [45.0],
-            "obstruction_angle_zenith": [30.0],
+            "horizon": [45.0],
+            "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
             "z2": 4.0

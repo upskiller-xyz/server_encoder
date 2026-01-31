@@ -27,8 +27,8 @@
         "x2": -3.0,
         "y2": 3.0,
         "z2": 2.4,
-        "obstruction_angle_horizon": 45.0,
-        "obstruction_angle_zenith": 30.0,
+        "horizon": 45.0,
+        "zenith": 30.0,
         "window_frame_reflectance": 0.5,
         "balcony_underside_reflectance": 0.7
       },
@@ -42,8 +42,8 @@
         "x2": 1.2,
         "y2": 0.0,
         "z2": 3.0,
-        "obstruction_angle_horizon": 20.0,
-        "obstruction_angle_zenith": 15.0,
+        "horizon": 20.0,
+        "zenith": 15.0,
         "window_frame_reflectance": 0.6,
         "balcony_underside_reflectance": 0.8
       },
@@ -57,8 +57,8 @@
         "x2": 0.5,
         "y2": 6.0,
         "z2": 2.3,
-        "obstruction_angle_horizon": 60.0,
-        "obstruction_angle_zenith": 40.0,
+        "horizon": 60.0,
+        "zenith": 40.0,
         "window_frame_reflectance": 0.5,
         "balcony_underside_reflectance": 0.6
       },
@@ -72,8 +72,8 @@
         "x2": 3.0,
         "y2": 1.5,
         "z2": 2.0,
-        "obstruction_angle_horizon": 10.0,
-        "obstruction_angle_zenith": 5.0,
+        "horizon": 10.0,
+        "zenith": 5.0,
         "window_frame_reflectance": 0.5,
         "balcony_underside_reflectance": 0.7
       },
@@ -87,8 +87,8 @@
         "x2": 2.5,
         "y2": 2.0,
         "z2": 2.0,
-        "obstruction_angle_horizon": 10.0,
-        "obstruction_angle_zenith": 5.0,
+        "horizon": 10.0,
+        "zenith": 5.0,
         "window_frame_reflectance": 0.5,
         "balcony_underside_reflectance": 0.7
       }

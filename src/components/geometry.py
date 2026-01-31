@@ -1,6 +1,7 @@
 from typing import List, Tuple, Any, Union, Dict, Callable
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+import logging
 import math
 import numpy as np
 import cv2
@@ -9,6 +10,7 @@ from shapely.affinity import rotate as shapely_rotate
 from src.components.enums import ImageDimensions, GeometryType, ParameterName
 from src.components.graphics_constants import GRAPHICS_CONSTANTS
 
+logger = logging.Logger("logger")
 
 @dataclass
 class Point2D:
@@ -279,7 +281,7 @@ class GeometryAdapter:
     def extract_coordinates(
         cls,
         geometry: Any,
-        fallback_coords: List[Tuple[float, float]] = None
+        fallback_coords: List[List[int]] = []
     ) -> np.ndarray:
         """
         Extract coordinates from a Shapely geometry object
@@ -310,6 +312,7 @@ class GeometryAdapter:
 
         # Fallback: use provided fallback coordinates or empty polygon
         if fallback_coords:
+            logger.info("[GEOMETRY ADAPTER]: Using fallback coordinates")
             return np.array([fallback_coords], dtype=np.int32)
         return np.array([[[0, 0]]], dtype=np.int32)
 
@@ -325,7 +328,7 @@ class RoomPolygon:
     - Window is on the right side of the image
     """
 
-    def __init__(self, vertices: List[Tuple[float, float]]):
+    def __init__(self, vertices: List[Tuple[float, ...]]):
         """
         Initialize room polygon
 
@@ -342,7 +345,7 @@ class RoomPolygon:
         """Get polygon vertices"""
         return self._vertices
 
-    def rotate(self, angle_degrees: float, center: Point2D = None) -> 'RoomPolygon':
+    def rotate(self, angle_degrees: float, center: Point2D | None = None) -> 'RoomPolygon':
         """
         Rotate polygon around a center point using Shapely
 
@@ -425,12 +428,12 @@ class RoomPolygon:
         
     def to_pixel_array(
         self,
+        window_x1: float | None,
+        window_y1: float | None,
+        window_x2: float | None,
+        window_y2: float | None,
         image_size: int = 128,
-        window_x1: float = None,
-        window_y1: float = None,
-        window_x2: float = None,
-        window_y2: float = None,
-        direction_angle: float = None
+        direction_angle: float | None = None
     ) -> np.ndarray:
         """
         Convert polygon to pixel coordinates for drawing on image
@@ -642,7 +645,7 @@ class WindowGeometry:
         x2: float,
         y2: float,
         z2: float,
-        direction_angle: float = None
+        direction_angle: float = 0
     ):
         """
         Initialize window geometry from bounding box
@@ -751,7 +754,7 @@ class WindowGeometry:
         """Get window direction angle in radians (None if not set)"""
         return self._direction_angle
 
-    def rotate(self, angle_degrees: float, center: Point2D = None) -> 'WindowGeometry':
+    def rotate(self, angle_degrees: float, center: Point2D | None = None) -> 'WindowGeometry':
         """
         Rotate window geometry around a center point using Shapely
 
@@ -782,7 +785,7 @@ class WindowGeometry:
     def get_pixel_bounds(
         self,
         image_size: int = 128,
-        window_offset_px: int = None
+        window_offset_px: int | None = None
     ) -> Tuple[int, int, int, int]:
         """
         Get window bounds in pixel coordinates for top view

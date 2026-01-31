@@ -30,8 +30,8 @@ class TestObstructionBarConstruction(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -59,8 +59,8 @@ class TestObstructionBarConstruction(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -111,8 +111,8 @@ class TestObstructionBarDimensions(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -140,8 +140,8 @@ class TestObstructionBarDimensions(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -180,7 +180,7 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
         self.model_type = ModelType.DF_DEFAULT
 
     def test_red_channel_horizon_angle(self):
-        """Test red channel encodes obstruction_angle_horizon (0-90° -> 0-1)"""
+        """Test red channel encodes horizon (0-90° -> 0-1)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -191,8 +191,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
 
         for angle, expected_value in test_cases:
             parameters = {
-                'obstruction_angle_zenith': 35.0,
-                'obstruction_angle_horizon': angle
+                'zenith': 35.0,
+                'horizon': angle
             }
 
             result = self.encoder.encode_region(
@@ -208,7 +208,7 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
             )
 
     def test_blue_channel_zenith_angle(self):
-        """Test blue channel encodes obstruction_angle_zenith (0-70° -> 0.2-0.8)"""
+        """Test blue channel encodes zenith (0-70° -> 0.2-0.8)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -219,8 +219,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
 
         for angle, expected_value in test_cases:
             parameters = {
-                'obstruction_angle_zenith': angle,
-                'obstruction_angle_horizon': 45.0
+                'zenith': angle,
+                'horizon': 45.0
             }
 
             result = self.encoder.encode_region(
@@ -247,8 +247,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'obstruction_angle_zenith': 35.0,
-                'obstruction_angle_horizon': 45.0,
+                'zenith': 35.0,
+                'horizon': 45.0,
                 'context_reflectance': reflectance
             }
 
@@ -270,8 +270,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
 
         # Don't provide context_reflectance parameter
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -294,8 +294,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
         horizon_angles = np.linspace(0, 90, 64)
 
         parameters = {
-            'obstruction_angle_zenith': zenith_angles.tolist(),
-            'obstruction_angle_horizon': horizon_angles.tolist()
+            'zenith': zenith_angles.tolist(),
+            'horizon': horizon_angles.tolist()
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -338,34 +338,34 @@ class TestObstructionBarParameterValidation(unittest.TestCase):
             self.encoder.encode_region(self.image, {}, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('obstruction_angle_zenith', error_msg)
-        self.assertIn('obstruction_angle_horizon', error_msg)
+        self.assertIn('zenith', error_msg)
+        self.assertIn('horizon', error_msg)
 
     def test_missing_zenith_angle(self):
-        """Test error when obstruction_angle_zenith is missing"""
-        parameters = {'obstruction_angle_horizon': 45.0}
+        """Test error when zenith is missing"""
+        parameters = {'horizon': 45.0}
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('obstruction_angle_zenith', error_msg)
+        self.assertIn('zenith', error_msg)
 
     def test_missing_horizon_angle(self):
-        """Test error when obstruction_angle_horizon is missing"""
-        parameters = {'obstruction_angle_zenith': 35.0}
+        """Test error when horizon is missing"""
+        parameters = {'zenith': 35.0}
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('obstruction_angle_horizon', error_msg)
+        self.assertIn('horizon', error_msg)
 
     def test_context_reflectance_optional(self):
         """Test that context_reflectance is optional"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
             # context_reflectance not provided
         }
 
@@ -381,8 +381,8 @@ class TestObstructionBarParameterValidation(unittest.TestCase):
     def test_all_parameters_provided(self):
         """Test successful encoding when all parameters provided"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'context_reflectance': 0.3
         }
 
@@ -412,8 +412,8 @@ class TestObstructionBarImageScaling(unittest.TestCase):
         image = np.zeros((256, 256, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -451,8 +451,8 @@ class TestObstructionBarImageScaling(unittest.TestCase):
         image = np.zeros((1024, 1024, 4), dtype=np.uint8)
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -481,8 +481,8 @@ class TestObstructionBarImageScaling(unittest.TestCase):
             image = np.zeros((size, size, 4), dtype=np.uint8)
 
             parameters = {
-                'obstruction_angle_zenith': 35.0,
-                'obstruction_angle_horizon': 45.0
+                'zenith': 35.0,
+                'horizon': 45.0
             }
 
             result = self.encoder.encode_region(
@@ -544,8 +544,8 @@ class TestObstructionBarIntegration(unittest.TestCase):
         builder = RoomImageBuilder()
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'context_reflectance': 0.3
         }
 
@@ -578,8 +578,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
     def test_alpha_channel_default_value(self):
         """Test alpha channel defaults to 0.8 when balcony_reflectance not provided"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0
+            'zenith': 35.0,
+            'horizon': 45.0
         }
 
         result = self.encoder.encode_region(
@@ -605,8 +605,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'obstruction_angle_zenith': 35.0,
-                'obstruction_angle_horizon': 45.0,
+                'zenith': 35.0,
+                'horizon': 45.0,
                 'balcony_reflectance': reflectance
             }
 
@@ -625,8 +625,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
     def test_alpha_channel_uniform_across_bar(self):
         """Test alpha channel has uniform value across entire bar"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'balcony_reflectance': 0.6
         }
 
@@ -651,8 +651,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
     def test_alpha_channel_all_columns_in_bar(self):
         """Test alpha channel is encoded across all 4 columns of bar"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'balcony_reflectance': 0.75
         }
 
@@ -674,8 +674,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
     def test_alpha_does_not_affect_other_channels(self):
         """Test balcony_reflectance doesn't interfere with other channels"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'balcony_reflectance': 0.9
         }
 
@@ -706,8 +706,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
     def test_works_with_all_model_types(self):
         """Test balcony_reflectance works with all model types"""
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'balcony_reflectance': 0.85
         }
 
@@ -736,8 +736,8 @@ class TestBalconyUndersideReflectance(unittest.TestCase):
         builder = RoomImageBuilder()
 
         parameters = {
-            'obstruction_angle_zenith': 35.0,
-            'obstruction_angle_horizon': 45.0,
+            'zenith': 35.0,
+            'horizon': 45.0,
             'balcony_reflectance': 0.65
         }
 

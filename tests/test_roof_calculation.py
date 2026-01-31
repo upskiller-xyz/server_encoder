@@ -38,8 +38,8 @@ class TestRoofHeightCalculation:
                     "x1": 0, "y1": 0.2, "z1": 18.0,
                     "x2": 0, "y2": 1.8, "z2": 19.2,
                     "window_frame_ratio": 0.2,
-                    "obstruction_angle_horizon": 0,
-                    "obstruction_angle_zenith": 0,
+                    "horizon": 0,
+                    "zenith": 0,
                 }
             }
         }
@@ -68,8 +68,8 @@ class TestRoofHeightCalculation:
                     "x1": 0, "y1": 0.2, "z1": 18.0,
                     "x2": 0, "y2": 1.8, "z2": 19.2,
                     "window_frame_ratio": 0.2,
-                    "obstruction_angle_horizon": 0,
-                    "obstruction_angle_zenith": 0,
+                    "horizon": 0,
+                    "zenith": 0,
                 }
             }
         }
@@ -107,8 +107,8 @@ class TestRoofHeightCalculation:
                     "x1": 0, "y1": 0.2, "z1": 18.0,
                     "x2": 0, "y2": 1.8, "z2": 20.0,  # Above roof
                     "window_frame_ratio": 0.2,
-                    "obstruction_angle_horizon": 0,
-                    "obstruction_angle_zenith": 0,
+                    "horizon": 0,
+                    "zenith": 0,
                 }
             }
         }

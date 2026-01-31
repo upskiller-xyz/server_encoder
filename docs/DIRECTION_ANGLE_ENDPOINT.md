@@ -181,8 +181,8 @@ encoding_result = requests.post(
                     "x2": 0, "y2": 1.8, "z2": 3.4,
                     "window_frame_ratio": 0.2,
                     "window_orientation": direction_angle,  # Use calculated angle
-                    "obstruction_angle_horizon": 0,
-                    "obstruction_angle_zenith": 0
+                    "horizon": 0,
+                    "zenith": 0
                 }
             }
         }

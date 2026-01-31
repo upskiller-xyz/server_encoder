@@ -26,8 +26,8 @@
         "x2": 0.6,
         "y2": 0.0,
         "z2": 3.0,
-        "obstruction_angle_horizon": 30.0,
-        "obstruction_angle_zenith": 20.0,
+        "horizon": 30.0,
+        "zenith": 20.0,
         "window_frame_reflectance": 0.5,
         "balcony_underside_reflectance": 0.7
       }

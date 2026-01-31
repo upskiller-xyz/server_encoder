@@ -165,17 +165,17 @@ class EncoderFactory:
         # Obstruction bar encoders - using enum keys
         # Alpha channel: balcony_reflectance (0-1 → 0-1, optional, default=0.8)
         ParameterName.BALCONY_REFLECTANCE.value: (EncoderType.REFLECTANCE.value, 0.0, 1.0, 0.0, 1.0),
-        # Red channel: obstruction_angle_horizon (0-90° → 0-1)
-        ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
+        # Red channel: horizon (0-90° → 0-1)
+        ParameterName.HORIZON.value: (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
         # Green channel: context_reflectance (0.1-0.6 → 0-1)
         ParameterName.CONTEXT_REFLECTANCE.value: (EncoderType.REFLECTANCE.value, 0.1, 0.6, 0.0, 1.0),
-        # Blue channel: obstruction_angle_zenith (0-70° → 0.2-0.8)
-        ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8),
+        # Blue channel: zenith (0-70° → 0.2-0.8)
+        ParameterName.ZENITH.value: (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8),
 
         # Legacy obstruction bar encoder names (backward compatibility)
         "balcony_reflectance": (EncoderType.REFLECTANCE.value, 0.0, 1.0, 0.0, 1.0),
-        "obstruction_angle_horizon": (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
-        "obstruction_angle_zenith": (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8),
+        "horizon": (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
+        "zenith": (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8),
         "context_reflectance": (EncoderType.REFLECTANCE.value, 0.1, 0.6, 0.0, 1.0),
     }
 

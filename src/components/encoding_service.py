@@ -311,8 +311,8 @@ class EncodingService(IEncodingService):
     _CLIPPING_CONFIG = {
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: (0.0, 10.0, True),        # Reject < 0, clip > 10
         ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: (15.0, 30.0, True),           # Reject <= 0, clip < 15 or > 30
-        ParameterName.OBSTRUCTION_ANGLE_HORIZON.value: (0.0, 90.0, False),        # Clip both min and max
-        ParameterName.OBSTRUCTION_ANGLE_ZENITH.value: (0.0, 70.0, False),         # Clip both min and max
+        ParameterName.HORIZON.value: (0.0, 90.0, False),        # Clip both min and max
+        ParameterName.ZENITH.value: (0.0, 70.0, False),         # Clip both min and max
     }
 
     def _clip_parameters(self, parameters: Dict[str, Any]) -> None:
@@ -324,8 +324,8 @@ class EncodingService(IEncodingService):
         Clipping rules:
         - floor_height_above_terrain: values > 10.0 clipped to 10.0, values < 0.0 rejected
         - height_roof_over_floor: values > 30.0 clipped to 30.0, values < 15.0 clipped to 15.0, values <= 0.0 rejected
-        - obstruction_angle_horizon: values clipped to [0.0, 90.0] range
-        - obstruction_angle_zenith: values clipped to [0.0, 70.0] range
+        - horizon: values clipped to [0.0, 90.0] range
+        - zenith: values clipped to [0.0, 70.0] range
 
         Args:
             parameters: Parameters to clip (modified in place)
@@ -437,10 +437,10 @@ class EncodingService(IEncodingService):
             missing.append(ParameterName.WINDOW_FRAME_RATIO.value)
         if not has_param(ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value):
             missing.append(ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value)
-        if not has_param(ParameterName.OBSTRUCTION_ANGLE_HORIZON.value):
-            missing.append(ParameterName.OBSTRUCTION_ANGLE_HORIZON.value)
-        if not has_param(ParameterName.OBSTRUCTION_ANGLE_ZENITH.value):
-            missing.append(ParameterName.OBSTRUCTION_ANGLE_ZENITH.value)
+        if not has_param(ParameterName.HORIZON.value):
+            missing.append(ParameterName.HORIZON.value)
+        if not has_param(ParameterName.ZENITH.value):
+            missing.append(ParameterName.ZENITH.value)
 
         # DA models need orientation
         if model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]:

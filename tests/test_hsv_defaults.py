@@ -25,8 +25,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
         }
 
@@ -53,8 +53,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5,
             "window_orientation": 180.0  # DA models require orientation
         }
@@ -81,8 +81,8 @@ class TestHSVDefaultPixelOverrides:
                 "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
                 "height_roof_over_floor": 3.0,
                 "window_frame_ratio": 0.2,
-                "obstruction_angle_horizon": 45.0,
-                "obstruction_angle_zenith": 30.0,
+                "horizon": 45.0,
+                "zenith": 30.0,
                 "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
             }
             if model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]:
@@ -113,8 +113,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
         }
 
@@ -139,8 +139,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
         }
 
@@ -164,8 +164,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
         }
 
@@ -188,8 +188,8 @@ class TestHSVDefaultPixelOverrides:
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 3.0,
             "window_frame_ratio": 0.2,
-            "obstruction_angle_horizon": 45.0,
-            "obstruction_angle_zenith": 30.0,
+            "horizon": 45.0,
+            "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
         }
 
