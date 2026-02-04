@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 
 
@@ -83,7 +84,7 @@ class ImageDimensions:
 class ParameterName(Enum):
     """Encoding parameter names"""
     # Background parameters
-    WINDOW_ORIENTATION = "window_orientation"
+    WINDOW_DIRECTION_ANGLE = "window_direction_angle"
     FACADE_REFLECTANCE = "facade_reflectance"
     FLOOR_HEIGHT_ABOVE_TERRAIN = "floor_height_above_terrain"
     TERRAIN_REFLECTANCE = "terrain_reflectance"
@@ -163,7 +164,7 @@ PARAMETER_REGIONS = {
     ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: RegionType.BACKGROUND,
     "floor_height_above_terrain": RegionType.BACKGROUND,
     "terrain_reflectance": RegionType.BACKGROUND,
-    ParameterName.WINDOW_ORIENTATION.value: RegionType.BACKGROUND,
+    ParameterName.WINDOW_DIRECTION_ANGLE.value: RegionType.BACKGROUND,
 
     # Room parameters
     ParameterName.CEILING_REFLECTANCE.value: RegionType.ROOM,
@@ -231,7 +232,7 @@ DEFAULT_PARAMETER_VALUES = {
     # Background defaults
     ParameterName.FACADE_REFLECTANCE: 1.0,
     ParameterName.TERRAIN_REFLECTANCE: 1.0,
-    ParameterName.WINDOW_ORIENTATION: 288,  # 0° = South
+    ParameterName.WINDOW_DIRECTION_ANGLE: math.pi,  # radians, math convention (0=East, CCW)
 
     # Room defaults
     ParameterName.FLOOR_REFLECTANCE: 1.0,
@@ -252,9 +253,9 @@ DEFAULT_PARAMETER_VALUES = {
 # Format: {(RegionType, ChannelType, ModelType): pixel_value}
 # Only specified combinations are overridden; others use normal encoding of DEFAULT_PARAMETER_VALUES
 HSV_DEFAULT_PIXEL_OVERRIDES = {
-    # Background region defaults (alpha=windowOrientation, hue=facadeReflectance, sat=floorHeight, val=terrainReflectance)
-    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_DEFAULT): 190,  # window_orientation
-    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_CUSTOM): 190,   # window_orientation
+    # Background region defaults (alpha=windowDirectionAngle, hue=facadeReflectance, sat=floorHeight, val=terrainReflectance)
+    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_DEFAULT): 190,  # window_direction_angle (DF models ignore orientation)
+    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_CUSTOM): 190,   # window_direction_angle (DF models ignore orientation)
     (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DF_DEFAULT): 190,    # facade_reflectance (hue)
     (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DA_DEFAULT): 200,    # facade_reflectance (hue)
     (RegionType.BACKGROUND, ChannelType.RED, ModelType.DF_DEFAULT): 190,   # terrain_reflectance (value)
@@ -299,7 +300,7 @@ REGION_CHANNEL_MAPPING_RGB = {
         ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,
         ChannelType.GREEN: ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
         ChannelType.RED: ParameterName.TERRAIN_REFLECTANCE,
-        ChannelType.ALPHA: ParameterName.WINDOW_ORIENTATION,
+        ChannelType.ALPHA: ParameterName.WINDOW_DIRECTION_ANGLE,
     },
     RegionType.ROOM: {
         ChannelType.BLUE: ParameterName.HEIGHT_ROOF_OVER_FLOOR,
@@ -326,7 +327,7 @@ REGION_CHANNEL_MAPPING_RGB = {
 # All channels remain RGBA in the actual image
 REGION_CHANNEL_MAPPING_HSV = {
     RegionType.BACKGROUND: {
-        ChannelType.ALPHA: ParameterName.WINDOW_ORIENTATION,  # alpha channel
+        ChannelType.ALPHA: ParameterName.WINDOW_DIRECTION_ANGLE,  # alpha channel
         ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,  # hue → red channel
         ChannelType.GREEN: ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,  # saturation → green channel
         ChannelType.RED: ParameterName.TERRAIN_REFLECTANCE,  # value → blue channel

@@ -304,10 +304,8 @@ class MetaJsonExtractor:
             default = cls._REFLECTANCE_DEFAULTS[param_name]
             params[param_name] = float(refl.get(meta_key, default))
 
-        # NOTE: window_orientation is NOT passed for any model type.
-        # In production, no caller sets it — the encoder uses its HSV default
-        # override (pixel 190) for all model types.  When the correct convention
-        # is confirmed, it can be derived from direction_angle and passed here.
+        # window_direction_angle is auto-populated by the image builder from
+        # each window's direction_angle, so no explicit pass is needed here.
 
         # Windows
         windows_section = meta_json.get("window", {})

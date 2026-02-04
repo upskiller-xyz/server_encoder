@@ -442,10 +442,8 @@ class EncodingService(IEncodingService):
         if not has_param(ParameterName.ZENITH.value):
             missing.append(ParameterName.ZENITH.value)
 
-        # DA models need orientation
-        if model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]:
-            if not has_param(ParameterName.WINDOW_ORIENTATION.value):
-                missing.append(ParameterName.WINDOW_ORIENTATION.value)
+        # DA models need orientation — auto-populated by image_builder from
+        # the window's direction_angle, so no explicit validation needed here.
 
         # Room polygon is required for all models
         if not has_param(ParameterName.ROOM_POLYGON.value):

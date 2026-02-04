@@ -70,7 +70,7 @@ Parameters for each window, placed inside `windows.<window_id>` object.
 - Array of 64 floats (one per direction)
 
 **Model-Specific:**
-`window_orientation` (0-360°) required only for `da_default` and `da_custom` models (default: 288)
+`window_direction_angle` (0-2π radians, math convention: 0=East, CCW) is auto-populated from each window's `direction_angle` for DA models. No need to pass it explicitly.
 
 ## Room Polygon Format
 
@@ -178,7 +178,6 @@ Used as:
     "height_roof_over_floor": 3.0,
     "floor_height_above_terrain": 0.0,
     "room_polygon": [[0, 0], [6, 0], [6, 5], [0, 5]],
-    "window_orientation": 180,
     "facade_reflectance": 0.5,
     "terrain_reflectance": 0.3,
     "windows": {

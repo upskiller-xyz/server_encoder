@@ -3,7 +3,6 @@
   "parameters": {
     "height_roof_over_floor": 3.0,
     "floor_height_above_terrain": 2.0,
-    "window_orientation": 180.0,
     "room_polygon": [
       {"x": -2.0, "y": 0.0},
       {"x": 2.0, "y": 0.0},

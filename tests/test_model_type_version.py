@@ -150,7 +150,7 @@ class TestModelTypeIntegration:
         assert response.content_type == "image/png"
 
     def test_all_model_types_with_versions(self):
-        """Test all DF model types work with version suffixes (DA models require window_orientation)."""
+        """Test all DF model types work with version suffixes (DA models get direction_angle auto-populated)."""
         base_payload = {
             "parameters": {
                 "height_roof_over_floor": 3.0,
@@ -168,7 +168,7 @@ class TestModelTypeIntegration:
             }
         }
 
-        # Only test DF models (DA models need additional window_orientation parameter)
+        # Only test DF models (DA models get direction_angle auto-populated from window)
         model_types = [
             "df_default_2.0.1",
             "df_custom_3.0.0",

@@ -37,7 +37,7 @@ class TestHSVDefaultPixelOverrides:
         bg_pixel = result[64, 64]  # Middle of background
 
         # HSV encoding for DF_DEFAULT should use overrides:
-        # Alpha (window_orientation): 190
+        # Alpha (window_direction_angle): 190
         # Red (facade_reflectance): 190
         # Blue (terrain_reflectance): 190
         assert bg_pixel[3] == 190, f"Alpha should be 190 for DF_DEFAULT HSV, got {bg_pixel[3]}"
@@ -56,7 +56,7 @@ class TestHSVDefaultPixelOverrides:
             "horizon": 45.0,
             "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5,
-            "window_orientation": 180.0  # DA models require orientation
+            "window_direction_angle": 3.14159  # DA models: direction in radians
         }
 
         image = np.zeros((128, 128, 4), dtype=np.uint8)
@@ -86,7 +86,7 @@ class TestHSVDefaultPixelOverrides:
                 "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
             }
             if model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]:
-                params["window_orientation"] = 180.0
+                params["window_direction_angle"] = 3.14159
 
             image = np.zeros((128, 128, 4), dtype=np.uint8)
             result = encoder.encode_region(image, params, model_type)
@@ -201,7 +201,7 @@ class TestHSVDefaultPixelOverrides:
         # DF_CUSTOM: facade_reflectance and terrain_reflectance are ✅ (use actual encoding)
         # Default facade_reflectance = 1.0 encodes to 255
         # Default terrain_reflectance = 1.0 encodes to 255
-        # But window_orientation still uses override (190)
+        # But window_direction_angle still uses override (190)
         assert bg_pixel[0] == 255, f"DF_CUSTOM should encode facade_reflectance normally, got {bg_pixel[0]}"
         assert bg_pixel[2] == 255, f"DF_CUSTOM should encode terrain_reflectance normally, got {bg_pixel[2]}"
-        assert bg_pixel[3] == 190, f"DF_CUSTOM should still use window_orientation override, got {bg_pixel[3]}"
+        assert bg_pixel[3] == 190, f"DF_CUSTOM should still use window_direction_angle override, got {bg_pixel[3]}"

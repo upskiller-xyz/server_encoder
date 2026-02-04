@@ -324,6 +324,11 @@ class RoomImageDirector:
         if all_parameters.room.parameters:
             all_parameters.room[ParameterName.DIRECTION_ANGLE.value] = direction_angle
 
+        # Auto-populate background orientation from window direction_angle
+        # (only if not already set by the caller)
+        if ParameterName.WINDOW_DIRECTION_ANGLE.value not in all_parameters.background.parameters:
+            all_parameters.background[ParameterName.WINDOW_DIRECTION_ANGLE.value] = direction_angle
+
         # Rotate geometry using GeometryRotator
         return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)
 
