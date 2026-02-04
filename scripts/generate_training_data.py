@@ -43,7 +43,7 @@ _ENCODER_ROOT = os.path.join(os.path.dirname(__file__), "..")
 # --- Phase 1: obstruction imports -------------------------------------------
 sys.path.insert(0, _OBSTRUCTION_ROOT)
 
-from src.components.geometry import Point3D as ObsPoint3D, Vector3D, Mesh
+from src.components.geometry import Mesh
 from src.components.models import Window as ObsWindow
 from src.components.calculators.intersection_calculator import IntersectionCalculator
 from src.components.filter import CompositeTriangleFilter, CoarseTriangleFilter
@@ -59,7 +59,6 @@ sys.path.insert(0, _ENCODER_ROOT)
 
 from src.components.enums import ModelType, EncodingScheme, ParameterName
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
-from src.components.geometry import WindowGeometry, RoomPolygon
 from src.server.services.logging import StructuredLogger
 from src.server.enums import LogLevel
 
@@ -100,11 +99,9 @@ class ObstructionCalculator:
     Uses server_obstruction's IntersectionCalculator directly (no HTTP,
     no ProcessPoolExecutor) for deterministic sequential computation.
 
-    The reference point is currently calculated in this script using the
-    encoder's WindowGeometry.calculate_reference_point_from_polygon.
-    Once Stasja updates the obstruction server to accept window endpoints
-    + room_polygon directly, this intermediate calculation will move into
-    the obstruction server itself.
+    Reference point calculation is handled by the obstruction server's
+    Window.from_endpoints, which projects the window bounding box center
+    onto the room polygon boundary.
     """
 
     def __init__(self, meta_json: dict):
@@ -153,14 +150,14 @@ class ObstructionCalculator:
     def calculate_for_window(
         self,
         win_data: dict,
-        room_polygon: RoomPolygon,
+        polygon_data: List[List[float]],
         reflectance_source: ReflectanceSource,
     ) -> ObstructionData:
         """Calculate obstruction angles for a window.
 
         Args:
             win_data: Window data dict with x1..z2, direction_angle
-            room_polygon: Encoder RoomPolygon for reference point projection
+            polygon_data: Raw room polygon vertices as list of [x, y] coords
             reflectance_source: DEFAULT or CUSTOM
 
         Returns:
@@ -183,20 +180,15 @@ class ObstructionCalculator:
                 balcony_reflectance=bal_refl,
             )
 
-        # Calculate reference point (TEMPORARY: done here until Stasja
-        # updates obstruction server to accept window endpoints directly)
+        # Build obstruction Window using from_endpoints (projects window
+        # center onto room polygon boundary internally)
         direction_angle = float(win_data.get("direction_angle", 0.0))
-        encoder_win = WindowGeometry(
-            float(win_data["x1"]), float(win_data["y1"]), float(win_data["z1"]),
-            float(win_data["x2"]), float(win_data["y2"]), float(win_data["z2"]),
+        obs_window = ObsWindow.from_endpoints(
+            x1=float(win_data["x1"]), y1=float(win_data["y1"]), z1=float(win_data["z1"]),
+            x2=float(win_data["x2"]), y2=float(win_data["y2"]), z2=float(win_data["z2"]),
             direction_angle=direction_angle,
+            room_polygon=polygon_data,
         )
-        ref_point = encoder_win.calculate_reference_point_from_polygon(room_polygon)
-
-        # Build obstruction Window
-        obs_center = ObsPoint3D(x=ref_point.x, y=ref_point.y, z=ref_point.z)
-        obs_normal = Vector3D.from_horizontal_angle(direction_angle)
-        obs_window = ObsWindow(center=obs_center, normal=obs_normal)
 
         horizon_vals, zenith_vals = self._sweep_directions(obs_window, combined_mesh)
 
@@ -427,7 +419,6 @@ class TrainingDataGenerator:
             self._logger.warning(f"dp={dp_id}: no room_polygon, skipping obstruction")
             return None
 
-        room_polygon = RoomPolygon.from_dict(polygon_data)
         windows_section = meta_json.get("window", {})
         result: Dict[str, ObstructionData] = {}
 
@@ -437,7 +428,7 @@ class TrainingDataGenerator:
             try:
                 # Calculate with default reflectance; custom will be swapped later
                 obs = calculator.calculate_for_window(
-                    win_data, room_polygon, ReflectanceSource.DEFAULT
+                    win_data, polygon_data, ReflectanceSource.DEFAULT
                 )
                 result[win_id] = obs
                 max_h = max(obs.horizon) if obs.horizon else 0
