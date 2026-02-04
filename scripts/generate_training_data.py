@@ -46,7 +46,7 @@ sys.path.insert(0, _OBSTRUCTION_ROOT)
 from src.components.geometry import Mesh
 from src.components.models import Window as ObsWindow
 from src.components.calculators.intersection_calculator import IntersectionCalculator
-from src.components.filter import CompositeTriangleFilter, CoarseTriangleFilter
+from src.components.filter import CoarseTriangleFilter, HeightTriangleFilter
 from src.server.base.constants import ANGLES
 
 # Back up obstruction modules and clear from sys.modules
@@ -77,10 +77,10 @@ class ReflectanceSource(Enum):
 
 
 MODEL_TYPE_CONFIG: Dict[ModelType, Dict[str, Any]] = {
-    ModelType.DF_DEFAULT: {"reflectance_source": ReflectanceSource.DEFAULT},
-    ModelType.DF_CUSTOM: {"reflectance_source": ReflectanceSource.CUSTOM},
-    ModelType.DA_DEFAULT: {"reflectance_source": ReflectanceSource.DEFAULT},
-    ModelType.DA_CUSTOM: {"reflectance_source": ReflectanceSource.CUSTOM},
+    ModelType.DF_DEFAULT: {"reflectance_source": ReflectanceSource.DEFAULT, "uses_orientation": False},
+    ModelType.DF_CUSTOM: {"reflectance_source": ReflectanceSource.CUSTOM, "uses_orientation": False},
+    ModelType.DA_DEFAULT: {"reflectance_source": ReflectanceSource.DEFAULT, "uses_orientation": True},
+    ModelType.DA_CUSTOM: {"reflectance_source": ReflectanceSource.CUSTOM, "uses_orientation": True},
 }
 
 
@@ -106,10 +106,17 @@ class ObstructionCalculator:
 
     def __init__(self, meta_json: dict):
         geometry = meta_json.get("geometry", {})
-        self._context_mesh = self._build_mesh(
-            geometry.get("context_buildings", [])
+
+        # horizon_mesh = context_buildings + facade (vertical surfaces)
+        context_verts = self._unwrap_nested(
+            "context_buildings", geometry.get("context_buildings", [])
         )
-        self._balcony_mesh = self._build_mesh(
+        facade_verts = geometry.get("facade", [])
+        horizon_verts = (context_verts or []) + (facade_verts or [])
+        self._horizon_mesh = self._build_mesh(horizon_verts)
+
+        # zenith_mesh = balcony_above (horizontal surfaces)
+        self._zenith_mesh = self._build_mesh(
             geometry.get("balcony_above", [])
         )
 
@@ -120,11 +127,25 @@ class ObstructionCalculator:
 
         custom_refl = reflectance.get("custom", {})
         self._custom_context_refl = float(
-            custom_refl.get("context_buildings", self._default_context_refl)
+            self._unwrap_nested("context_buildings", custom_refl.get("context_buildings", self._default_context_refl))
         )
         self._custom_balcony_refl = float(
             custom_refl.get("balcony_ceiling", self._default_balcony_refl)
         )
+
+    @staticmethod
+    def _unwrap_nested(key: str, value):
+        """Unwrap legacy double-nested DB format.
+
+        The simulation workers store context_buildings as
+        ``{"context_buildings": <actual_value>}`` in both geometry and
+        reflectance.  This helper transparently returns the inner value
+        when that pattern is detected, or returns the value as-is when
+        the data is already flat.
+        """
+        if isinstance(value, dict) and key in value and len(value) == 1:
+            return value[key]
+        return value
 
     @staticmethod
     def _build_mesh(vertices: list) -> Optional[Mesh]:
@@ -135,17 +156,6 @@ class ObstructionCalculator:
             return Mesh.from_vertices(vertices)
         except (ValueError, TypeError):
             return None
-
-    def _build_combined_mesh(self) -> Optional[Mesh]:
-        """Combine context buildings and balcony meshes into one."""
-        if self._context_mesh is None and self._balcony_mesh is None:
-            return None
-        ctx_tris = self._context_mesh.triangles if self._context_mesh else ()
-        bal_tris = self._balcony_mesh.triangles if self._balcony_mesh else ()
-        combined = tuple(ctx_tris) + tuple(bal_tris)
-        if not combined:
-            return None
-        return Mesh(combined)
 
     def calculate_for_window(
         self,
@@ -163,8 +173,6 @@ class ObstructionCalculator:
         Returns:
             ObstructionData with horizon/zenith arrays and reflectances
         """
-        combined_mesh = self._build_combined_mesh()
-
         if reflectance_source == ReflectanceSource.CUSTOM:
             ctx_refl = self._custom_context_refl
             bal_refl = self._custom_balcony_refl
@@ -172,7 +180,7 @@ class ObstructionCalculator:
             ctx_refl = self._default_context_refl
             bal_refl = self._default_balcony_refl
 
-        if combined_mesh is None:
+        if self._horizon_mesh is None and self._zenith_mesh is None:
             return ObstructionData(
                 horizon=[0.0] * NUM_OBSTRUCTION_DIRECTIONS,
                 zenith=[0.0] * NUM_OBSTRUCTION_DIRECTIONS,
@@ -190,7 +198,9 @@ class ObstructionCalculator:
             room_polygon=polygon_data,
         )
 
-        horizon_vals, zenith_vals = self._sweep_directions(obs_window, combined_mesh)
+        horizon_vals, zenith_vals = self._sweep_directions(
+            obs_window, self._horizon_mesh, self._zenith_mesh
+        )
 
         return ObstructionData(
             horizon=horizon_vals,
@@ -202,12 +212,23 @@ class ObstructionCalculator:
     @staticmethod
     def _sweep_directions(
         window: ObsWindow,
-        mesh: Mesh,
+        horizon_mesh: Optional[Mesh],
+        zenith_mesh: Optional[Mesh],
         num_directions: int = NUM_OBSTRUCTION_DIRECTIONS,
     ) -> Tuple[List[float], List[float]]:
-        """Sweep obstruction angles across directions synchronously."""
-        coarse_filtered = CoarseTriangleFilter.call(mesh.triangles, window)
-        filtered_mesh = Mesh(coarse_filtered)
+        """Sweep obstruction angles across directions synchronously.
+
+        Uses pre-separated meshes: horizon_mesh for horizon angles,
+        zenith_mesh for zenith angles. No CompositeTriangleFilter needed.
+        """
+        # Pre-filter each mesh once (coarse: remove triangles below/behind window)
+        h_coarse = None
+        if horizon_mesh is not None:
+            h_coarse = Mesh(CoarseTriangleFilter.call(horizon_mesh.triangles, window))
+
+        z_coarse = None
+        if zenith_mesh is not None:
+            z_coarse = Mesh(CoarseTriangleFilter.call(zenith_mesh.triangles, window))
 
         normal_arr = window.normal.to_array()
         base_angle = math.atan2(normal_arr[1], normal_arr[0])
@@ -223,15 +244,19 @@ class ObstructionCalculator:
             abs_angle = base_angle - (math.pi * 0.5) + relative
             rotated = ObsWindow.set_angle(window, abs_angle)
 
-            h_filtered, v_filtered = CompositeTriangleFilter.call(
-                filtered_mesh.triangles, rotated
-            )
-            h_result = IntersectionCalculator.call(
-                Mesh(h_filtered), rotated, ANGLES.HORIZON
-            )
-            z_result = IntersectionCalculator.call(
-                Mesh(v_filtered), rotated, ANGLES.ZENITH
-            )
+            # Per-direction distance filter on each mesh independently
+            if h_coarse is not None and h_coarse.triangles:
+                h_dir = Mesh(HeightTriangleFilter.call(h_coarse.triangles, rotated, ANGLES.HORIZON))
+            else:
+                h_dir = Mesh(())
+
+            if z_coarse is not None and z_coarse.triangles:
+                z_dir = Mesh(HeightTriangleFilter.call(z_coarse.triangles, rotated, ANGLES.ZENITH))
+            else:
+                z_dir = Mesh(())
+
+            h_result = IntersectionCalculator.call(h_dir, rotated, ANGLES.HORIZON)
+            z_result = IntersectionCalculator.call(z_dir, rotated, ANGLES.ZENITH)
             horizons.append(h_result.obstruction_angle_degrees)
             zeniths.append(z_result.obstruction_angle_degrees)
 
@@ -296,8 +321,10 @@ class MetaJsonExtractor:
             default = cls._REFLECTANCE_DEFAULTS[param_name]
             params[param_name] = float(refl.get(meta_key, default))
 
-        # window_direction_angle is auto-populated by the image builder from
-        # each window's direction_angle, so no explicit pass is needed here.
+        # For DA models, pass window_direction_angle so the encoder uses the
+        # real orientation. For DF models, omit it so the HSV override applies
+        # a constant value (DF is orientation-independent).
+        uses_orientation = config["uses_orientation"]
 
         # Windows
         windows_section = meta_json.get("window", {})
@@ -321,6 +348,9 @@ class MetaJsonExtractor:
                 "wall_thickness": float(win_data.get("wall_thickness", 0.3)),
                 "window_frame_reflectance": params["window_frame_reflectance"],
             }
+
+            if uses_orientation:
+                win_params["window_direction_angle"] = direction_angle
 
             # Obstruction data
             if obstruction_data and win_id in obstruction_data:

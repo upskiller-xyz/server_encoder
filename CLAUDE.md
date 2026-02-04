@@ -96,6 +96,15 @@ elif status == "ready":
 6. **Use type hints** - Always specify parameter and return types
 7. **ALL IMPORTS ON TOP** - Never import inside functions or methods, all imports must be at the top of the file
 
+## Git Workflow - MANDATORY
+
+- **NEVER commit directly to master/main**. Always create a feature branch first.
+- All changes must go through a **separate branch** with a **pull request (PR)**.
+- Branch naming: `feat/<feature-name>`, `fix/<bug-name>`, `refactor/<description>`
+- Before starting any code changes, create the branch. Do not accumulate uncommitted changes on master.
+- This applies to ALL repos in the LUX backend: server_obstruction, server_encoder, server_lux, server_model, server_merger, server_stats.
+- Exception: lux-radiance-DA and lux-radiance-DF already follow this via PR workflow.
+
 ## Refactoring Notes
 
 - Current main.py violates OOP principles - needs complete refactor
