@@ -499,15 +499,14 @@ class RoomPolygon:
         # Window's left edge position on image
         window_left_edge_x = image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_thickness_px
 
-        # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
-        room_facade_x = window_left_edge_x - GRAPHICS_CONSTANTS.ROOM_FACADE_OFFSET_PX
+        room_facade_x = window_left_edge_x
         window_y_pixels = image_size // 2
-        
+
 
         # First pass: calculate room extent to check for obstruction bar overlap
         dims = ImageDimensions(image_size)
         obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
-        
+
         offsets = [GeometryOps.offset_coords(vertex, window_center_rotated) for vertex in rotated_polygon.vertices]
 
         offsets = [[GRAPHICS_CONSTANTS.get_pixel_value(i, image_size) for i in dd] for dd in offsets]

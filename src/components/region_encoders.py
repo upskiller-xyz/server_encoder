@@ -435,6 +435,13 @@ class WindowRegionEncoder(BaseRegionEncoder):
         # Get pixel bounds from geometry
         x_start, y_start, x_end, y_end = window_geom.get_pixel_bounds(image_size=width)
 
+        # Snap window to room's facade edge if available (preserves width, eliminates gap)
+        room_facade_right_edge = parameters.get('_room_facade_right_edge')
+        if room_facade_right_edge is not None:
+            window_width = x_end - x_start
+            x_start = room_facade_right_edge + 1
+            x_end = x_start + window_width
+
         # Enforce border (must remain background)
         border = GRAPHICS_CONSTANTS.BORDER_PX
         x_start = max(x_start, border)

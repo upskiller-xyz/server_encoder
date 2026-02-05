@@ -18,8 +18,10 @@ Outputs (GH):
   HorizonVecs: list[Vector3d]   # 64 unit vectors (azimuth + horizon elevation)
   ZenithVecs: list[Vector3d]    # 64 unit vectors (azimuth + zenith elevation)
   RefPoint: Point3d             # window reference point (vector origin)
-  HorizonMesh: Mesh             # geometry used for horizon (context_buildings + facade)
-  ZenithMesh: Mesh              # geometry used for zenith (balcony_above)
+  HorizonMeshFull: Mesh         # full horizon geometry (context_buildings + facade)
+  HorizonMesh: Mesh             # filtered horizon geometry (after coarse filter)
+  ZenithMeshFull: Mesh          # full zenith geometry (balcony_above)
+  ZenithMesh: Mesh              # filtered zenith geometry (after coarse filter)
   info: str
 """
 
@@ -158,7 +160,9 @@ def obstruction_to_vector(azimuth_rad, obstruction_deg, from_horizon):
 HorizonVecs = []
 ZenithVecs = []
 RefPoint = None
+HorizonMeshFull = None
 HorizonMesh = None
+ZenithMeshFull = None
 ZenithMesh = None
 info = ""
 
@@ -249,12 +253,18 @@ try:
         info += "horizon filtered: %d -> %d verts\n" % (len(horizon_verts), len(horizon_filtered))
         info += "zenith filtered: %d -> %d verts\n" % (len(zenith_verts), len(zenith_filtered))
 
+        # Build Rhino meshes from FULL vertices (all geometry)
+        print("[MESH] Building Rhino meshes ...")
+        HorizonMeshFull = build_rhino_mesh(horizon_verts)
+        ZenithMeshFull = build_rhino_mesh(zenith_verts)
+        print("[MESH] HorizonMeshFull: %s" % ("OK (%d faces)" % HorizonMeshFull.Faces.Count if HorizonMeshFull else "None (no verts)"))
+        print("[MESH] ZenithMeshFull: %s" % ("OK (%d faces)" % ZenithMeshFull.Faces.Count if ZenithMeshFull else "None (no verts)"))
+
         # Build Rhino meshes from FILTERED vertices (what the server actually uses)
-        print("[MESH] Building Rhino meshes from filtered verts ...")
         HorizonMesh = build_rhino_mesh(horizon_filtered)
         ZenithMesh = build_rhino_mesh(zenith_filtered)
-        print("[MESH] HorizonMesh: %s" % ("OK (%d faces)" % HorizonMesh.Faces.Count if HorizonMesh else "None (no verts)"))
-        print("[MESH] ZenithMesh: %s" % ("OK (%d faces)" % ZenithMesh.Faces.Count if ZenithMesh else "None (no verts)"))
+        print("[MESH] HorizonMesh (filtered): %s" % ("OK (%d faces)" % HorizonMesh.Faces.Count if HorizonMesh else "None (no verts)"))
+        print("[MESH] ZenithMesh (filtered): %s" % ("OK (%d faces)" % ZenithMesh.Faces.Count if ZenithMesh else "None (no verts)"))
 
         # ---- 4. POST to obstruction server ----
         endpoint = server_url.rstrip("/") + "/obstruction_parallel"
@@ -344,6 +354,8 @@ except Exception as e:
     HorizonVecs = []
     ZenithVecs = []
     RefPoint = None
+    HorizonMeshFull = None
     HorizonMesh = None
+    ZenithMeshFull = None
     ZenithMesh = None
     info = "ERROR: %s\n\n%s\n\nTraceback:\n%s" % (str(e), info, tb)
