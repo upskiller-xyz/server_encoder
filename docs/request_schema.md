@@ -70,7 +70,7 @@ Parameters for each window, placed inside `windows.<window_id>` object.
 - Array of 64 floats (one per direction)
 
 **Model-Specific:**
-`window_direction_angle` (0-2π radians, math convention: 0=East, CCW) is auto-populated from each window's `direction_angle` for DA models. No need to pass it explicitly.
+`window_orientation` (0-2π radians, math convention: 0=East, CCW) is auto-populated from each window's `direction_angle` for DA models. No need to pass it explicitly.
 
 ## Room Polygon Format
 

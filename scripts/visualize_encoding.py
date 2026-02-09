@@ -40,44 +40,50 @@ class EncodingVisualizer:
             arr = data[key]
 
             if "mask" in key:
-                # Room mask: green/black
-                mask_bgr = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
-                mask_bgr[arr > 0] = [0, 200, 0]
-                cv2.imwrite(os.path.join(dp_dir, f"{key}.png"), mask_bgr)
-
+                EncodingVisualizer._save_mask(arr, os.path.join(dp_dir, f"{key}.png"))
             elif "image" in key:
-                # RGBA image: save full RGBA + individual channels
-                if arr.ndim == 3 and arr.shape[2] == 4:
-                    # Save full RGBA as PNG (BGRA for OpenCV)
-                    bgra = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
-                    cv2.imwrite(os.path.join(dp_dir, f"{key}_rgba.png"), bgra)
-
-                    # Save individual channels as colormapped images
-                    channel_imgs = []
-                    for ch in range(4):
-                        channel = arr[:, :, ch]
-                        colored = cv2.applyColorMap(channel, cv2.COLORMAP_VIRIDIS)
-                        label = EncodingVisualizer.CHANNEL_NAMES[ch]
-                        cv2.putText(
-                            colored, label, (2, 12),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1
-                        )
-                        channel_imgs.append(colored)
-                        cv2.imwrite(
-                            os.path.join(dp_dir, f"{key}_ch{ch}_{label.lower()}.png"),
-                            colored
-                        )
-
-                    # Combined overview: 4 channels side by side
-                    overview = np.hstack(channel_imgs)
-                    cv2.imwrite(os.path.join(dp_dir, f"{key}_overview.png"), overview)
-
-            else:
-                # Unknown array type: save as grayscale
-                if arr.ndim == 2:
-                    cv2.imwrite(os.path.join(dp_dir, f"{key}.png"), arr)
+                EncodingVisualizer._save_image(arr, dp_dir, key)
+            elif arr.ndim == 2:
+                cv2.imwrite(os.path.join(dp_dir, f"{key}.png"), arr)
 
         print(f"  {basename}: {len(data.files)} arrays visualized -> {dp_dir}")
+
+    @staticmethod
+    def _save_mask(arr: np.ndarray, output_path: str) -> None:
+        """Save a binary mask as green/black PNG."""
+        mask_bgr = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
+        mask_bgr[arr > 0] = [0, 200, 0]
+        cv2.imwrite(output_path, mask_bgr)
+
+    @staticmethod
+    def _save_image(arr: np.ndarray, dp_dir: str, key: str) -> None:
+        """Save an RGBA image as full PNG + individual colormapped channel PNGs."""
+        if arr.ndim != 3 or arr.shape[2] != 4:
+            return
+
+        # Save full RGBA as PNG (BGRA for OpenCV)
+        bgra = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+        cv2.imwrite(os.path.join(dp_dir, f"{key}_rgba.png"), bgra)
+
+        # Save individual channels as colormapped images
+        channel_imgs = []
+        for ch in range(4):
+            channel = arr[:, :, ch]
+            colored = cv2.applyColorMap(channel, cv2.COLORMAP_VIRIDIS)
+            label = EncodingVisualizer.CHANNEL_NAMES[ch]
+            cv2.putText(
+                colored, label, (2, 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1
+            )
+            channel_imgs.append(colored)
+            cv2.imwrite(
+                os.path.join(dp_dir, f"{key}_ch{ch}_{label.lower()}.png"),
+                colored
+            )
+
+        # Combined overview: 4 channels side by side
+        overview = np.hstack(channel_imgs)
+        cv2.imwrite(os.path.join(dp_dir, f"{key}_overview.png"), overview)
 
 
 def main():

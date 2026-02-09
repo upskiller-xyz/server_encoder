@@ -150,7 +150,7 @@ class TestBackgroundColorEncoding(unittest.TestCase):
             )
 
     def test_alpha_channel_direction_angle(self):
-        """Test alpha channel encodes window_direction_angle (0-2pi rad -> 0-1)"""
+        """Test alpha channel encodes window_orientation (0-2pi rad -> 0-1)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -162,7 +162,7 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         for angle, expected_value in test_cases:
             parameters = {
                 'floor_height_above_terrain': 2.0,
-                'window_direction_angle': angle
+                'window_orientation': angle
             }
 
             result = self.encoder.encode_region(
@@ -214,7 +214,7 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         )
 
     def test_default_direction_angle(self):
-        """Test alpha channel defaults to pi when window_direction_angle not provided"""
+        """Test alpha channel defaults to pi when window_orientation not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
@@ -228,7 +228,7 @@ class TestBackgroundColorEncoding(unittest.TestCase):
 
         self.assertAlmostEqual(
             bg_pixel, 127, delta=2,
-            msg="Default window_direction_angle should be pi (encoded as ~127)"
+            msg="Default window_orientation should be pi (encoded as ~127)"
         )
 
 
@@ -274,7 +274,7 @@ class TestBackgroundParameterValidation(unittest.TestCase):
             'floor_height_above_terrain': 2.5,
             'facade_reflectance': 0.6,
             'terrain_reflectance': 0.25,
-            'window_direction_angle': math.pi
+            'window_orientation': math.pi
         }
 
         try:
@@ -306,7 +306,7 @@ class TestBackgroundUniformEncoding(unittest.TestCase):
             'floor_height_above_terrain': 3.0,
             'facade_reflectance': 0.5,
             'terrain_reflectance': 0.3,
-            'window_direction_angle': math.pi / 2  # 90 degrees in radians
+            'window_orientation': math.pi / 2  # 90 degrees in radians
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -403,7 +403,7 @@ class TestBackgroundIntegration(unittest.TestCase):
             'floor_height_above_terrain': 2.0,
             'facade_reflectance': 0.6,
             'terrain_reflectance': 0.3,
-            'window_direction_angle': math.pi
+            'window_orientation': math.pi
         }
 
         image = (builder

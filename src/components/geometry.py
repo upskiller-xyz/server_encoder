@@ -475,7 +475,7 @@ class RoomPolygon:
 
         # Create polygon from rotated coordinates to check which edge is on it
         rotated_room_poly = ShapelyPolygon(rotated_polygon)
-        tolerance = 0.05  # Match merger tolerance
+        tolerance = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
 
         # Check which edge is on the polygon boundary
         edge_on_boundary = None
@@ -508,7 +508,8 @@ class RoomPolygon:
         # Window's left edge position on image
         window_left_edge_x = image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_thickness_px
 
-        room_facade_x = window_left_edge_x
+        # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
+        room_facade_x = window_left_edge_x - GRAPHICS_CONSTANTS.ROOM_FACADE_OFFSET_PX
         window_y_pixels = image_size // 2
 
 
@@ -882,38 +883,7 @@ class WindowGeometry:
         # When direction_angle is available, compute the actual rotated rectangle
         # edges instead of axis-aligned bbox edges. This handles diagonal walls.
         if self._direction_angle is not None and self._direction_angle != 0:
-            cx = (self.x1 + self.x2) / 2
-            cy = (self.y1 + self.y2) / 2
-
-            # Wall direction (perpendicular to window normal)
-            wall_angle = self._direction_angle + math.pi / 2
-            wall_dx = math.cos(wall_angle)
-            wall_dy = math.sin(wall_angle)
-
-            # Normal direction
-            norm_dx = math.cos(self._direction_angle)
-            norm_dy = math.sin(self._direction_angle)
-
-            half_width = self.window_width_3d / 2
-            half_thick = self.wall_thickness / 2
-
-            # 4 corners of rotated rectangle
-            c1 = (cx - half_width * wall_dx - half_thick * norm_dx,
-                  cy - half_width * wall_dy - half_thick * norm_dy)
-            c2 = (cx + half_width * wall_dx - half_thick * norm_dx,
-                  cy + half_width * wall_dy - half_thick * norm_dy)
-            c3 = (cx + half_width * wall_dx + half_thick * norm_dx,
-                  cy + half_width * wall_dy + half_thick * norm_dy)
-            c4 = (cx - half_width * wall_dx + half_thick * norm_dx,
-                  cy - half_width * wall_dy + half_thick * norm_dy)
-
-            # 4 edges: interior, exterior, and two sides
-            return [
-                ShapelyLine([c1, c2]),  # interior (away from normal)
-                ShapelyLine([c3, c4]),  # exterior (toward normal)
-                ShapelyLine([c1, c4]),  # side
-                ShapelyLine([c2, c3]),  # side
-            ]
+            return self._compute_rotated_rectangle_edges()
 
         # Axis-aligned fallback when no direction_angle
         window_edge1 = ShapelyLine([(self.x1, self.y1), (self.x2, self.y1)])
@@ -922,7 +892,42 @@ class WindowGeometry:
         window_edge4 = ShapelyLine([(self.x2, self.y1), (self.x2, self.y2)])
         return [window_edge1, window_edge2, window_edge3, window_edge4]
 
-    def get_room_edge(self, room_polygon:RoomPolygon, tolerance=0.05)->list:
+    def _compute_rotated_rectangle_edges(self):
+        """Compute edges of the rotated window rectangle using direction_angle."""
+        cx = (self.x1 + self.x2) / 2
+        cy = (self.y1 + self.y2) / 2
+
+        # Wall direction (perpendicular to window normal)
+        wall_angle = self._direction_angle + math.pi / 2
+        wall_dx = math.cos(wall_angle)
+        wall_dy = math.sin(wall_angle)
+
+        # Normal direction
+        norm_dx = math.cos(self._direction_angle)
+        norm_dy = math.sin(self._direction_angle)
+
+        half_width = self.window_width_3d / 2
+        half_thick = self.wall_thickness / 2
+
+        # 4 corners of rotated rectangle
+        c1 = (cx - half_width * wall_dx - half_thick * norm_dx,
+              cy - half_width * wall_dy - half_thick * norm_dy)
+        c2 = (cx + half_width * wall_dx - half_thick * norm_dx,
+              cy + half_width * wall_dy - half_thick * norm_dy)
+        c3 = (cx + half_width * wall_dx + half_thick * norm_dx,
+              cy + half_width * wall_dy + half_thick * norm_dy)
+        c4 = (cx - half_width * wall_dx + half_thick * norm_dx,
+              cy - half_width * wall_dy + half_thick * norm_dy)
+
+        # 4 edges: interior, exterior, and two sides
+        return [
+            ShapelyLine([c1, c2]),  # interior (away from normal)
+            ShapelyLine([c3, c4]),  # exterior (toward normal)
+            ShapelyLine([c1, c4]),  # side
+            ShapelyLine([c2, c3]),  # side
+        ]
+
+    def get_room_edge(self, room_polygon:RoomPolygon, tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE)->list:
         w_edges = self.get_candidate_edges()
         # Find which polygon edge contains one of the window edges
 
