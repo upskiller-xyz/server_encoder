@@ -461,39 +461,48 @@ class RoomPolygon:
             
         rotated_polygon = self.get_coords()
         
-        window = WindowGeometry.from_corners(window_x1, window_y1, 0, window_x2, window_y2, 0)
+        # Create WindowGeometry WITH direction_angle so get_candidate_edges()
+        # returns rotated edges for diagonal walls (matches merger's logic)
+        if direction_angle is not None:
+            window = WindowGeometry(
+                window_x1, window_y1, 0,
+                window_x2, window_y2, 0,
+                direction_angle=direction_angle
+            )
+        else:
+            window = WindowGeometry.from_corners(window_x1, window_y1, 0, window_x2, window_y2, 0)
         w_edges = window.get_candidate_edges()
 
         # Create polygon from rotated coordinates to check which edge is on it
         rotated_room_poly = ShapelyPolygon(rotated_polygon)
-        tolerance = 0.01
+        tolerance = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
 
         # Check which edge is on the polygon boundary
         edge_on_boundary = None
-        
+
         res = [w_edge for w_edge in w_edges if rotated_room_poly.boundary.buffer(tolerance).contains(w_edge)]
 
         window_center_rotated = Point2D((window_x1 + window_x2) / 2, (window_y1 + window_y2) / 2)
-        if len(res)>0:
+        if len(res) > 0:
             edge_on_boundary = res[0]
             edge_coords = list(edge_on_boundary.coords)
             window_center_rotated = Point2D(
                 (edge_coords[0][0] + edge_coords[1][0]) / 2,
                 (edge_coords[0][1] + edge_coords[1][1]) / 2
             )
-        
-        rotated_polygon = RoomPolygon(rotated_polygon)
-        
-        
-        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size)
+        else:
+            # Fallback: project window center onto polygon boundary (matches merger's fallback)
+            center = ShapelyPoint((window_x1 + window_x2) / 2, (window_y1 + window_y2) / 2)
+            poly_boundary = ShapelyLine(list(rotated_polygon) + [rotated_polygon[0]])
+            projected = poly_boundary.interpolate(poly_boundary.project(center))
+            window_center_rotated = Point2D(projected.x, projected.y)
 
+        rotated_polygon = RoomPolygon(rotated_polygon)
+
+
+        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size)
         if direction_angle is not None:
-            window_geom = WindowGeometry(
-                window_x1, window_y1, 0,
-                window_x2, window_y2, 0,
-                direction_angle=direction_angle
-            )
-            wall_thickness_px = window_geom.wall_thickness_px
+            wall_thickness_px = window.wall_thickness_px
                 
         
         # Window's left edge position on image
@@ -502,12 +511,12 @@ class RoomPolygon:
         # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
         room_facade_x = window_left_edge_x - GRAPHICS_CONSTANTS.ROOM_FACADE_OFFSET_PX
         window_y_pixels = image_size // 2
-        
+
 
         # First pass: calculate room extent to check for obstruction bar overlap
         dims = ImageDimensions(image_size)
         obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
-        
+
         offsets = [GeometryOps.offset_coords(vertex, window_center_rotated) for vertex in rotated_polygon.vertices]
 
         offsets = [[GRAPHICS_CONSTANTS.get_pixel_value(i, image_size) for i in dd] for dd in offsets]
@@ -871,16 +880,54 @@ class WindowGeometry:
         )
 
     def get_candidate_edges(self):
-        # Create the two possible window edges from bounding box
-        # The 4 corners are: (x1,y1), (x2,y1), (x1,y2), (x2,y2)
-        # The two candidate edges (matching the validation logic) are:
+        # When direction_angle is available, compute the actual rotated rectangle
+        # edges instead of axis-aligned bbox edges. This handles diagonal walls.
+        if self._direction_angle is not None and self._direction_angle != 0:
+            return self._compute_rotated_rectangle_edges()
+
+        # Axis-aligned fallback when no direction_angle
         window_edge1 = ShapelyLine([(self.x1, self.y1), (self.x2, self.y1)])
         window_edge2 = ShapelyLine([(self.x1, self.y2), (self.x2, self.y2)])
         window_edge3 = ShapelyLine([(self.x1, self.y1), (self.x1, self.y2)])
         window_edge4 = ShapelyLine([(self.x2, self.y1), (self.x2, self.y2)])
         return [window_edge1, window_edge2, window_edge3, window_edge4]
 
-    def get_room_edge(self, room_polygon:RoomPolygon, tolerance=0.01)->list:
+    def _compute_rotated_rectangle_edges(self):
+        """Compute edges of the rotated window rectangle using direction_angle."""
+        cx = (self.x1 + self.x2) / 2
+        cy = (self.y1 + self.y2) / 2
+
+        # Wall direction (perpendicular to window normal)
+        wall_angle = self._direction_angle + math.pi / 2
+        wall_dx = math.cos(wall_angle)
+        wall_dy = math.sin(wall_angle)
+
+        # Normal direction
+        norm_dx = math.cos(self._direction_angle)
+        norm_dy = math.sin(self._direction_angle)
+
+        half_width = self.window_width_3d / 2
+        half_thick = self.wall_thickness / 2
+
+        # 4 corners of rotated rectangle
+        c1 = (cx - half_width * wall_dx - half_thick * norm_dx,
+              cy - half_width * wall_dy - half_thick * norm_dy)
+        c2 = (cx + half_width * wall_dx - half_thick * norm_dx,
+              cy + half_width * wall_dy - half_thick * norm_dy)
+        c3 = (cx + half_width * wall_dx + half_thick * norm_dx,
+              cy + half_width * wall_dy + half_thick * norm_dy)
+        c4 = (cx - half_width * wall_dx + half_thick * norm_dx,
+              cy - half_width * wall_dy + half_thick * norm_dy)
+
+        # 4 edges: interior, exterior, and two sides
+        return [
+            ShapelyLine([c1, c2]),  # interior (away from normal)
+            ShapelyLine([c3, c4]),  # exterior (toward normal)
+            ShapelyLine([c1, c4]),  # side
+            ShapelyLine([c2, c3]),  # side
+        ]
+
+    def get_room_edge(self, room_polygon:RoomPolygon, tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE)->list:
         w_edges = self.get_candidate_edges()
         # Find which polygon edge contains one of the window edges
 

@@ -217,7 +217,7 @@ class BackgroundRegionEncoder(BaseRegionEncoder):
     - Red: facade_reflectance (0-1 → 0-1, default=1) [OPTIONAL]
     - Green: floor_height_above_terrain (0-10m → 0.1-1) [REQUIRED]
     - Blue: terrain_reflectance (0-1 → 0-1, default=1) [OPTIONAL]
-    - Alpha: window_orientation (0-360° → 0-1, default=0° South) [OPTIONAL]
+    - Alpha: window_orientation (0-2π rad → 0-1, math convention 0=East CCW) [AUTO from direction_angle]
     """
 
     def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
@@ -434,6 +434,13 @@ class WindowRegionEncoder(BaseRegionEncoder):
 
         # Get pixel bounds from geometry
         x_start, y_start, x_end, y_end = window_geom.get_pixel_bounds(image_size=width)
+
+        # Snap window to room's facade edge if available (preserves width, eliminates gap)
+        room_facade_right_edge = parameters.get('_room_facade_right_edge')
+        if room_facade_right_edge is not None:
+            window_width = x_end - x_start
+            x_start = room_facade_right_edge + 1
+            x_end = x_start + window_width
 
         # Enforce border (must remain background)
         border = GRAPHICS_CONSTANTS.BORDER_PX

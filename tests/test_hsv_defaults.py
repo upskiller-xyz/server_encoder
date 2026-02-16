@@ -56,7 +56,7 @@ class TestHSVDefaultPixelOverrides:
             "horizon": 45.0,
             "zenith": 30.0,
             "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5,
-            "window_orientation": 180.0  # DA models require orientation
+            "window_orientation": 3.14159  # DA models: direction in radians
         }
 
         image = np.zeros((128, 128, 4), dtype=np.uint8)
@@ -86,7 +86,7 @@ class TestHSVDefaultPixelOverrides:
                 "x1": 5.0, "y1": 0.0, "z1": 2.5, "x2": 7.0, "y2": 0.0, "z2": 4.5
             }
             if model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]:
-                params["window_orientation"] = 180.0
+                params["window_orientation"] = 3.14159
 
             image = np.zeros((128, 128, 4), dtype=np.uint8)
             result = encoder.encode_region(image, params, model_type)

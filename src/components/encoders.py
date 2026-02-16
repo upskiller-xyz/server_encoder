@@ -1,4 +1,6 @@
+import math
 from typing import Tuple
+
 import numpy as np
 from src.components.interfaces import IChannelEncoder
 from src.components.enums import ParameterName, EncoderType
@@ -130,8 +132,8 @@ class EncoderFactory:
         ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: (EncoderType.LINEAR.value, 0.0, 10.0, 0.1, 1.0),
         # Blue channel: terrain_reflectance (0-1 → 0-1, optional, default=1)
         ParameterName.TERRAIN_REFLECTANCE.value: (EncoderType.REFLECTANCE.value, 0.0, 1.0, 0.0, 1.0),
-        # Alpha channel: window_orientation (0-360° → 0-1, optional, default=0.8)
-        ParameterName.WINDOW_ORIENTATION.value: (EncoderType.ANGLE.value, 0.0, 360.0, 0.0, 1.0),
+        # Alpha channel: window_orientation (0-2π rad → 0-1, optional)
+        ParameterName.WINDOW_ORIENTATION.value: (EncoderType.ANGLE.value, 0.0, 2 * math.pi, 0.0, 1.0),
 
         # Legacy background encoder names (backward compatibility)
         "facade_reflectance": (EncoderType.REFLECTANCE.value, 0.0, 1.0, 0.0, 1.0),

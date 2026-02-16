@@ -180,7 +180,7 @@ encoding_result = requests.post(
                     "x1": 0, "y1": 0.2, "z1": 1.9,
                     "x2": 0, "y2": 1.8, "z2": 3.4,
                     "window_frame_ratio": 0.2,
-                    "window_orientation": direction_angle,  # Use calculated angle
+                    "direction_angle": direction_angle,  # Auto-copied to background for DA models
                     "horizon": 0,
                     "zenith": 0
                 }

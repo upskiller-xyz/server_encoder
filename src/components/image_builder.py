@@ -49,6 +49,11 @@ class RoomImageBuilder(IImageBuilder):
             Self for chaining
         """
         self._validate_state()
+
+        # Snap window to room's facade edge before encoding
+        if region_type == RegionType.WINDOW and self._room_mask is not None:
+            self._snap_window_to_room(parameters)
+
         encoder = self._region_encoder_factory.get_encoder(region_type, self._encoding_scheme)
         self._image = encoder.encode_region(self._image, parameters, self._model_type)
 
@@ -57,6 +62,14 @@ class RoomImageBuilder(IImageBuilder):
             self._room_mask = encoder.get_last_mask()
 
         return self
+
+    def _snap_window_to_room(self, window_params: Dict[str, Any]) -> None:
+        """Inject room facade right edge into window parameters for pixel-perfect alignment."""
+        center_y = self._room_mask.shape[0] // 2
+        room_columns = np.where(self._room_mask[center_y])[0]
+        if len(room_columns) == 0:
+            return
+        window_params['_room_facade_right_edge'] = int(room_columns.max())
 
     def build(self) -> np.ndarray:
         """
@@ -264,14 +277,14 @@ class RoomImageDirector:
         # Rotate geometry if window is not on south facade
         all_parameters = self._rotate_geometry_if_needed(all_parameters)
         
-        # Define region encoding order (list-based iteration)
+        # Define region encoding order
         region_order = [
             RegionType.BACKGROUND,
             RegionType.ROOM,
             RegionType.WINDOW,
             RegionType.OBSTRUCTION_BAR
         ]
-        
+
         # Encode regions in order using list comprehension
         [self._builder.encode_region(region, all_parameters.get_region(region).parameters)
          for region in region_order
@@ -323,6 +336,12 @@ class RoomImageDirector:
         all_parameters.window[ParameterName.DIRECTION_ANGLE.value] = direction_angle
         if all_parameters.room.parameters:
             all_parameters.room[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+
+        # NOTE: window_orientation is NOT auto-populated here because
+        # the HSV override system relies on parameters being absent to apply
+        # fixed defaults (e.g., DF models use constant 190 for orientation).
+        # DA models must pass window_orientation explicitly in the caller
+        # (training pipeline or server_lux encoding handler).
 
         # Rotate geometry using GeometryRotator
         return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)

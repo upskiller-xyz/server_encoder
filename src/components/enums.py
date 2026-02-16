@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 
 
@@ -192,7 +193,6 @@ PARAMETER_REGIONS = {
 
     # Obstruction bar parameters
     ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
-    ParameterName.BALCONY_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
     ParameterName.HORIZON.value: RegionType.OBSTRUCTION_BAR,
    
     ParameterName.CONTEXT_REFLECTANCE.value: RegionType.OBSTRUCTION_BAR,
@@ -231,7 +231,7 @@ DEFAULT_PARAMETER_VALUES = {
     # Background defaults
     ParameterName.FACADE_REFLECTANCE: 1.0,
     ParameterName.TERRAIN_REFLECTANCE: 1.0,
-    ParameterName.WINDOW_ORIENTATION: 288,  # 0° = South
+    ParameterName.WINDOW_ORIENTATION: math.pi,  # radians, math convention (0=East, CCW)
 
     # Room defaults
     ParameterName.FLOOR_REFLECTANCE: 1.0,
@@ -253,8 +253,8 @@ DEFAULT_PARAMETER_VALUES = {
 # Only specified combinations are overridden; others use normal encoding of DEFAULT_PARAMETER_VALUES
 HSV_DEFAULT_PIXEL_OVERRIDES = {
     # Background region defaults (alpha=windowOrientation, hue=facadeReflectance, sat=floorHeight, val=terrainReflectance)
-    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_DEFAULT): 190,  # window_orientation
-    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_CUSTOM): 190,   # window_orientation
+    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_DEFAULT): 190,  # window_orientation (DF models ignore orientation)
+    (RegionType.BACKGROUND, ChannelType.ALPHA, ModelType.DF_CUSTOM): 190,   # window_orientation (DF models ignore orientation)
     (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DF_DEFAULT): 190,    # facade_reflectance (hue)
     (RegionType.BACKGROUND, ChannelType.BLUE, ModelType.DA_DEFAULT): 200,    # facade_reflectance (hue)
     (RegionType.BACKGROUND, ChannelType.RED, ModelType.DF_DEFAULT): 190,   # terrain_reflectance (value)

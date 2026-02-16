@@ -34,6 +34,9 @@ class ImageGraphicsConstants:
     # Room positioning
     ROOM_FACADE_OFFSET_PX: int = 1  # pixels offset from window for C-frame adjacency
 
+    # Window placement tolerance (meters) for edge matching
+    WINDOW_PLACEMENT_TOLERANCE: float = 0.05
+
     @classmethod
     def get_pixel_value(cls, value:float, 
                         image_size:int=BASE_IMAGE_SIZE_PX):
