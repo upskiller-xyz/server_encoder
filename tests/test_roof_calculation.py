@@ -1,9 +1,8 @@
 """Test roof height calculation with high floor_height_above_terrain values."""
 
 import pytest
-from src.components.encoding_service import EncodingService
-from src.components.enums import ModelType
-from src.server.services.logging import StructuredLogger
+from src.server.services import EncodingService
+from src.core import ModelType
 from src.server.enums import LogLevel
 
 
@@ -13,8 +12,8 @@ class TestRoofHeightCalculation:
     @pytest.fixture
     def encoding_service(self):
         """Create encoding service instance."""
-        logger = StructuredLogger("test", LogLevel.INFO)
-        return EncodingService(logger)
+        
+        return EncodingService()
 
     def test_window_validation_uses_original_floor_height(self, encoding_service):
         """

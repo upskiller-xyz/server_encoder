@@ -17,20 +17,18 @@ sys.path.insert(0, str(project_root))
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
-import math
+import logging
 import io
-import zipfile
 import traceback
 import re
 import numpy as np
 
-from src.server.enums import ContentType, HTTPStatus, LogLevel
-from src.components.enums import ModelType, ParameterName, EncodingScheme
-from src.components.encoding_service import EncodingServiceFactory
-from src.server.services.logging import StructuredLogger
+from src.server.enums import  HTTPStatus, LogLevel
+from src.core import ParameterName, EncodingScheme
+from src.server.services import EncodingServiceFactory
 from src.server.controllers.base_controller import ServerController
 
-
+logger = logging.getLogger("logger")
 
 
 class ServerApplication:
@@ -40,7 +38,6 @@ class ServerApplication:
         self._app = Flask(app_name)
         CORS(self._app)
         self._controller = None
-        self._logger = None
         self._encoding_service = None
         self._setup_dependencies()
         self._setup_routes()
@@ -48,11 +45,10 @@ class ServerApplication:
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
         # Logger
-        self._logger = StructuredLogger("Server", LogLevel.INFO)
 
         # Encoding services (both RGB and HSV)
-        self._encoding_service_hsv = EncodingServiceFactory.get_instance(self._logger, EncodingScheme.HSV)
-        self._encoding_service_rgb = EncodingServiceFactory.get_instance(self._logger, EncodingScheme.RGB)
+        self._encoding_service_hsv = EncodingServiceFactory.get_instance(EncodingScheme.HSV)
+        self._encoding_service_rgb = EncodingServiceFactory.get_instance(EncodingScheme.RGB)
 
         # Services dict (default to HSV)
         services = {
@@ -63,7 +59,6 @@ class ServerApplication:
 
         # Controller
         self._controller = ServerController(
-            logger=self._logger,
             services=services
         )
 
@@ -122,11 +117,6 @@ class ServerApplication:
             if not data:
                 raise BadRequest("No JSON data provided")
 
-            # Validate required fields
-            for pp in [ParameterName.MODEL_TYPE, ParameterName.PARAMETERS]:
-                if pp.value not in data:
-                    raise BadRequest("Missing {} field".format(pp.value))
-
             # Parse encoding scheme (default to HSV)
             encoding_scheme_str = data.get("encoding_scheme", "hsv")
             try:
@@ -138,44 +128,31 @@ class ServerApplication:
                     f"Valid schemes: {', '.join(valid_schemes)}"
                 )
 
-            # Parse model type
-            model_type_str = data[ParameterName.MODEL_TYPE.value]
-            model_type_prefix = self._extract_model_type_prefix(model_type_str)
-
-            try:
-                model_type = ModelType(model_type_prefix)
-            except ValueError:
-                valid_types = [mt.value for mt in ModelType]
-                raise BadRequest(
-                    f"Invalid model_type '{model_type_str}' (parsed as '{model_type_prefix}'). "
-                    f"Valid types: {', '.join(valid_types)}"
-                )
-
-            # Get parameters
-            parameters = data["parameters"]
-
             # Select encoding service based on encoding scheme
             encoding_service = (
                 self._encoding_service_hsv if encoding_scheme == EncodingScheme.HSV
                 else self._encoding_service_rgb
             )
 
-            # Validate windows structure
-            if ParameterName.WINDOWS.value not in parameters:
-                raise BadRequest("Missing 'windows' field in parameters. At least one window must be provided.")
-
-            if not isinstance(parameters[ParameterName.WINDOWS.value], dict) or len(parameters[ParameterName.WINDOWS.value]) == 0:
-                raise BadRequest("'windows' must be a non-empty dictionary with at least one window.")
-
-            # Determine if single or multi-window
-            window_count = len(parameters[ParameterName.WINDOWS.value])
-            is_single_window = window_count == 1
+            # Parse request using typed model
+            try:
+                room_request = encoding_service.parse_request(data) # type: ignore
+            except ValueError as e:
+                raise BadRequest(str(e))
 
             # Log request
-            self._logger.info(
-                f"{'Single' if is_single_window else 'Multi'}-window array encoding request - "
-                f"model_type: {model_type_str}, encoding_scheme: {encoding_scheme_str}, window_count: {window_count}"
+            logger.info(
+                f"{'Single' if len(room_request.windows) == 1 else 'Multi'}-window array encoding request - "
+                f"model_type: {room_request.model_type.value}, encoding_scheme: {encoding_scheme_str}, "
+                f"window_count: {len(room_request.windows)}"
             )
+
+            # For backward compatibility, convert back to flat dict
+            parameters = room_request.to_flat_dict()
+            model_type = room_request.model_type
+
+            # Determine if single or multi-window
+            is_single_window = len(room_request.windows) == 1
 
             # Encode arrays
             if is_single_window:
@@ -218,7 +195,7 @@ class ServerApplication:
                 np.savez_compressed(npz_buffer, **arrays_dict)
                 npz_buffer.seek(0)
 
-                self._logger.info(
+                logger.info(
                     f"Multi-window array encoding complete - {len(result.images)} images in NPZ"
                 )
 
@@ -233,7 +210,7 @@ class ServerApplication:
             raise
         except ValueError as e:
             # Log validation error with traceback
-            self._logger.error(
+            logger.error(
                 f"Validation error: {str(e)}\n"
                 f"Traceback:\n{traceback.format_exc()}"
             )
@@ -241,7 +218,7 @@ class ServerApplication:
         except Exception as e:
             # Log encoding error with full traceback
             error_trace = traceback.format_exc()
-            self._logger.error(
+            logger.error(
                 f"Array encoding failed: {str(e)}\n"
                 f"Error type: {type(e).__name__}\n"
                 f"Traceback:\n{error_trace}"
@@ -288,7 +265,7 @@ class ServerApplication:
             direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(data)
 
             # Log success
-            self._logger.info(
+            logger.info(
                 f"Direction angle calculation successful - "
                 f"window_count: {len(direction_angles_rad)}"
             )
@@ -301,12 +278,12 @@ class ServerApplication:
             raise
         except ValueError as e:
             # Log validation error
-            self._logger.error(f"Direction angle calculation error: {str(e)}")
+            logger.error(f"Direction angle calculation error: {str(e)}")
             return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             # Log unexpected error with traceback
             error_trace = traceback.format_exc()
-            self._logger.error(
+            logger.error(
                 f"Direction angle calculation failed: {str(e)}\n"
                 f"Error type: {type(e).__name__}\n"
                 f"Traceback:\n{error_trace}"
@@ -353,7 +330,7 @@ class ServerApplication:
             reference_points = self._encoding_service_hsv.calculate_reference_point(data)
 
             # Log success
-            self._logger.info(
+            logger.info(
                 f"Reference point calculation successful - "
                 f"window_count: {len(reference_points)}"
             )
@@ -366,12 +343,12 @@ class ServerApplication:
             raise
         except ValueError as e:
             # Log validation error
-            self._logger.error(f"Reference point calculation error: {str(e)}")
+            logger.error(f"Reference point calculation error: {str(e)}")
             return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             # Log unexpected error with traceback
             error_trace = traceback.format_exc()
-            self._logger.error(
+            logger.error(
                 f"Reference point calculation failed: {str(e)}\n"
                 f"Error type: {type(e).__name__}\n"
                 f"Traceback:\n{error_trace}"

@@ -1,257 +1,21 @@
 from typing import Dict, Any, Optional, Tuple
-import copy
-import math
+from src.core import ModelType, RegionType, ParameterName, PARAMETER_REGIONS
+from src.models import EncodingParameters, EncodingResult
+from src.components.image_builder.room_image_builder import RoomImageBuilder
+from src.components.image_builder.parameter_normalizer import ParameterNormalizer
+from src.components.image_builder.geometry_rotator import GeometryRotator
+from src.components.geometry import WindowGeometry
 import numpy as np
-from src.components.interfaces import IImageBuilder, EncodingResult, EncodingParameters, RegionParameters
-from src.components.enums import ModelType, RegionType, ParameterName, PARAMETER_REGIONS, EncodingScheme
-from src.components.region_encoders import RegionEncoderFactory
-from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
-
-class RoomImageBuilder(IImageBuilder):
-    """
-    Builder for creating encoded room images (Builder Pattern)
-
-    Constructs 128×128 RGBA images with encoded room parameters
-    """
-
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
-        self._image: Optional[np.ndarray] = None
-        self._model_type: Optional[ModelType] = None
-        self._encoding_scheme = encoding_scheme
-        self._region_encoder_factory = RegionEncoderFactory()
-        self._room_mask: Optional[np.ndarray] = None
-        self.reset()
-
-    def reset(self) -> 'RoomImageBuilder':
-        """Reset builder to initial state"""
-        # Create 128×128 RGBA image initialized to zeros
-        self._image = np.zeros((128, 128, 4), dtype=np.uint8)
-        self._model_type = None
-        self._room_mask = None
-        return self
-
-    def set_model_type(self, model_type: ModelType) -> 'RoomImageBuilder':
-        """Set the model type for encoding"""
-        if not isinstance(model_type, ModelType):
-            raise ValueError(f"Invalid model type: {model_type}")
-        self._model_type = model_type
-        return self
-
-    def encode_region(self, region_type: RegionType, parameters: Dict[str, Any]) -> 'RoomImageBuilder':
-        """
-        Encode a region using its encoder (Single Responsibility Principle)
-
-        Args:
-            region_type: Type of region to encode
-            parameters: Region-specific parameters
-
-        Returns:
-            Self for chaining
-        """
-        self._validate_state()
-
-        # Snap window to room's facade edge before encoding
-        if region_type == RegionType.WINDOW and self._room_mask is not None:
-            self._snap_window_to_room(parameters)
-
-        encoder = self._region_encoder_factory.get_encoder(region_type, self._encoding_scheme)
-        self._image = encoder.encode_region(self._image, parameters, self._model_type)
-
-        # Capture room mask when encoding room region
-        if region_type == RegionType.ROOM:
-            self._room_mask = encoder.get_last_mask()
-
-        return self
-
-    def _snap_window_to_room(self, window_params: Dict[str, Any]) -> None:
-        """Inject room facade right edge into window parameters for pixel-perfect alignment."""
-        center_y = self._room_mask.shape[0] // 2
-        room_columns = np.where(self._room_mask[center_y])[0]
-        if len(room_columns) == 0:
-            return
-        window_params['_room_facade_right_edge'] = int(room_columns.max())
-
-    def build(self) -> np.ndarray:
-        """
-        Build and return the final encoded image
-
-        Returns:
-            128×128 RGBA numpy array
-
-        Raises:
-            RuntimeError: If model type not set
-        """
-        self._validate_state()
-        if self._image is None:
-            raise RuntimeError("Image not initialized")
-        return self._image.copy()
-
-    def get_room_mask(self) -> Optional[np.ndarray]:
-        """
-        Get the room mask (ones in room area, zeros elsewhere)
-
-        Returns:
-            128×128 single-channel mask or None if no room was encoded
-        """
-        if self._room_mask is None:
-            return None
-        return self._room_mask.copy()
-
-    def _validate_state(self) -> None:
-        """Validate builder state before operations"""
-        if self._model_type is None:
-            raise RuntimeError("Model type must be set before encoding")
-        if self._image is None:
-            raise RuntimeError("Image not initialized. Call reset() first.")
 
 
-class ParameterNormalizer:
-    """
-    Normalizes parameters by converting dicts to proper geometry classes
-
-    Ensures we always work with WindowGeometry and RoomPolygon classes, not dicts
-    """
-
-    @staticmethod
-    def normalize_window_geometry(window_params: Dict[str, Any]) -> Optional[WindowGeometry]:
-        """
-        Extract or create WindowGeometry from parameters
-
-        Args:
-            window_params: Window parameter dictionary
-
-        Returns:
-            WindowGeometry object or None if no geometry found
-        """
-        # Check if window_geometry exists
-        if ParameterName.WINDOW_GEOMETRY.value in window_params:
-            geom = window_params[ParameterName.WINDOW_GEOMETRY.value]
-            if isinstance(geom, WindowGeometry):
-                return geom
-            # Convert dict to WindowGeometry
-            return WindowGeometry.from_dict(geom)
-
-        # Check if individual coordinates exist
-        if all(k in window_params for k in [
-            ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value,
-            ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value
-        ]):
-            return WindowGeometry(
-                x1=window_params[ParameterName.X1.value],
-                y1=window_params[ParameterName.Y1.value],
-                z1=window_params[ParameterName.Z1.value],
-                x2=window_params[ParameterName.X2.value],
-                y2=window_params[ParameterName.Y2.value],
-                z2=window_params[ParameterName.Z2.value],
-                direction_angle=window_params.get(ParameterName.DIRECTION_ANGLE.value)
-            )
-
-        return None
-
-    @staticmethod
-    def normalize_room_polygon(room_params: Dict[str, Any]) -> Optional[RoomPolygon]:
-        """
-        Extract or create RoomPolygon from parameters
-
-        Args:
-            room_params: Room parameter dictionary
-
-        Returns:
-            RoomPolygon object or None if no polygon found
-        """
-        if ParameterName.ROOM_POLYGON.value not in room_params:
-            return None
-
-        polygon = room_params[ParameterName.ROOM_POLYGON.value]
-        if isinstance(polygon, RoomPolygon):
-            return polygon
-        # RoomPolygon.from_dict() actually expects a list, not a dict (despite the name)
-        if isinstance(polygon, (list, tuple)):
-            return RoomPolygon.from_dict(polygon)
-        # If it's a dict, it might be a serialized RoomPolygon
-        if isinstance(polygon, dict) and 'vertices' in polygon:
-            return RoomPolygon.from_dict(polygon['vertices'])
-        return RoomPolygon.from_dict(polygon)
-
-
-class GeometryRotator:
-    """
-    Rotates window and room geometry (Single Responsibility)
-    """
-
-    @staticmethod
-    def rotate_if_needed(
-        all_parameters: EncodingParameters,
-        window_geom: WindowGeometry,
-        room_polygon: Optional[RoomPolygon]
-    ) -> EncodingParameters:
-        """
-        Rotate geometry if window is not pointing right (0 degrees)
-
-        Args:
-            all_parameters: All parameters grouped by region
-            window_geom: WindowGeometry object with direction_angle set
-            room_polygon: RoomPolygon object or None
-
-        Returns:
-            Parameters with rotated geometry
-        """
-        
-        direction_angle_degrees = window_geom.direction_angle * 180 / math.pi  # Convert to degrees
-        all_parameters.set_global(ParameterName.DIRECTION_ANGLE.value, window_geom.direction_angle)
-
-        # If already pointing right (within tolerance), no rotation needed
-        if abs(direction_angle_degrees) < 0.01:
-            return all_parameters
-
-        # Rotation angle is negative of direction angle (rotate opposite direction to align to 0°)
-        rotation_angle = -direction_angle_degrees
-        origin = Point2D(0, 0)
-
-        # Calculate wall thickness BEFORE rotation (it's invariant under rotation)
-
-        # Make a deep copy of parameters to avoid modifying original
-        rotated_params = copy.deepcopy(all_parameters)
-
-        # Rotate window geometry
-        rotated_window = window_geom.rotate(rotation_angle, origin)
-        window_params_copy = rotated_params.window.parameters
-
-        GeometryRotator._update_window_coords(window_params_copy, rotated_window, window_geom.wall_thickness)
-
-        # Rotate room polygon if present
-        if room_polygon is not None:
-            rotated_polygon = room_polygon.rotate(rotation_angle, origin)
-
-            room_params = rotated_params.room.parameters
-            room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
-
-            GeometryRotator._update_window_coords(room_params, rotated_window, window_geom.wall_thickness)
-
-            # Set direction_angle to 0 after rotation (window now points right)
-            room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
-
-        return rotated_params
-
-    @staticmethod
-    def _update_window_coords(param_dict: dict, window: WindowGeometry, thickness: float) -> dict:
-        """Update parameter dict with window coordinates and thickness"""
-        param_dict[ParameterName.X1.value] = window.x1
-        param_dict[ParameterName.Y1.value] = window.y1
-        param_dict[ParameterName.X2.value] = window.x2
-        param_dict[ParameterName.Y2.value] = window.y2
-        param_dict[ParameterName.WALL_THICKNESS.value] = thickness
-        return param_dict
-
-
-class RoomImageDirector: 
+class RoomImageDirector:
     """
     Director class for orchestrating image building (Director Pattern)
 
     Provides high-level interface for building complete encoded images
     """
 
-    def __init__(self, builder: IImageBuilder):
+    def __init__(self, builder: RoomImageBuilder):
         self._builder = builder
 
     def construct_full_image(
@@ -270,13 +34,13 @@ class RoomImageDirector:
             Tuple of (encoded_image, room_mask)
             - encoded_image: Complete encoded image
             - room_mask: Room mask (ones in room area, zeros elsewhere) or None
-        """ 
+        """
         # Reset and configure builder
         self._builder.reset().set_model_type(model_type)
 
         # Rotate geometry if window is not on south facade
         all_parameters = self._rotate_geometry_if_needed(all_parameters)
-        
+
         # Define region encoding order
         region_order = [
             RegionType.BACKGROUND,
@@ -284,11 +48,12 @@ class RoomImageDirector:
             RegionType.WINDOW,
             RegionType.OBSTRUCTION_BAR
         ]
-
+        params = [all_parameters.get_region(region).parameters for region in region_order]
         # Encode regions in order using list comprehension
-        [self._builder.encode_region(region, all_parameters.get_region(region).parameters)
-         for region in region_order
-         if all_parameters.get_region(region).parameters]
+        # EncodingParameters.from_dict(p) instead of p
+        [self._builder.encode_region(region, p)
+         for region, p in zip(region_order, params)
+         if p]
 
         # Build final image and get room mask
         return self._builder.build(), self._builder.get_room_mask()
@@ -374,7 +139,7 @@ class RoomImageDirector:
 
         # Legacy flat structure - group and construct directly
         grouped = self._group_parameters(parameters)
-        
+
         return self.construct_full_image(model_type, grouped)
 
     def construct_multi_window_images(
@@ -486,4 +251,3 @@ class RoomImageDirector:
             window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
 
         return encoding_params
-    

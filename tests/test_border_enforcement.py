@@ -17,7 +17,7 @@ from src.components.region_encoders import (
     WindowRegionEncoder,
     ObstructionBarEncoder
 )
-from src.components.enums import ModelType, RegionType
+from src.core import ModelType, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 

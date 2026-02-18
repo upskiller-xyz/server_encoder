@@ -1,23 +1,25 @@
-from typing import Dict, Any, Tuple, Union, Optional
+from typing import Dict, Any, Tuple, Optional, Union
 import numpy as np
 import cv2
-from src.components.interfaces import IEncodingService, EncodingResult, EncodedBytesResult
-from src.components.enums import ModelType, ParameterName, EncodingScheme
+from src.core.enums import FileFormat
+from src.models import EncodingResult, EncodedBytesResult, RoomEncodingRequest
+from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
-from src.components.encoders import EncoderFactory
+from src.components.parameter_encoders import EncoderFactory
 from src.components.geometry import WindowBorderValidator, WindowHeightValidator, WindowGeometry, RoomPolygon
-from src.components.parameter_calculators import ParameterCalculatorRegistry
-from src.server.services.logging import StructuredLogger
+from src.components.calculators import ParameterCalculatorRegistry
+import logging
 
+logger = logging.getLogger("logger")
 
-class EncodingService(IEncodingService):
+class EncodingService:
     """
     Service for encoding room parameters into images
 
     Follows Dependency Injection and Single Responsibility principles
     """
 
-    def __init__(self, logger: StructuredLogger, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self,  encoding_scheme: EncodingScheme = EncodingScheme.RGB):
         """
         Initialize encoding service
 
@@ -25,11 +27,89 @@ class EncodingService(IEncodingService):
             logger: Logger instance for structured logging
             encoding_scheme: Encoding scheme to use (default: HSV)
         """
-        self._logger = logger
         self._encoding_scheme = encoding_scheme
         self._builder = RoomImageBuilder(encoding_scheme=encoding_scheme)
         self._director = RoomImageDirector(self._builder)
         self._encoder_factory = EncoderFactory()
+
+    def parse_request(self, data: Dict[str, Any]) -> RoomEncodingRequest:
+        """
+        Parse raw request dictionary into typed RoomEncodingRequest
+
+        Args:
+            data: Raw API request dictionary
+
+        Returns:
+            Parsed and validated RoomEncodingRequest
+
+        Raises:
+            ValueError: If request is invalid
+        """
+        try:
+            request = RoomEncodingRequest.from_dict(data)
+            logger.info(f"Parsed request: model_type={request.model_type.value}, windows={len(request.windows)}")
+            return request
+        except Exception as e:
+            logger.error(f"Failed to parse request: {str(e)}")
+            raise ValueError(f"Invalid request format: {str(e)}")
+
+    def validate_request(self, request: RoomEncodingRequest) -> Tuple[bool, str]:
+        """
+        Validate RoomEncodingRequest
+
+        Args:
+            request: Parsed request to validate
+
+        Returns:
+            (is_valid, error_message) tuple
+        """
+        # Validate request structure
+        is_valid, error_msg = request.validate()
+        if not is_valid:
+            logger.error(f"Request validation failed: {error_msg}")
+            return False, error_msg
+
+        # Convert to flat dict for existing validation
+        parameters = request.to_flat_dict()
+
+        # Run existing parameter validation
+        is_valid, error_msg = self.validate_parameters(parameters, request.model_type)
+        if not is_valid:
+            return False, error_msg
+
+        return True, ""
+
+    def encode_from_request(
+        self,
+        request: RoomEncodingRequest,
+        return_format: FileFormat = FileFormat.ARRAYS
+    ) -> Union[Tuple[np.ndarray, Optional[np.ndarray]], Tuple[bytes, Optional[bytes]]]:
+        """
+        Encode room image from typed RoomEncodingRequest
+
+        Args:
+            request: Validated RoomEncodingRequest
+            return_format: Return format (ARRAYS or BYTES)
+
+        Returns:
+            Encoded image and mask (format depends on return_format)
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Validate request
+        is_valid, error_msg = self.validate_request(request)
+        if not is_valid:
+            raise ValueError(error_msg)
+
+        # Convert to flat dict
+        parameters = request.to_flat_dict()
+
+        # Use existing encoding methods
+        if return_format == FileFormat.ARRAYS:
+            return self.encode_room_image_arrays(parameters, request.model_type)
+        else:
+            return self.encode_room_image(parameters, request.model_type)
 
     def encode_room_image_arrays(
         self,
@@ -51,13 +131,16 @@ class EncodingService(IEncodingService):
         Raises:
             ValueError: If parameters are invalid
         """
+        # Calculate direction_angle if missing (needed for validation)
+        parameters = self._ensure_direction_angle(parameters)
+
         # Validate parameters
         is_valid, error_msg = self.validate_parameters(parameters, model_type)
         if not is_valid:
-            self._logger.error(f"Parameter validation failed: {error_msg}")
+            logger.error(f"Parameter validation failed: {error_msg}")
             raise ValueError(error_msg)
 
-        self._logger.info(
+        logger.info(
             f"Encoding room image arrays - model_type: {model_type.value}, "
             f"param_count: {len(parameters)}"
         )
@@ -70,9 +153,9 @@ class EncodingService(IEncodingService):
 
         image_array = image_array.astype(np.uint8)
 
-        self._logger.info(f"Room image arrays encoded successfully - shape: {image_array.shape}")
+        logger.info(f"Room image arrays encoded successfully - shape: {image_array.shape}")
         if mask_array is not None:
-            self._logger.info(f"Room mask array encoded successfully - shape: {mask_array.shape}")
+            logger.info(f"Room mask array encoded successfully - shape: {mask_array.shape}")
 
         return image_array, mask_array
 
@@ -99,10 +182,10 @@ class EncodingService(IEncodingService):
         # Validate parameters
         is_valid, error_msg = self.validate_parameters(parameters, model_type)
         if not is_valid:
-            self._logger.error(f"Parameter validation failed: {error_msg}")
+            logger.error(f"Parameter validation failed: {error_msg}")
             raise ValueError(error_msg)
 
-        self._logger.info(
+        logger.info(
             f"Encoding room image - model_type: {model_type.value}, "
             f"param_count: {len(parameters)}"
         )
@@ -117,19 +200,19 @@ class EncodingService(IEncodingService):
         # Convert RGBA to BGRA for OpenCV
         image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
         # Encode to PNG
-        success, buffer = cv2.imencode('.png', image_array)
+        success, buffer = cv2.imencode(FileFormat.PNG.value, image_array)
         if not success:
             raise RuntimeError("Failed to encode image to PNG")
 
-        self._logger.info(f"Room image encoded successfully - size: {len(buffer)} bytes")
+        logger.info(f"Room image encoded successfully - size: {len(buffer)} bytes")
 
         # Encode mask if available
         mask_bytes = None
         if mask_array is not None:
-            success_mask, mask_buffer = cv2.imencode('.png', mask_array)
+            success_mask, mask_buffer = cv2.imencode(FileFormat.PNG.value, mask_array)
             if success_mask:
                 mask_bytes = mask_buffer.tobytes()
-                self._logger.info(f"Room mask encoded successfully - size: {len(mask_buffer)} bytes")
+                logger.info(f"Room mask encoded successfully - size: {len(mask_buffer)} bytes")
 
         return buffer.tobytes(), mask_bytes
 
@@ -159,7 +242,7 @@ class EncodingService(IEncodingService):
             result.add_window("window_1", single_image, single_mask)
             return result
 
-        self._logger.info(
+        logger.info(
             f"Encoding multi-window image arrays - model_type: {model_type.value}, "
             f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
@@ -174,7 +257,7 @@ class EncodingService(IEncodingService):
         for window_id in result.window_ids():
             result.images[window_id] = result.images[window_id].astype(np.uint8)
 
-        self._logger.info(
+        logger.info(
             f"Multi-window image arrays encoded successfully - count: {len(result.images)}"
         )
 
@@ -206,7 +289,7 @@ class EncodingService(IEncodingService):
             result.add_window("window_1", single_image, single_mask)
             return result
 
-        self._logger.info(
+        logger.info(
             f"Encoding multi-window images - model_type: {model_type.value}, "
             f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
@@ -222,11 +305,11 @@ class EncodingService(IEncodingService):
         for window_id in array_result.window_ids():
             image_array = array_result.get_image(window_id)
             # Convert RGBA to BGRA for OpenCV
-            image_array = image_array.astype(np.uint8)
+            image_array = image_array.astype(np.uint8) #type: ignore
             image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
 
             # Encode to PNG
-            success, buffer = cv2.imencode('.png', image_array)
+            success, buffer = cv2.imencode(FileFormat.PNG.value, image_array)
             if not success:
                 raise RuntimeError(f"Failed to encode image to PNG for window {window_id}")
 
@@ -236,13 +319,13 @@ class EncodingService(IEncodingService):
             mask_array = array_result.get_mask(window_id)
             mask_bytes = None
             if mask_array is not None:
-                success_mask, mask_buffer = cv2.imencode('.png', mask_array)
+                success_mask, mask_buffer = cv2.imencode(FileFormat.PNG.value, mask_array)
                 if success_mask:
                     mask_bytes = mask_buffer.tobytes()
 
             result.add_window(window_id, image_bytes, mask_bytes)
 
-        self._logger.info(
+        logger.info(
             f"Multi-window images encoded successfully - count: {len(result.images)}"
         )
 
@@ -281,7 +364,7 @@ class EncodingService(IEncodingService):
                 merged_params.pop(ParameterName.WINDOWS.value, None)
 
                 is_valid, error_msg = self._validate_flat_parameters(
-                    merged_params, model_type, window_id
+                    merged_params
                 )
                 if not is_valid:
                     return False, f"Window '{window_id}': {error_msg}"
@@ -302,7 +385,7 @@ class EncodingService(IEncodingService):
             return True, ""
         else:
             # Legacy flat structure - validate directly
-            return self._validate_flat_parameters(parameters, model_type)
+            return self._validate_flat_parameters(parameters)
 
     # Parameters that support clipping (Strategy Pattern)
     # Format: {param_name: (clip_min, clip_max, reject_below_min)}
@@ -379,7 +462,7 @@ class EncodingService(IEncodingService):
 
                 # Update parameter if clipped
                 if clipped:
-                    self._logger.warning(
+                    logger.warning(
                         f"Parameter '{param_name}' value {original_value} outside range [{min_val}, {max_val}]. "
                         f"Value will be clipped to {value}."
                     )
@@ -393,11 +476,76 @@ class EncodingService(IEncodingService):
                     f"Error: {str(e)}"
                 )
 
+    def _ensure_direction_angle(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculate direction_angle if not provided (needed for validation)
+
+        Args:
+            parameters: Flat parameter dictionary
+
+        Returns:
+            Parameters with direction_angle set for each window
+        """
+        from src.components.geometry import WindowGeometry, RoomPolygon
+        from src.core import ParameterName
+
+        # Get room polygon if available
+        room_polygon = None
+        if ParameterName.ROOM_POLYGON.value in parameters:
+            room_data = parameters[ParameterName.ROOM_POLYGON.value]
+            if isinstance(room_data, RoomPolygon):
+                room_polygon = room_data
+            else:
+                room_polygon = RoomPolygon.from_dict(room_data)
+
+        # Check if we have a single window (flat structure)
+        has_flat_window = all(k in parameters for k in ['x1', 'y1', 'z1', 'x2', 'y2', 'z2'])
+
+        if has_flat_window and room_polygon:
+            # Single window in flat structure
+            if ParameterName.DIRECTION_ANGLE.value not in parameters:
+                window_geom = WindowGeometry(
+                    x1=parameters['x1'],
+                    y1=parameters['y1'],
+                    z1=parameters['z1'],
+                    x2=parameters['x2'],
+                    y2=parameters['y2'],
+                    z2=parameters['z2']
+                )
+                try:
+                    direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                    parameters[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+                    logger.info(f"Auto-calculated direction_angle: {direction_angle:.4f} rad")
+                except Exception as e:
+                    logger.warning(f"Could not auto-calculate direction_angle: {str(e)}")
+
+        # Check for multiple windows structure
+        elif ParameterName.WINDOWS.value in parameters and room_polygon:
+            windows = parameters[ParameterName.WINDOWS.value]
+            if isinstance(windows, dict):
+                for window_id, window_params in windows.items():
+                    if isinstance(window_params, dict) and ParameterName.DIRECTION_ANGLE.value not in window_params:
+                        if all(k in window_params for k in ['x1', 'y1', 'z1', 'x2', 'y2', 'z2']):
+                            window_geom = WindowGeometry(
+                                x1=window_params['x1'],
+                                y1=window_params['y1'],
+                                z1=window_params['z1'],
+                                x2=window_params['x2'],
+                                y2=window_params['y2'],
+                                z2=window_params['z2']
+                            )
+                            try:
+                                direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                                window_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
+                                logger.info(f"Auto-calculated direction_angle for '{window_id}': {direction_angle:.4f} rad")
+                            except Exception as e:
+                                logger.warning(f"Could not auto-calculate direction_angle for '{window_id}': {str(e)}")
+
+        return parameters
+
     def _validate_flat_parameters(
         self,
-        parameters: Dict[str, Any],
-        model_type: ModelType,
-        window_id: str = None
+        parameters: Dict[str, Any]
     ) -> Tuple[bool, str]:
         """
         Validate flat parameter structure
@@ -414,13 +562,12 @@ class EncodingService(IEncodingService):
         # This modifies parameters dict in place by adding calculated values
         # Pass logger to log warnings instead of failing
         calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(
-            parameters,
-            logger=self._logger
+            parameters
         )
         parameters.update(calculated_params)
 
         # Helper to check if parameter exists (supports both new and legacy names)
-        def has_param(new_name: str, legacy_name: str = None) -> bool:
+        def has_param(new_name: str, legacy_name: str = "") -> bool:
             if new_name in parameters:
                 return True
             if legacy_name and legacy_name in parameters:
@@ -612,14 +759,14 @@ class EncodingService(IEncodingService):
                 direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
                 results[window_id] = direction_angle
 
-                self._logger.info(
+                logger.info(
                     f"Calculated direction_angle for '{window_id}': {direction_angle:.4f} rad "
                     f"({direction_angle * 180 / 3.14159:.2f}°)"
                 )
 
             except Exception as e:
                 error_msg = f"Failed to calculate direction_angle for window '{window_id}': {str(e)}"
-                self._logger.error(error_msg)
+                logger.error(error_msg)
                 raise ValueError(error_msg)
 
         return results
@@ -696,49 +843,14 @@ class EncodingService(IEncodingService):
                     "z": round(ref_point.z, 4)
                 }
 
-                self._logger.info(
+                logger.info(
                     f"Calculated reference_point for '{window_id}': "
                     f"({ref_point.x:.4f}, {ref_point.y:.4f}, {ref_point.z:.4f})"
                 )
 
             except Exception as e:
                 error_msg = f"Failed to calculate reference_point for window '{window_id}': {str(e)}"
-                self._logger.error(error_msg)
+                logger.error(error_msg)
                 raise ValueError(error_msg)
 
         return results
-
-
-class EncodingServiceFactory:
-    """Factory for creating encoding service instances (Singleton Pattern per encoding scheme)"""
-
-    _instances: Dict[EncodingScheme, EncodingService] = {}
-
-    @classmethod
-    def get_instance(cls, logger: StructuredLogger, encoding_scheme: EncodingScheme = EncodingScheme.RGB) -> EncodingService:
-        """
-        Get singleton instance of encoding service for specified encoding scheme
-
-        Args:
-            logger: Logger instance
-            encoding_scheme: Encoding scheme to use (default: HSV)
-
-        Returns:
-            EncodingService instance
-        """
-        if encoding_scheme not in cls._instances:
-            cls._instances[encoding_scheme] = EncodingService(logger, encoding_scheme)
-        return cls._instances[encoding_scheme]
-
-    @classmethod
-    def reset_instance(cls, encoding_scheme: EncodingScheme = None) -> None:
-        """
-        Reset singleton instance(s) (useful for testing)
-
-        Args:
-            encoding_scheme: If specified, reset only that scheme's instance. Otherwise, reset all.
-        """
-        if encoding_scheme is None:
-            cls._instances = {}
-        else:
-            cls._instances.pop(encoding_scheme, None)

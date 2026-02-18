@@ -3,7 +3,7 @@ Test HSV encoding default pixel overrides
 """
 import pytest
 import numpy as np
-from src.components.enums import EncodingScheme, ModelType, RegionType, ChannelType
+from src.core import EncodingScheme, ModelType, RegionType, ChannelType
 from src.components.region_encoders import (
     BackgroundRegionEncoder,
     RoomRegionEncoder,

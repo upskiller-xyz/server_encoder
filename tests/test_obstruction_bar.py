@@ -13,7 +13,7 @@ Tests verify:
 import unittest
 import numpy as np
 from src.components.region_encoders import ObstructionBarEncoder
-from src.components.enums import ModelType, ImageDimensions, RegionType
+from src.core import ModelType, ImageDimensions, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 

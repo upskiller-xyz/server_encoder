@@ -17,6 +17,10 @@ class ChannelType(Enum):
     BLUE = "blue"
     ALPHA = "alpha"
 
+class FileFormat(Enum):
+    """File format output types"""
+    ARRAYS = "arrays"
+    PNG = ".png"
 
 class RegionType(Enum):
     """Image region types"""
@@ -107,18 +111,12 @@ class ParameterName(Enum):
     WINDOW_HEIGHT = "window_height"
     WINDOW_WIDTH = "window_width"
 
-    # Window position parameters
-    WINDOW_POSITION_X = "window_position_x"
-    WINDOW_POSITION_Y = "window_position_y"
-    WINDOW_POSITION_Z = "window_position_z"
 
     # Obstruction bar parameters
     BALCONY_REFLECTANCE = "balcony_reflectance"
     HORIZON = "horizon"
     CONTEXT_REFLECTANCE = "context_reflectance"
     ZENITH = "zenith"
-    
-    
 
     # Structure keys
     WINDOWS = "windows"
@@ -133,6 +131,12 @@ class ParameterName(Enum):
     Z2 = "z2"
     DIRECTION_ANGLE = "direction_angle"
     WALL_THICKNESS = "wall_thickness"
+
+    X = "x"
+    Y = "y"
+    Z = "z"
+
+    RIGHT_WALL = '_room_facade_right_edge'
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)

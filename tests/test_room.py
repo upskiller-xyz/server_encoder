@@ -14,7 +14,7 @@ import unittest
 import numpy as np
 from src.components.region_encoders import RoomRegionEncoder
 from src.components.geometry import RoomPolygon
-from src.components.enums import ModelType, ImageDimensions, RegionType
+from src.core import ModelType, ImageDimensions, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 

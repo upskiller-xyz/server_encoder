@@ -36,10 +36,12 @@ class ImageGraphicsConstants:
 
     # Window placement tolerance (meters) for edge matching
     WINDOW_PLACEMENT_TOLERANCE: float = 0.05
+    WINDOW_HEIGHT_TOLERANCE:float =  1e-6
 
     @classmethod
     def get_pixel_value(cls, value:float, 
                         image_size:int=BASE_IMAGE_SIZE_PX):
+        
         return round(value / cls.get_resolution(image_size))
 
     @classmethod

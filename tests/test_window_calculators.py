@@ -8,7 +8,7 @@ Tests all cases for window_sill_height and window_height calculations:
 """
 
 import unittest
-from src.components.parameter_calculators import (
+from src.components.calculators import (
     WindowHeightCalculator,
     WindowSillHeightCalculator,
     ParameterCalculatorRegistry
@@ -274,8 +274,8 @@ class TestParameterCalculatorRegistry(unittest.TestCase):
 
         result = ParameterCalculatorRegistry.calculate_derived_parameters(parameters)
 
-        # Should keep user-provided value
-        self.assertEqual(result["window_height"], 99.9)
+        # Should skip window_height because user already provided it
+        self.assertNotIn("window_height", result)
 
         # But still calculate sill height
         self.assertEqual(result["window_sill_height"], 1.5)

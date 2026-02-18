@@ -15,7 +15,7 @@ import unittest
 import numpy as np
 from src.components.region_encoders import WindowRegionEncoder
 from src.components.geometry import WindowGeometry
-from src.components.enums import ModelType, RegionType
+from src.core import ModelType, RegionType
 from src.components.image_builder import RoomImageBuilder
 
 

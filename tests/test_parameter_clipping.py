@@ -10,8 +10,8 @@ Tests clipping behavior for all parameters with clipping rules:
 
 import unittest
 from unittest.mock import Mock
-from src.components.encoding_service import EncodingService
-from src.components.enums import ModelType
+from src.server.services import EncodingService
+from src.core import ModelType
 
 
 class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
