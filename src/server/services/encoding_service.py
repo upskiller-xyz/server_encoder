@@ -179,6 +179,9 @@ class EncodingService:
         Raises:
             ValueError: If parameters are invalid
         """
+        # Calculate direction_angle if missing (needed for validation)
+        parameters = self._ensure_direction_angle(parameters)
+
         # Validate parameters
         is_valid, error_msg = self.validate_parameters(parameters, model_type)
         if not is_valid:

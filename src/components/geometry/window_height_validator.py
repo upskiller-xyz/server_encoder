@@ -84,5 +84,7 @@ class WindowHeightValidator:
 
             return cls.validate_window_height_bounds(window_geom, floor_height, roof_height)
 
+        except WindowHeightValidationError as e:
+            return False, str(e)
         except (KeyError, ValueError, AttributeError, TypeError) as e:
             return False, f"Error parsing height data: {type(e).__name__}: {str(e)}"

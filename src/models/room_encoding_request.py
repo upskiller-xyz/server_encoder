@@ -5,10 +5,31 @@ Represents a complete room encoding request with all parameters.
 Provides validation and conversion to internal formats.
 """
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Union
+import numpy as np
 from src.core import ModelType, ParameterName
 from src.models.window_request import WindowRequest
 from src.models.reflectance_parameters import ReflectanceParameters
+
+
+def _parse_float_or_list(value: Any) -> Optional[Union[float, List[float]]]:
+    """
+    Parse value as either float or list of floats
+    
+    Args:
+        value: Value to parse (can be int, float, or list)
+        
+    Returns:
+        Parsed value as float, list, or None
+    """
+    if value is None:
+        return None
+    if isinstance(value, (list, np.ndarray)):
+        return value
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
 
 
 @dataclass
@@ -39,8 +60,9 @@ class RoomEncodingRequest:
     window_orientation: Optional[float] = None
 
     # Global obstruction parameters (can be overridden per window)
-    horizon: Optional[float] = None
-    zenith: Optional[float] = None
+    # Can be float (single value) or list (array of values for obstruction pattern)
+    horizon: Optional[Union[float, List[float]]] = None
+    zenith: Optional[Union[float, List[float]]] = None
 
     def validate(self) -> Tuple[bool, str]:
         """
@@ -188,6 +210,6 @@ class RoomEncodingRequest:
             windows=windows,
             reflectance=reflectance,
             window_orientation=float(params[ParameterName.WINDOW_ORIENTATION.value]) if ParameterName.WINDOW_ORIENTATION.value in params else None,
-            horizon=float(params[ParameterName.HORIZON.value]) if ParameterName.HORIZON.value in params else None,
-            zenith=float(params[ParameterName.ZENITH.value]) if ParameterName.ZENITH.value in params else None,
+            horizon=_parse_float_or_list(params.get(ParameterName.HORIZON.value)),
+            zenith=_parse_float_or_list(params.get(ParameterName.ZENITH.value)),
         )

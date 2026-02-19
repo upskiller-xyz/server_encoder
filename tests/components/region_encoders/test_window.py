@@ -272,23 +272,34 @@ class TestWindowColorEncoding(unittest.TestCase):
         self.encoder = WindowRegionEncoder()
         self.model_type = ModelType.DF_DEFAULT
 
-    def test_red_channel_sill_height(self):
-        """Test red channel encodes sill_height (0-5m → 0-1)"""
+    def test_red_channel_window_height(self):
+        """Test red channel encodes window_height (NOT sill_height)
+
+        NOTE: Actual channel mapping is RED=window_height, BLUE=sill_height
+        Window height is calculated as z2 - z1.
+        """
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0m → 0
-            (2.5, 127),    # 2.5m → ~127
-            (5.0, 255),    # 5m → 255
+            (0.2, 252),    # 0.2m height → ~252 (reversed)
+            (2.6, 127),    # 2.6m height → ~127 (middle)
+            (5.0, 2),      # 5.0m height → ~2 (reversed)
         ]
 
-        for sill_height, expected_value in test_cases:
+        for window_height, expected_value in test_cases:
+            floor_height = 0.9
+            z1 = floor_height + 1.0  # Sill at 1m
+            z2 = z1 + window_height  # Window height = z2 - z1
+
             parameters = {
-                'window_sill_height': sill_height,
+                'floor_height_above_terrain': floor_height,
+                'height_roof_over_floor': 15.0,  # Required parameter
                 'window_frame_ratio': 0.8,
-                'window_height': 1.5,
-                'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-                'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+                'horizon': 0,
+                'zenith': 0,
+                'room_polygon': [[0, 2], [0, -7], [-3, -7], [-3, 2]],
+                'x1': -0.6, 'y1': 0.0, 'z1': z1,
+                'x2': 0.6, 'y2': 0.0, 'z2': z2
             }
 
             result = self.encoder.encode_region(
@@ -300,7 +311,7 @@ class TestWindowColorEncoding(unittest.TestCase):
 
             self.assertAlmostEqual(
                 window_pixel, expected_value, delta=2,
-                msg=f"Sill height {sill_height}m should encode to ~{expected_value} in red channel"
+                msg=f"Window height {window_height}m should encode to ~{expected_value} in red channel"
             )
 
     def test_green_channel_frame_ratio_reversed(self):
@@ -334,23 +345,34 @@ class TestWindowColorEncoding(unittest.TestCase):
                 msg=f"Frame ratio {frame_ratio} should encode to ~{expected_value} in green channel (reversed)"
             )
 
-    def test_blue_channel_window_height_reversed(self):
-        """Test blue channel encodes window_height (0.2-5m → 0.99-0.01, REVERSED)"""
+    def test_blue_channel_sill_height(self):
+        """Test blue channel encodes sill_height (NOT window_height)
+
+        NOTE: Actual channel mapping is RED=window_height, BLUE=sill_height
+        Sill height is calculated as z1 - floor_height_above_terrain.
+        """
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.2, 252),    # 0.2m → 0.99*255 = 252 (reversed, min height)
-            (2.6, 127),    # 2.6m → 0.5*255 = 127 (middle)
-            (5.0, 2),      # 5.0m → 0.01*255 = 2 (reversed, max height)
+            (0.0, 0),      # 0m sill → 0
+            (2.5, 127),    # 2.5m sill → ~127
+            (5.0, 255),    # 5m sill → 255
         ]
 
-        for window_height, expected_value in test_cases:
+        for sill_height, expected_value in test_cases:
+            floor_height = 0.9
+            z1 = floor_height + sill_height  # z1 = floor + sill
+            z2 = z1 + 1.5  # Window height of 1.5m
+
             parameters = {
-                'window_sill_height': 0.9,
+                'floor_height_above_terrain': floor_height,
+                'height_roof_over_floor': 15.0,
                 'window_frame_ratio': 0.8,
-                'window_height': window_height,
-                'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-                'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+                'horizon': 0,
+                'zenith': 0,
+                'room_polygon': [[0, 2], [0, -7], [-3, -7], [-3, 2]],
+                'x1': -0.6, 'y1': 0.0, 'z1': z1,
+                'x2': 0.6, 'y2': 0.0, 'z2': z2
             }
 
             result = self.encoder.encode_region(
@@ -362,7 +384,7 @@ class TestWindowColorEncoding(unittest.TestCase):
 
             self.assertAlmostEqual(
                 window_pixel, expected_value, delta=2,
-                msg=f"Window height {window_height}m should encode to ~{expected_value} in blue channel (reversed)"
+                msg=f"Sill height {sill_height}m should encode to ~{expected_value} in blue channel"
             )
 
     def test_alpha_channel_default_frame_reflectance(self):

@@ -95,5 +95,7 @@ class WindowBorderValidator:
 
             return cls.validate_window_on_border(window_geom, room_poly)
 
+        except WindowNotOnPolygonError as e:
+            return False, str(e)
         except (KeyError, ValueError, AttributeError) as e:
             return False, f"Error parsing geometry data: {type(e).__name__}: {str(e)}"

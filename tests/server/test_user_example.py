@@ -1,6 +1,7 @@
 """Test user's exact example."""
 
 import json
+import math
 from src.main import ServerApplication
 
 
@@ -35,12 +36,11 @@ def test_user_exact_example():
         print("\n" + "="*50)
         print("User's Example Result:")
         print("="*50)
-        print(f"Direction angle: {data['direction_angles']['window_id']:.4f} rad")
-        print(f"Direction angle: {data['direction_angles_degrees']['window_id']:.2f}°")
+        print(f"Direction angle: {data['direction_angle']['window_id']:.4f} rad")
         print("="*50 + "\n")
 
         # Should be 0° (east), not 180° (π)
-        angle_deg = data['direction_angles_degrees']['window_id']
+        angle_deg = data['direction_angle']['window_id'] * 180 / math.pi
         assert abs(angle_deg - 0.0) < 1.0, (
             f"Expected 0° for window on east wall, got {angle_deg:.2f}°"
         )

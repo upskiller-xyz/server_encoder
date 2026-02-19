@@ -179,8 +179,8 @@ class WindowGeometry:
         Get window bounds in pixel coordinates for top view
 
         In top view:
-        - Window appears as vertical line at fixed x position (default 12px from right)
-        - Horizontal extent = wall thickness (approximately constant)
+        - Window appears as vertical line at fixed x position (default 12px from right, scaled)
+        - Horizontal extent = wall thickness (scaled with image size)
         - Vertical extent = window width in 3D converted to pixels
 
         Args:
@@ -190,16 +190,25 @@ class WindowGeometry:
         Returns:
             (x_start, y_start, x_end, y_end) tuple in pixels
         """
+        # Window offset does NOT scale with image size - it stays fixed at 12px
         if window_offset_px is None:
             window_offset_px = GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX
 
         window_x_end = image_size - window_offset_px
-        window_x_start = window_x_end - self.wall_thickness_px
 
-        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(self.window_width_3d)
+        # Get wall thickness in pixels, scaled for the image size
+        wall_thickness_m = self.wall_thickness
+        if wall_thickness_m == 0:
+            # Fallback to default if calculated thickness is 0 (e.g., when y1==y2)
+            wall_thickness_m = GRAPHICS_CONSTANTS.WALL_THICKNESS_M
+        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(wall_thickness_m, image_size)
+
+        window_x_start = window_x_end - wall_thickness_px
+
+        # Get window height in pixels, scaled for the image size
+        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(self.window_width_3d, image_size)
 
         # Center vertically
-
         window_y_start = image_size // 2 - window_height_px // 2
         window_y_end = window_y_start + window_height_px
 

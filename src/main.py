@@ -21,10 +21,11 @@ import logging
 import io
 import traceback
 import re
+import math
 import numpy as np
 
 from src.server.enums import  HTTPStatus, LogLevel
-from src.core import ParameterName, EncodingScheme
+from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.server.services import EncodingServiceFactory
 from src.server.controllers.base_controller import ServerController
 
@@ -102,14 +103,19 @@ class ServerApplication:
 
     def _encode_room_arrays(self):
         """
-        Encode room parameters into numpy arrays (returns .npz file)
+        Encode room parameters into PNG image or NPZ arrays
 
-        Expected JSON payload: Same as /encode endpoint
+        Expected JSON payload:
+        {
+            "model_type": "df_default",
+            "encoding_scheme": "hsv" (optional, defaults to hsv),
+            "parameters": {
+                ... encoding parameters ...
+            }
+        }
 
         Returns:
-            .npz file containing:
-            - For single window: 'image' and 'mask' arrays
-            - For multi-window: 'window1_image', 'window1_mask', 'window2_image', etc.
+            PNG image (single window) or NPZ file (multiple windows)
         """
         try:
             # Get JSON data
@@ -134,6 +140,10 @@ class ServerApplication:
                 else self._encoding_service_rgb
             )
 
+            # Handle versioned model types (e.g., "df_default_2.0.1" -> "df_default")
+            if ResponseKey.MODEL_TYPE.value in data:
+                data[ResponseKey.MODEL_TYPE.value] = self._extract_model_type_prefix(data[ResponseKey.MODEL_TYPE.value])
+
             # Parse request using typed model
             try:
                 room_request = encoding_service.parse_request(data) # type: ignore
@@ -142,7 +152,7 @@ class ServerApplication:
 
             # Log request
             logger.info(
-                f"{'Single' if len(room_request.windows) == 1 else 'Multi'}-window array encoding request - "
+                f"{'Single' if len(room_request.windows) == 1 else 'Multi'}-window encoding request - "
                 f"model_type: {room_request.model_type.value}, encoding_scheme: {encoding_scheme_str}, "
                 f"window_count: {len(room_request.windows)}"
             )
@@ -154,30 +164,24 @@ class ServerApplication:
             # Determine if single or multi-window
             is_single_window = len(room_request.windows) == 1
 
-            # Encode arrays
+            # Encode images
             if is_single_window:
-                # Single window
-                image_array, mask_array = encoding_service.encode_room_image_arrays(
+                # Single window - return PNG image
+                image_bytes, mask_bytes = encoding_service.encode_room_image(
                     parameters=parameters,
                     model_type=model_type
                 )
 
-                # Create NPZ file
-                npz_buffer = io.BytesIO()
-                arrays_dict = {'image': image_array}
-                if mask_array is not None:
-                    arrays_dict['mask'] = mask_array
-                np.savez_compressed(npz_buffer, **arrays_dict)
-                npz_buffer.seek(0)
+                logger.info(f"Single-window image encoding complete - size: {len(image_bytes)} bytes")
 
                 return send_file(
-                    npz_buffer,
-                    mimetype='application/octet-stream',
-                    as_attachment=True,
-                    download_name='result.npz'
+                    io.BytesIO(image_bytes),
+                    mimetype='image/png',
+                    as_attachment=False,
+                    download_name='result.png'
                 )
             else:
-                # Multiple windows
+                # Multiple windows - return NPZ file with arrays
                 result = encoding_service.encode_multi_window_images_arrays(
                     parameters=parameters,
                     model_type=model_type
@@ -214,18 +218,18 @@ class ServerApplication:
                 f"Validation error: {str(e)}\n"
                 f"Traceback:\n{traceback.format_exc()}"
             )
-            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
+            return jsonify({ResponseKey.ERROR.value: str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             # Log encoding error with full traceback
             error_trace = traceback.format_exc()
             logger.error(
-                f"Array encoding failed: {str(e)}\n"
+                f"Encoding failed: {str(e)}\n"
                 f"Error type: {type(e).__name__}\n"
                 f"Traceback:\n{error_trace}"
             )
             return jsonify({
-                "error": f"Array encoding failed: {str(e)}",
-                "error_type": type(e).__name__
+                ResponseKey.ERROR.value: f"Encoding failed: {str(e)}",
+                ResponseKey.ERROR_TYPE.value: type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 
     def _calculate_direction(self):
@@ -234,20 +238,22 @@ class ServerApplication:
 
         Expected JSON payload:
         {
-            "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
-            "windows": {
-                "window1": {
-                    "x1": -0.6, "y1": 0.0,
-                    "x2": 0.6, "y2": 0.0
-                },
-                "window2": {
-                    ... (optional additional windows)
+            "parameters": {
+                "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+                "windows": {
+                    "window1": {
+                        "x1": -0.6, "y1": 0.0,
+                        "x2": 0.6, "y2": 0.0
+                    },
+                    "window2": {
+                        ... (optional additional windows)
+                    }
                 }
             }
         }
 
         Returns:
-            JSON with direction_angle for each window:
+            JSON with direction_angle for each window in radians:
             {
                 "direction_angle": {
                     "window1": 3.14159,  # radians
@@ -261,8 +267,11 @@ class ServerApplication:
             if not data:
                 raise BadRequest("No JSON data provided")
 
+            # Extract parameters from request (handle wrapper structure)
+            parameters = data.get(ResponseKey.PARAMETERS.value, data)
+
             # Calculate direction angles (use HSV service, but doesn't matter which)
-            direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(data)
+            direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
 
             # Log success
             logger.info(
@@ -279,7 +288,7 @@ class ServerApplication:
         except ValueError as e:
             # Log validation error
             logger.error(f"Direction angle calculation error: {str(e)}")
-            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
+            return jsonify({ResponseKey.ERROR.value: str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             # Log unexpected error with traceback
             error_trace = traceback.format_exc()
@@ -289,8 +298,8 @@ class ServerApplication:
                 f"Traceback:\n{error_trace}"
             )
             return jsonify({
-                "error": f"Direction angle calculation failed: {str(e)}",
-                "error_type": type(e).__name__
+                ResponseKey.ERROR.value: f"Direction angle calculation failed: {str(e)}",
+                ResponseKey.ERROR_TYPE.value: type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 
     def _get_reference_point(self):
@@ -344,7 +353,7 @@ class ServerApplication:
         except ValueError as e:
             # Log validation error
             logger.error(f"Reference point calculation error: {str(e)}")
-            return jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST.value
+            return jsonify({ResponseKey.ERROR.value: str(e)}), HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             # Log unexpected error with traceback
             error_trace = traceback.format_exc()
@@ -354,8 +363,8 @@ class ServerApplication:
                 f"Traceback:\n{error_trace}"
             )
             return jsonify({
-                "error": f"Reference point calculation failed: {str(e)}",
-                "error_type": type(e).__name__
+                ResponseKey.ERROR.value: f"Reference point calculation failed: {str(e)}",
+                ResponseKey.ERROR_TYPE.value: type(e).__name__
             }), HTTPStatus.INTERNAL_SERVER_ERROR.value
 
     @property

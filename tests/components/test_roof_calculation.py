@@ -55,17 +55,21 @@ class TestRoofHeightCalculation:
 
     def test_clipping_happens_during_encoding(self, encoding_service):
         """
-        Test that floor_height_above_terrain is clipped during encoding,
-        not during validation.
+        Test that floor_height_above_terrain and height_roof_over_floor are clipped.
+
+        The test uses moderate values that will be clipped but still result in
+        valid window parameters after clipping.
         """
         parameters = {
-            "height_roof_over_floor": 2.7,
-            "floor_height_above_terrain": 17.1,  # Will be clipped to 10.0
+            "height_roof_over_floor": 12.0,  # Will be clipped to 15.0 (min)
+            "floor_height_above_terrain": 12.0,  # Will be clipped to 10.0 (max)
             "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
             "windows": {
                 "test_window": {
-                    "x1": 0, "y1": 0.2, "z1": 18.0,
-                    "x2": 0, "y2": 1.8, "z2": 19.2,
+                    # Window at 1m above original floor (13.0), height 1.5m
+                    # After floor clips to 10.0: sill = 13.0 - 10.0 = 3.0m (valid)
+                    "x1": 0, "y1": 0.2, "z1": 13.0,
+                    "x2": 0, "y2": 1.8, "z2": 14.5,
                     "window_frame_ratio": 0.2,
                     "horizon": 0,
                     "zenith": 0,
@@ -85,6 +89,10 @@ class TestRoofHeightCalculation:
                 parameters, ModelType.DF_DEFAULT
             )
             assert image_bytes is not None
+
+            # Verify clipping occurred
+            assert parameters["floor_height_above_terrain"] == 10.0
+            assert parameters["height_roof_over_floor"] == 15.0
         except ValueError as e:
             pytest.fail(f"Encoding failed: {e}")
 

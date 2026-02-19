@@ -179,8 +179,8 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
         self.encoder = ObstructionBarEncoder()
         self.model_type = ModelType.DF_DEFAULT
 
-    def test_red_channel_horizon_angle(self):
-        """Test red channel encodes horizon (0-90° -> 0-1)"""
+    def test_blue_channel_horizon_angle(self):
+        """Test blue channel encodes horizon (0-90° -> 0-1)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -199,16 +199,16 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
                 image.copy(), parameters, self.model_type
             )
 
-            # Check red channel value at bar center
-            bar_pixel = result[64, 126, 0]  # Red channel
+            # Check blue channel value at bar center
+            bar_pixel = result[64, 126, 2]  # Blue channel
 
             self.assertAlmostEqual(
                 bar_pixel, expected_value, delta=2,
-                msg=f"Horizon angle {angle}° should encode to ~{expected_value} in red channel"
+                msg=f"Horizon angle {angle}° should encode to ~{expected_value} in blue channel"
             )
 
-    def test_blue_channel_zenith_angle(self):
-        """Test blue channel encodes zenith (0-70° -> 0.2-0.8)"""
+    def test_red_channel_zenith_angle(self):
+        """Test red channel encodes zenith (0-70° -> 0.2-0.8)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -227,13 +227,14 @@ class TestObstructionBarColorEncoding(unittest.TestCase):
                 image.copy(), parameters, self.model_type
             )
 
-            # Check blue channel value at bar center
-            bar_pixel = result[64, 126, 2]  # Blue channel
+            # Check red channel value at bar center
+            bar_pixel = result[64, 126, 0]  # Red channel
 
             self.assertAlmostEqual(
                 bar_pixel, expected_value, delta=2,
-                msg=f"Zenith angle {angle}° should encode to ~{expected_value} in blue channel"
+                msg=f"Zenith angle {angle}° should encode to ~{expected_value} in red channel"
             )
+            
 
     def test_green_channel_context_reflectance(self):
         """Test green channel encodes context_reflectance (0.1-0.6 -> 0-1)"""

@@ -93,36 +93,8 @@ class TestBackgroundColorEncoding(unittest.TestCase):
                 msg=f"Floor height {height}m should encode to ~{expected_value}"
             )
 
-    def test_red_channel_facade_reflectance(self):
-        """Test red channel encodes facade_reflectance (0-1 -> 0-1)"""
-        image = np.zeros((128, 128, 4), dtype=np.uint8)
-
-        test_cases = [
-            (0.0, 0),      # 0.0 -> 0
-            (0.5, 127),    # 0.5 -> ~127
-            (1.0, 255),    # 1.0 -> 255
-        ]
-
-        for reflectance, expected_value in test_cases:
-            parameters = {
-                'floor_height_above_terrain': 2.0,
-                'facade_reflectance': reflectance
-            }
-
-            result = self.encoder.encode_region(
-                image.copy(), parameters, self.model_type
-            )
-
-            # Check red channel value at background pixel
-            bg_pixel = result[64, 60, 0]  # Red channel
-
-            self.assertAlmostEqual(
-                bg_pixel, expected_value, delta=2,
-                msg=f"Facade reflectance {reflectance} should encode to ~{expected_value}"
-            )
-
-    def test_blue_channel_terrain_reflectance(self):
-        """Test blue channel encodes terrain_reflectance (0-1 -> 0-1)"""
+    def test_red_channel_terrain_reflectance(self):
+        """Test red channel encodes terrain_reflectance (0-1 -> 0-1)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
@@ -141,12 +113,40 @@ class TestBackgroundColorEncoding(unittest.TestCase):
                 image.copy(), parameters, self.model_type
             )
 
+            # Check red channel value at background pixel
+            bg_pixel = result[64, 60, 0]  # Red channel
+
+            self.assertAlmostEqual(
+                bg_pixel, expected_value, delta=2,
+                msg=f"Terrain reflectance {reflectance} should encode to ~{expected_value}"
+            )
+
+    def test_blue_channel_facade_reflectance(self):
+        """Test blue channel encodes facade_reflectance (0-1 -> 0-1)"""
+        image = np.zeros((128, 128, 4), dtype=np.uint8)
+
+        test_cases = [
+            (0.0, 0),      # 0.0 -> 0
+            (0.5, 127),    # 0.5 -> ~127
+            (1.0, 255),    # 1.0 -> 255
+        ]
+
+        for reflectance, expected_value in test_cases:
+            parameters = {
+                'floor_height_above_terrain': 2.0,
+                'facade_reflectance': reflectance
+            }
+
+            result = self.encoder.encode_region(
+                image.copy(), parameters, self.model_type
+            )
+
             # Check blue channel value at background pixel
             bg_pixel = result[64, 60, 2]  # Blue channel
 
             self.assertAlmostEqual(
                 bg_pixel, expected_value, delta=2,
-                msg=f"Terrain reflectance {reflectance} should encode to ~{expected_value}"
+                msg=f"Facade reflectance {reflectance} should encode to ~{expected_value}"
             )
 
     def test_alpha_channel_direction_angle(self):
@@ -430,10 +430,17 @@ class TestBackgroundIntegration(unittest.TestCase):
             msg="Builder should encode floor height correctly"
         )
 
-        # Red: facade reflectance (0.6 -> 153)
-        expected_red = int(0.6 * 255)
+        # Red: terrain reflectance (0.3 -> 76)
+        expected_red = int(0.3 * 255)
         self.assertAlmostEqual(
             bg_pixel[0], expected_red, delta=2,
+            msg="Builder should encode terrain reflectance correctly"
+        )
+
+        # Blue: facade reflectance (0.6 -> 153)
+        expected_blue = int(0.6 * 255)
+        self.assertAlmostEqual(
+            bg_pixel[2], expected_blue, delta=2,
             msg="Builder should encode facade reflectance correctly"
         )
 

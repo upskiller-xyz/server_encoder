@@ -22,6 +22,15 @@ class FileFormat(Enum):
     ARRAYS = "arrays"
     PNG = ".png"
 
+
+class ResponseKey(Enum):
+    """API response keys"""
+    ERROR = "error"
+    ERROR_TYPE = "error_type"
+    PARAMETERS = "parameters"
+    MODEL_TYPE = "model_type"
+
+
 class RegionType(Enum):
     """Image region types"""
     BACKGROUND = "background"

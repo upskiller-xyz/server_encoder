@@ -49,6 +49,12 @@ class ObstructionBarEncoder(BaseRegionEncoder):
 
         for channel_idx, channel_type in enumerate(channel_order):
             encoded = self._encode_channel(parameters, channel_map, channel_type, model_type, bar_height, actual_bar_height)
+            # Squeeze and broadcast encoded array to match bar width
+            encoded = np.squeeze(encoded)
+            bar_width = bar_x_end - bar_x_start
+            if encoded.ndim == 1:
+                # Repeat 1D array across width dimension
+                encoded = np.repeat(encoded[:, np.newaxis], bar_width, axis=1)
             image[bar_y_start:bar_y_end, bar_x_start:bar_x_end, channel_idx] = encoded
 
         return image

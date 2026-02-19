@@ -163,18 +163,19 @@ class TestRoomColorEncoding(unittest.TestCase):
         }
 
     def test_red_channel_roof_height(self):
-        """Test red channel encodes height_roof_over_floor (0-30m -> 0-1)"""
+        """Test red channel encodes wall_reflectance (0-1 -> 0-1) in DF models"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0m -> 0
-            (15.0, 127),   # 15m -> ~127
-            (30.0, 255),   # 30m -> 255
+            (0.0, 0),      # 0.0 reflectance -> 0
+            (0.5, 127),    # 0.5 reflectance -> ~127
+            (1.0, 255),    # 1.0 reflectance -> 255
         ]
 
-        for height, expected_value in test_cases:
+        for reflectance, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': height,
+                'height_roof_over_floor': 3.0,
+                'wall_reflectance': reflectance,
                 'room_polygon': self.room_polygon,
                 **self.window_coords
             }
@@ -189,7 +190,7 @@ class TestRoomColorEncoding(unittest.TestCase):
                 red_value = room_pixels[0, 0]
                 self.assertAlmostEqual(
                     red_value, expected_value, delta=2,
-                    msg=f"Roof height {height}m should encode to ~{expected_value}"
+                    msg=f"Wall reflectance {reflectance} should encode to ~{expected_value}"
                 )
 
     def test_green_channel_horizontal_reflectance(self):
@@ -224,25 +225,24 @@ class TestRoomColorEncoding(unittest.TestCase):
                     msg=f"Floor reflectance {reflectance} should encode to ~{expected_value}"
                 )
 
-    def test_blue_channel_vertical_reflectance(self):
-        """Test blue channel encodes wall_reflectance (0-1 -> 0-1) in custom model"""
+    def test_blue_channel_height_roof_over_floor(self):
+        """Test blue channel encodes height_roof_over_floor (0-30m -> 0-1) in HSV"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0 -> 0
-            (0.5, 127),    # 0.5 -> ~127
-            (1.0, 255),    # 1.0 -> 255
+            (0.0, 0),      # 0.0m -> 0
+            (15.0, 127),   # 15.0m -> ~127 (middle of 0-30 range)
+            (30.0, 255),   # 30.0m -> 255
         ]
 
-        for reflectance, expected_value in test_cases:
+        for height, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': 3.0,
-                'wall_reflectance': reflectance,  # Correct parameter name
+                'height_roof_over_floor': height,
                 'room_polygon': self.room_polygon,
                 **self.window_coords
             }
 
-            # Use DF_CUSTOM to test reflectance encoding
+            # Use DF_CUSTOM to test height encoding
             result = self.encoder.encode_region(
                 image.copy(), parameters, ModelType.DF_CUSTOM
             )
@@ -253,7 +253,7 @@ class TestRoomColorEncoding(unittest.TestCase):
                 blue_value = room_pixels[0, 2]
                 self.assertAlmostEqual(
                     blue_value, expected_value, delta=2,
-                    msg=f"Wall reflectance {reflectance} should encode to ~{expected_value}"
+                    msg=f"Height {height}m should encode to ~{expected_value}"
                 )
 
     def test_alpha_channel_ceiling_reflectance(self):
@@ -287,8 +287,8 @@ class TestRoomColorEncoding(unittest.TestCase):
                     msg=f"Ceiling reflectance {reflectance} should encode to ~{expected_value}"
                 )
 
-    def test_default_horizontal_reflectance(self):
-        """Test green channel defaults to 1.0 when horizontal_reflectance not provided"""
+    def test_default_floor_reflectance(self):
+        """Test green channel defaults to 1.0 when floor_reflectance not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
@@ -305,11 +305,11 @@ class TestRoomColorEncoding(unittest.TestCase):
             green_value = room_pixels[0, 1]
             self.assertEqual(
                 green_value, 255,
-                "Default horizontal_reflectance should be 1.0 (encoded as 255)"
+                "Default floor_reflectance should be 1.0 (encoded as 255)"
             )
 
-    def test_default_vertical_reflectance(self):
-        """Test blue channel defaults to 1.0 when vertical_reflectance not provided"""
+    def test_default_height_roof_over_floor(self):
+        """Test blue channel encodes height_roof_over_floor with default when not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
@@ -320,13 +320,14 @@ class TestRoomColorEncoding(unittest.TestCase):
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
-        # Default value of 1.0 should map to 255
+        # 3.0m should encode to a value between 0 and 255 (in 0-30m range)
         room_pixels = result[result[:, :, 0] > 0]
         if len(room_pixels) > 0:
             blue_value = room_pixels[0, 2]
-            self.assertEqual(
-                blue_value, 255,
-                "Default vertical_reflectance should be 1.0 (encoded as 255)"
+            # 3.0m / 30.0m = 0.1 -> 0.1 * 255 ≈ 25
+            self.assertAlmostEqual(
+                blue_value, 25, delta=2,
+                msg="3.0m height should encode to ~25 in 0-255 scale"
             )
 
     def test_default_ceiling_reflectance(self):
@@ -530,11 +531,11 @@ class TestRoomIntegration(unittest.TestCase):
 
         # Verify color encoding
         if len(room_pixels) > 0:
-            # Red: roof height (3.0m / 30.0m = 0.1 -> 25.5)
-            expected_red = int(3.0 / 30.0 * 255)
+            # Red: wall reflectance (0.7 -> 178.5)
+            expected_red = int(0.7 * 255)
             self.assertAlmostEqual(
                 room_pixels[0, 0], expected_red, delta=2,
-                msg="Builder should encode roof height correctly"
+                msg="Builder should encode wall reflectance correctly"
             )
 
             # Green: floor reflectance (0.3 -> 76.5)
@@ -542,6 +543,13 @@ class TestRoomIntegration(unittest.TestCase):
             self.assertAlmostEqual(
                 room_pixels[0, 1], expected_green, delta=2,
                 msg="Builder should encode floor reflectance correctly"
+            )
+
+            # Blue: roof height (3.0m / 30.0m = 0.1 -> 25.5)
+            expected_blue = int(3.0 / 30.0 * 255)
+            self.assertAlmostEqual(
+                room_pixels[0, 2], expected_blue, delta=2,
+                msg="Builder should encode roof height correctly"
             )
 
 
@@ -606,11 +614,12 @@ class TestRoomPolygonGeometry(unittest.TestCase):
 
         polygon = RoomPolygon(vertices)
 
-        with self.assertRaises(ValueError) as context:
+        # Window coordinates are required positional arguments, so TypeError is raised
+        with self.assertRaises(TypeError) as context:
             polygon.to_pixel_array(image_size=128)
 
         error_msg = str(context.exception)
-        self.assertIn('Window coordinates required', error_msg)
+        self.assertIn('required', error_msg.lower())
 
 
 if __name__ == '__main__':

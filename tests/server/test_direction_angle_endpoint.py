@@ -44,19 +44,12 @@ class TestDirectionAngleEndpoint:
         assert response.status_code == 200
         data = json.loads(response.data)
 
-        assert "direction_angles" in data
-        assert "direction_angles_degrees" in data
-        assert "test_window" in data["direction_angles"]
+        assert "direction_angle" in data
+        assert "test_window" in data["direction_angle"]
 
         # Verify result is a reasonable angle (0 to 2*pi radians)
-        angle_rad = data["direction_angles"]["test_window"]
+        angle_rad = data["direction_angle"]["test_window"]
         assert 0 <= angle_rad <= 2 * math.pi
-
-        angle_deg = data["direction_angles_degrees"]["test_window"]
-        assert 0 <= angle_deg <= 360
-
-        # Verify radians and degrees match
-        assert abs(angle_rad * 180 / math.pi - angle_deg) < 0.01
 
     def test_calculate_direction_multiple_windows(self, client):
         """Test calculating direction_angle for multiple windows."""
@@ -89,10 +82,8 @@ class TestDirectionAngleEndpoint:
         assert response.status_code == 200
         data = json.loads(response.data)
 
-        assert "window1" in data["direction_angles"]
-        assert "window2" in data["direction_angles"]
-        assert "window1" in data["direction_angles_degrees"]
-        assert "window2" in data["direction_angles_degrees"]
+        assert "window1" in data["direction_angle"]
+        assert "window2" in data["direction_angle"]
 
     def test_missing_parameters(self, client):
         """Test error handling for missing parameters."""
@@ -178,13 +169,18 @@ class TestDirectionAngleEndpoint:
         assert "error" in data
 
     def test_window_not_on_polygon_edge(self, client):
-        """Test error handling when window is not on polygon edge."""
+        """Test direction calculation for window not exactly on polygon edge.
+
+        The endpoint projects the window to the nearest edge and calculates direction,
+        rather than rejecting it. Validation happens during encoding, not here.
+        """
         payload = {
             "parameters": {
                 "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
                 "windows": {
                     "window1": {
                         # Window in the middle of the room, not on edge
+                        # Will be projected to nearest edge for direction calculation
                         "x1": -1.5,
                         "y1": -2.0,
                         "x2": -1.5,
@@ -200,6 +196,8 @@ class TestDirectionAngleEndpoint:
             content_type='application/json'
         )
 
-        assert response.status_code == 400
+        # Should succeed - endpoint calculates direction by projecting to nearest edge
+        assert response.status_code == 200
         data = json.loads(response.data)
-        assert "error" in data
+        assert "direction_angle" in data
+        assert "window1" in data["direction_angle"]

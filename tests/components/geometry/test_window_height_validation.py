@@ -11,12 +11,11 @@ class TestWindowHeightValidator:
 
     def test_window_within_bounds(self):
         """Test window that is properly within floor and roof bounds."""
-        validator = WindowHeightValidator()
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.0, x2=1.0, y2=0.0, z2=2.5)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -25,12 +24,11 @@ class TestWindowHeightValidator:
 
     def test_window_at_floor_level(self):
         """Test window that starts exactly at floor level."""
-        validator = WindowHeightValidator()
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=0.0, x2=1.0, y2=0.0, z2=2.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -39,12 +37,11 @@ class TestWindowHeightValidator:
 
     def test_window_at_roof_level(self):
         """Test window that ends exactly at roof level."""
-        validator = WindowHeightValidator()
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.0, x2=1.0, y2=0.0, z2=3.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -53,12 +50,11 @@ class TestWindowHeightValidator:
 
     def test_window_fills_entire_height(self):
         """Test window that spans from floor to roof."""
-        validator = WindowHeightValidator()
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=0.0, x2=1.0, y2=0.0, z2=3.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -67,58 +63,63 @@ class TestWindowHeightValidator:
 
     def test_window_below_floor(self):
         """Test window that extends below floor level."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.5, x2=1.0, y2=0.0, z2=2.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "below floor" in error_msg
         assert "-0.50m" in error_msg
         assert "0.00m" in error_msg
 
     def test_window_above_roof(self):
         """Test window that extends above roof level."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.0, x2=1.0, y2=0.0, z2=3.5)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "above roof" in error_msg
         assert "3.50m" in error_msg
         assert "3.00m" in error_msg
 
     def test_window_both_below_and_above(self):
         """Test window that extends both below floor and above roof (should fail on floor check first)."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-1.0, x2=1.0, y2=0.0, z2=4.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "below floor" in error_msg  # Floor check happens first
 
     def test_window_with_elevated_floor(self):
         """Test window with non-zero floor height."""
-        validator = WindowHeightValidator()
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.5, x2=1.0, y2=0.0, z2=4.0)
         floor_height = 2.0
         roof_height = 5.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -127,29 +128,30 @@ class TestWindowHeightValidator:
 
     def test_window_below_elevated_floor(self):
         """Test window below elevated floor."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.5, x2=1.0, y2=0.0, z2=3.0)
         floor_height = 2.0
         roof_height = 5.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "below floor" in error_msg
         assert "1.50m" in error_msg
         assert "2.00m" in error_msg
 
     def test_window_with_reversed_z_coordinates(self):
         """Test window where z2 < z1 (should handle both orderings)."""
-        validator = WindowHeightValidator()
         # z2 < z1, but window is still within bounds
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.5, x2=1.0, y2=0.0, z2=1.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -158,13 +160,13 @@ class TestWindowHeightValidator:
 
     def test_window_within_tolerance(self):
         """Test window that is within numerical tolerance of bounds."""
-        validator = WindowHeightValidator(tolerance=1e-6)
-        # Window bottom is 1e-7 below floor (within tolerance)
+        # GRAPHICS_CONSTANTS.WINDOW_HEIGHT_TOLERANCE is used
+        # Window bottom is slightly below floor but within tolerance
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-1e-7, x2=1.0, y2=0.0, z2=2.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -173,17 +175,20 @@ class TestWindowHeightValidator:
 
     def test_window_outside_tolerance(self):
         """Test window that is outside numerical tolerance."""
-        validator = WindowHeightValidator(tolerance=1e-6)
-        # Window bottom is 1e-5 below floor (outside tolerance)
-        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-1e-5, x2=1.0, y2=0.0, z2=2.0)
+        from src.core.exceptions import WindowHeightValidationError
+
+        # GRAPHICS_CONSTANTS.WINDOW_HEIGHT_TOLERANCE is used
+        # Window bottom is significantly below floor (outside tolerance)
+        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.01, x2=1.0, y2=0.0, z2=2.0)
         floor_height = 0.0
         roof_height = 3.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "below floor" in error_msg
 
     def test_validate_from_parameters_valid(self):
@@ -253,14 +258,13 @@ class TestWindowHeightValidator:
 
     def test_realistic_scenario_valid(self):
         """Test realistic scenario with typical building dimensions."""
-        validator = WindowHeightValidator()
         # Floor at 0.3m above terrain, roof at 3.0m above floor
         # Window from 1.0m to 2.5m (valid)
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.0, x2=2.0, y2=0.0, z2=2.5)
         floor_height = 0.3
         roof_height = 0.3 + 3.0  # 3.3m
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -269,43 +273,46 @@ class TestWindowHeightValidator:
 
     def test_realistic_scenario_window_too_low(self):
         """Test realistic scenario where window sill is below floor."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         # Floor at 0.3m, but window starts at 0.2m (below floor)
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=0.2, x2=2.0, y2=0.0, z2=2.0)
         floor_height = 0.3
         roof_height = 3.3
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "below floor" in error_msg
 
     def test_realistic_scenario_window_too_high(self):
         """Test realistic scenario where window extends above roof."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         # Roof at 3.3m, but window goes to 3.5m
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.0, x2=2.0, y2=0.0, z2=3.5)
         floor_height = 0.3
         roof_height = 3.3
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "above roof" in error_msg
 
     def test_zero_height_room(self):
         """Test edge case where floor and roof are at same height."""
-        validator = WindowHeightValidator()
         # Floor and roof at same height - window can only be a line
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.0, x2=2.0, y2=0.0, z2=1.0)
         floor_height = 1.0
         roof_height = 1.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height, roof_height
         )
 
@@ -314,14 +321,16 @@ class TestWindowHeightValidator:
 
     def test_zero_height_room_window_with_height(self):
         """Test window with height in zero-height room (should fail)."""
-        validator = WindowHeightValidator()
+        from src.core.exceptions import WindowHeightValidationError
+
         window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=1.0, x2=2.0, y2=0.0, z2=1.5)
         floor_height = 1.0
         roof_height = 1.0
 
-        is_valid, error_msg = validator.validate_window_height_bounds(
-            window_geom, floor_height, roof_height
-        )
+        with pytest.raises(WindowHeightValidationError) as exc_info:
+            WindowHeightValidator.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
-        assert is_valid is False
+        error_msg = str(exc_info.value)
         assert "above roof" in error_msg
