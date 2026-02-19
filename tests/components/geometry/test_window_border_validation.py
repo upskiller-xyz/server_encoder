@@ -42,9 +42,11 @@ class TestWindowBorderValidator:
         # Square room
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, -1], [-1, -1], [-1, 0]])
 
-        # Window starts inside but extends outside
+        # Window straddles y=0 edge (from y=-0.5 to y=0.5)
+        # The window edge doesn't properly align with the polygon edge
         window_geom = WindowGeometry(x1=0, y1=-0.5, z1=1.0, x2=0, y2=0.5, z2=2.0)
 
+        # Should raise exception - window doesn't lie on valid edge
         with pytest.raises(WindowNotOnPolygonError):
             WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
 
@@ -142,16 +144,15 @@ class TestWindowBorderValidator:
         assert is_valid is True
 
     def test_window_at_corner(self):
-        """Test window with zero size at corner - should be rejected."""
+        """Test window at polygon corner point."""
         from src.core.exceptions import WindowNotOnPolygonError
 
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, -1], [-1, -1], [-1, 0]])
 
-        # Window with zero size (point at corner) - bounding box is (0,0) to (0,0)
-        # Zero-size windows are not valid and should be rejected
+        # Window with zero size at (0,0)
         window_geom = WindowGeometry(x1=0, y1=0, z1=1.0, x2=0, y2=0, z2=2.0)
 
-        # Zero-size windows should be rejected by the validator
+        # Zero-size windows should be rejected
         with pytest.raises(WindowNotOnPolygonError):
             WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
 
