@@ -29,6 +29,7 @@ from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.server.services import EncodingServiceFactory
 from src.server.controllers.base_controller import ServerController
 
+
 logger = logging.getLogger("logger")
 
 
