@@ -1,11 +1,9 @@
 """Server application implementation"""
 from typing import Dict, Any
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 import logging
-import io
-import numpy as np
 
 from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.core.model_type_manager import ModelTypeManager
@@ -13,10 +11,12 @@ from src.server.enums import HTTPStatus, Endpoint
 from src.server.services import EncodingServiceFactory
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
+from src.server.key_manager import KeyManager
 from src.server.schemas import (
     EncodeRequest,
     CalculateDirectionRequest,
     ReferencePointRequest,
+    EncoderResponse,
 )
 from src.server.openapi import OpenAPISpecGenerator
 
@@ -93,6 +93,8 @@ class ServerApplication:
         """
         return jsonify(self._controller.get_status())
 
+
+
     @endpoint_error_handler(Endpoint.ENCODE)
     # Optional: Add Pydantic validation for type safety: @endpoint_error_handler(Endpoint.ENCODE, EncodeRequest)
     def _encode_room_arrays(self, data: Dict[str, Any]) -> tuple:
@@ -152,10 +154,10 @@ class ServerApplication:
         parameters = room_request.to_flat_dict()
         model_type = room_request.model_type
 
-        # Determine if single or multi-window
+        # Determine if single or multi-window and build response
         is_single_window = len(room_request.windows) == 1
+        encoder_response = EncoderResponse()
 
-        # Encode images
         if is_single_window:
             # Single window - encode and return arrays in NPZ format
             image_array, mask_array = encoding_service.encode_room_image_arrays(
@@ -164,53 +166,28 @@ class ServerApplication:
             )
 
             logger.info(f"Single-window array encoding complete - image shape: {image_array.shape}")
-
-            # Create NPZ file with image and mask arrays
-            npz_buffer = io.BytesIO()
-            arrays_dict = {
-                'window1_image': image_array,
-            }
-            if mask_array is not None:
-                arrays_dict['window1_mask'] = mask_array
-
-            np.savez_compressed(npz_buffer, **arrays_dict)
-            npz_buffer.seek(0)
-
-            return send_file(
-                npz_buffer,
-                mimetype='application/octet-stream',
-                as_attachment=True,
-                download_name='result.npz'
-            )
+            encoder_response.add_window(image_array, mask_array)
         else:
-            # Multiple windows - return NPZ file with arrays
+            # Multiple windows - encode and return arrays for all windows
             result = encoding_service.encode_multi_window_images_arrays(
                 parameters=parameters,
                 model_type=model_type
             )
 
-            # Create NPZ file with all arrays
-            npz_buffer = io.BytesIO()
-            arrays_dict = {}
-            for window_id in result.window_ids():
-                arrays_dict[f'{window_id}_image'] = result.get_image(window_id)
-                mask = result.get_mask(window_id)
-                if mask is not None:
-                    arrays_dict[f'{window_id}_mask'] = mask
-
-            np.savez_compressed(npz_buffer, **arrays_dict)
-            npz_buffer.seek(0)
-
             logger.info(
                 f"Multi-window array encoding complete - {len(result.images)} images in NPZ"
             )
 
-            return send_file(
-                npz_buffer,
-                mimetype='application/octet-stream',
-                as_attachment=True,
-                download_name='result.npz'
-            )
+            # Add each window to response
+            for window_id in result.window_ids():
+                encoder_response.add_window(
+                    result.get_image(window_id),
+                    result.get_mask(window_id),
+                    window_id
+                )
+
+        # Return NPZ response
+        return encoder_response.to_npz_response()
 
     @endpoint_error_handler(Endpoint.CALCULATE_DIRECTION)
     def _calculate_direction(self, data: Dict[str, Any]) -> tuple:

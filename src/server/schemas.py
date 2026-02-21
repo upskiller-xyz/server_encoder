@@ -1,6 +1,11 @@
 """API request/response models using Pydantic for type safety and validation in Flask"""
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
+import io
+import numpy as np
+from flask import send_file
+
+from src.server.key_manager import KeyManager
 
 
 class EncodeRequest(BaseModel):
@@ -159,3 +164,65 @@ class ErrorResponse(BaseModel):
                 "error_type": "BadRequest"
             }
         }
+
+
+class EncoderResponse:
+    """
+    Builder for encoder response with NPZ file generation.
+    
+    Handles construction of image and mask arrays into NPZ format for both
+    single-window and multi-window encoding requests.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize empty arrays dictionary"""
+        self._arrays_dict: Dict[str, Any] = {}
+    
+    def add_window(self, 
+                   image_array: Any, 
+                   mask_array: Optional[Any] = None, 
+                   window_id: Optional[str] = None) -> None:
+        """
+        Add a window's image and mask arrays to the response.
+        
+        Args:
+            image_array: Image array for the window
+            mask_array: Optional mask array for the window
+            window_id: Optional window ID for multi-window encoding (None for single-window)
+        
+        Example:
+            # Single window
+            response = EncoderResponse()
+            response.add_window(image_array, mask_array)
+            
+            # Multi-window
+            response = EncoderResponse()
+            response.add_window(window1_image, window1_mask, "window1")
+            response.add_window(window2_image, window2_mask, "window2")
+        """
+        self._arrays_dict[KeyManager.get_image_key(window_id)] = image_array
+        if mask_array is not None:
+            self._arrays_dict[KeyManager.get_mask_key(window_id)] = mask_array
+    
+    def to_npz_response(self) -> tuple:
+        """
+        Create NPZ file response from all added windows.
+        
+        Returns:
+            tuple: (response, status_code) with NPZ file for downloading
+        
+        Example:
+            response = EncoderResponse()
+            response.add_window(image_array, mask_array)
+            return response.to_npz_response()
+        """
+        npz_buffer = io.BytesIO()
+        np.savez_compressed(npz_buffer, **self._arrays_dict)
+        npz_buffer.seek(0)
+        
+        return send_file(
+            npz_buffer,
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name='result.npz'
+        )
