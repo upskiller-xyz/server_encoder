@@ -96,6 +96,9 @@ class ImageDimensions:
 
 class ParameterName(Enum):
     """Encoding parameter names"""
+    # API/Request parameters
+    ENCODING_SCHEME = "encoding_scheme"
+    
     # Background parameters
     WINDOW_ORIENTATION = "window_orientation"
     FACADE_REFLECTANCE = "facade_reflectance"
