@@ -253,6 +253,8 @@ class RoomPolygon:
         """
         if not data:
             raise ValueError("Polygon data cannot be empty")
+        if isinstance(data, cls):
+            return data
 
         # Check format of first element to determine data structure
         first_element = data[0]

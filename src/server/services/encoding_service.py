@@ -1,16 +1,25 @@
 from typing import Dict, Any, Tuple, Optional, Union
 import numpy as np
 import cv2
-from src.core.enums import FileFormat
-from src.models import EncodingResult, EncodedBytesResult, RoomEncodingRequest
+import logging
+
+from src.components.geometry.point_3d import Point3D
+from src.core.enums import FileFormat, REQUIRED_WINDOW_COORDINATES, REQUIRED_WINDOW_2D_COORDINATES
+from src.models import EncodingResult, EncodedBytesResult, RoomEncodingRequest, ReferencePointResult
 from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.parameter_encoders import EncoderFactory
 from src.components.geometry import WindowBorderValidator, WindowHeightValidator, WindowGeometry, RoomPolygon
 from src.components.calculators import ParameterCalculatorRegistry
-import logging
+from src.validation import ValidationResult, ValidationUtils, ValidatorManager, RequestType
+from src.validation.parameter_validators import (
+    WindowBorderValidator as ValidationWindowBorderValidator,
+    WindowHeightValidator as ValidationWindowHeightValidator,
+    RequiredParametersValidator,
+    ParameterRangeValidator,
+)
 
-logger = logging.getLogger("logger")
+logger = logging.getLogger(__name__)
 
 class EncodingService:
     """
@@ -179,27 +188,7 @@ class EncodingService:
         Raises:
             ValueError: If parameters are invalid
         """
-        # Calculate direction_angle if missing (needed for validation)
-        parameters = self._ensure_direction_angle(parameters)
-
-        # Validate parameters
-        is_valid, error_msg = self.validate_parameters(parameters, model_type)
-        if not is_valid:
-            logger.error(f"Parameter validation failed: {error_msg}")
-            raise ValueError(error_msg)
-
-        logger.info(
-            f"Encoding room image - model_type: {model_type.value}, "
-            f"param_count: {len(parameters)}"
-        )
-
-        # Build image using director
-        image_array, mask_array = self._director.construct_from_flat_parameters(
-            model_type,
-            parameters
-        )
-
-        image_array = image_array.astype(np.uint8)
+        image_array, mask_array = self.encode_room_image_arrays(parameters, model_type)
         # Convert RGBA to BGRA for OpenCV
         image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
         # Encode to PNG
@@ -489,32 +478,19 @@ class EncodingService:
         Returns:
             Parameters with direction_angle set for each window
         """
-        from src.components.geometry import WindowGeometry, RoomPolygon
-        from src.core import ParameterName
-
         # Get room polygon if available
         room_polygon = None
         if ParameterName.ROOM_POLYGON.value in parameters:
             room_data = parameters[ParameterName.ROOM_POLYGON.value]
-            if isinstance(room_data, RoomPolygon):
-                room_polygon = room_data
-            else:
-                room_polygon = RoomPolygon.from_dict(room_data)
+            room_polygon = RoomPolygon.from_dict(room_data)
 
         # Check if we have a single window (flat structure)
-        has_flat_window = all(k in parameters for k in ['x1', 'y1', 'z1', 'x2', 'y2', 'z2'])
+        has_flat_window = ValidationUtils.has_flat_window_coordinates(parameters)
 
         if has_flat_window and room_polygon:
             # Single window in flat structure
             if ParameterName.DIRECTION_ANGLE.value not in parameters:
-                window_geom = WindowGeometry(
-                    x1=parameters['x1'],
-                    y1=parameters['y1'],
-                    z1=parameters['z1'],
-                    x2=parameters['x2'],
-                    y2=parameters['y2'],
-                    z2=parameters['z2']
-                )
+                window_geom = WindowGeometry.from_dict(parameters)
                 try:
                     direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
                     parameters[ParameterName.DIRECTION_ANGLE.value] = direction_angle
@@ -528,15 +504,8 @@ class EncodingService:
             if isinstance(windows, dict):
                 for window_id, window_params in windows.items():
                     if isinstance(window_params, dict) and ParameterName.DIRECTION_ANGLE.value not in window_params:
-                        if all(k in window_params for k in ['x1', 'y1', 'z1', 'x2', 'y2', 'z2']):
-                            window_geom = WindowGeometry(
-                                x1=window_params['x1'],
-                                y1=window_params['y1'],
-                                z1=window_params['z1'],
-                                x2=window_params['x2'],
-                                y2=window_params['y2'],
-                                z2=window_params['z2']
-                            )
+                        if ValidationUtils.has_flat_window_coordinates(window_params):
+                            window_geom = WindowGeometry.from_dict(window_params)
                             try:
                                 direction_angle = window_geom.calculate_direction_from_polygon(room_polygon)
                                 window_params[ParameterName.DIRECTION_ANGLE.value] = direction_angle
@@ -651,41 +620,35 @@ class EncodingService:
                     f"{type(e).__name__}: {str(e)}"
                 )
 
-        # Validate window geometry placement (if window coordinates and room_polygon are present)
+        # Validate window geometry placement using validators
         room_polygon = parameters.get(ParameterName.ROOM_POLYGON.value)
 
         # Check if we have window coordinates (either as nested object or flat)
-        has_window_coords = (
-            ParameterName.WINDOW_GEOMETRY.value in parameters or
-            all(k in parameters for k in [
-                ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value,
-                ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value
-            ])
-        )
+        has_window_coords = ValidationUtils.has_window_coordinates(parameters, require_3d=True)
 
         if has_window_coords and room_polygon:
-            # Validate window is on polygon border
-            is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-                window_data=parameters,
-                polygon_data=room_polygon
-            )
-            if not is_valid:
-                return False, f"Window geometry validation failed: {error_msg}"
+            # Validate window is on polygon border using validator
+            border_validator = ValidationWindowBorderValidator()
+            border_context = {"room_polygon": room_polygon}
+            border_result = border_validator.validate(parameters, border_context)
+            if not border_result.is_valid:
+                error_messages = [str(error) for error in border_result.errors]
+                return False, "; ".join(error_messages)
 
-            # Validate window height is between floor and roof
+            # Validate window height is between floor and roof using validator
             floor_height = parameters.get(ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value)
             height_roof_over_floor = parameters.get(ParameterName.HEIGHT_ROOF_OVER_FLOOR.value)
 
             if floor_height is not None and height_roof_over_floor is not None:
-                roof_height = floor_height + height_roof_over_floor
-
-                is_valid, error_msg = WindowHeightValidator.validate_from_parameters(
-                    window_geometry_data=parameters.get(ParameterName.WINDOW_GEOMETRY.value) or parameters,
-                    floor_height=floor_height,
-                    roof_height=roof_height
-                )
-                if not is_valid:
-                    return False, f"Window height validation failed: {error_msg}"
+                height_validator = ValidationWindowHeightValidator()
+                height_context = {
+                    "floor_height": floor_height,
+                    "height_roof_over_floor": height_roof_over_floor
+                }
+                height_result = height_validator.validate(parameters, height_context)
+                if not height_result.is_valid:
+                    error_messages = [str(error) for error in height_result.errors]
+                    return False, "; ".join(error_messages)
 
         # Clip parameters AFTER validation so validation uses original values
         # This ensures window height validation uses the actual floor/roof heights
@@ -717,15 +680,11 @@ class EncodingService:
         Raises:
             ValueError: If required parameters are missing or calculation fails
         """
-        # Validate required parameters
-        if ParameterName.ROOM_POLYGON.value not in parameters:
-            raise ValueError(f"Missing required parameter: '{ParameterName.ROOM_POLYGON.value}'")
-
-        if ParameterName.WINDOWS.value not in parameters:
-            raise ValueError(f"Missing required parameter: '{ParameterName.WINDOWS.value}'")
-
-        if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
-            raise ValueError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
+        # Validate request using validator manager (stateless classmethod)
+        validation_result = ValidatorManager.validate(RequestType.CALCULATE_DIRECTION, parameters)
+        if not validation_result.is_valid:
+            error_messages = [str(error) for error in validation_result.errors]
+            raise ValueError("; ".join(error_messages))
 
         # Create room polygon
         try:
@@ -737,17 +696,6 @@ class EncodingService:
         results = {}
         for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
             try:
-                # Validate window has required coordinates
-                required_coords = [
-                    ParameterName.X1.value,
-                    ParameterName.Y1.value,
-                    ParameterName.X2.value,
-                    ParameterName.Y2.value
-                ]
-                missing = [coord for coord in required_coords if coord not in window_params]
-                if missing:
-                    raise ValueError(f"Window '{window_id}' missing required coordinates: {', '.join(missing)}")
-
                 # Create window geometry (z coordinates not needed for direction calculation)
                 window_geom = WindowGeometry(
                     x1=window_params["x1"],
@@ -777,7 +725,7 @@ class EncodingService:
     def calculate_reference_point(
         self,
         parameters: Dict[str, Any]
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> Dict[str, ReferencePointResult]:
         """
         Calculate reference point for window(s) from room polygon and window coordinates
 
@@ -790,20 +738,16 @@ class EncodingService:
                     Each window must have: x1, y1, z1, x2, y2, z2
 
         Returns:
-            Dictionary mapping window_id -> {"x": float, "y": float, "z": float}
+            Dictionary mapping window_id -> ReferencePointResult
 
         Raises:
             ValueError: If required parameters are missing or calculation fails
         """
-        # Validate required parameters
-        if ParameterName.ROOM_POLYGON.value not in parameters:
-            raise ValueError(f"Missing required parameter: '{ParameterName.ROOM_POLYGON.value}'")
-
-        if ParameterName.WINDOWS.value not in parameters:
-            raise ValueError(f"Missing required parameter: '{ParameterName.WINDOWS.value}'")
-
-        if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
-            raise ValueError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
+        # Validate request using validator manager (stateless classmethod)
+        validation_result = ValidatorManager.validate(RequestType.GET_REFERENCE_POINT, parameters)
+        if not validation_result.is_valid:
+            error_messages = [str(error) for error in validation_result.errors]
+            raise ValueError("; ".join(error_messages))
 
         # Create room polygon
         try:
@@ -815,36 +759,13 @@ class EncodingService:
         results = {}
         for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
             try:
-                # Validate window has required coordinates
-                required_coords = [
-                    ParameterName.X1.value,
-                    ParameterName.Y1.value,
-                    ParameterName.Z1.value,
-                    ParameterName.X2.value,
-                    ParameterName.Y2.value,
-                    ParameterName.Z2.value
-                ]
-                missing = [coord for coord in required_coords if coord not in window_params]
-                if missing:
-                    raise ValueError(f"Window '{window_id}' missing required coordinates: {', '.join(missing)}")
 
                 # Create window geometry
-                window_geom = WindowGeometry(
-                    x1=window_params[ParameterName.X1.value],
-                    y1=window_params[ParameterName.Y1.value],
-                    z1=window_params[ParameterName.Z1.value],
-                    x2=window_params[ParameterName.X2.value],
-                    y2=window_params[ParameterName.Y2.value],
-                    z2=window_params[ParameterName.Z2.value]
-                )
+                window_geom = WindowGeometry.from_dict(window_params)
 
                 # Calculate reference point
                 ref_point = window_geom.calculate_reference_point_from_polygon(room_polygon)
-                results[window_id] = {
-                    "x": round(ref_point.x, 4),
-                    "y": round(ref_point.y, 4),
-                    "z": round(ref_point.z, 4)
-                }
+                results[window_id] = ReferencePointResult.from_point(ref_point)
 
                 logger.info(
                     f"Calculated reference_point for '{window_id}': "
@@ -853,6 +774,67 @@ class EncodingService:
 
             except Exception as e:
                 error_msg = f"Failed to calculate reference_point for window '{window_id}': {str(e)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+        return results
+    
+
+
+
+    def calculate_external_reference_point(
+        self,
+        parameters: Dict[str, Any]
+    ) -> Dict[str, ReferencePointResult]:
+        """
+        Calculate external reference point for window(s) from room polygon and window coordinates
+
+        The external reference point is on the opposite edge of the window rectangle
+        from the edge that lies on the room polygon (i.e., the external face of the window).
+
+        Args:
+            parameters: Dictionary containing:
+                - room_polygon: List of [x, y] coordinates defining the room
+                - windows: Dictionary of window_id -> window parameters
+                    Each window must have: x1, y1, z1, x2, y2, z2
+
+        Returns:
+            Dictionary mapping window_id -> ReferencePointResult
+
+        Raises:
+            ValueError: If required parameters are missing or calculation fails
+        """
+        # Validate request using validator manager (stateless classmethod)
+        validation_result = ValidatorManager.validate(RequestType.GET_EXTERNAL_REFERENCE_POINT, parameters)
+        if not validation_result.is_valid:
+            error_messages = [str(error) for error in validation_result.errors]
+            raise ValueError("; ".join(error_messages))
+
+        # Create room polygon
+        try:
+            room_polygon = RoomPolygon.from_dict(parameters[ParameterName.ROOM_POLYGON.value])
+        except Exception as e:
+            raise ValueError(f"Invalid room_polygon: {str(e)}")
+
+        # Calculate external reference point for each window
+        results = {}
+        for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
+            try:
+
+                # Create window geometry
+                window_geom = WindowGeometry.from_dict(window_params)
+
+                # Calculate external reference point
+                ext_ref_point = window_geom.calculate_external_reference_point_from_polygon(room_polygon)
+                results[window_id] = ReferencePointResult.from_point(ext_ref_point)
+
+                logger.info(
+                    f"Calculated external_reference_point for '{window_id}': "
+                    f"({ext_ref_point.x:.4f}, {ext_ref_point.y:.4f}, {ext_ref_point.z:.4f})"
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to calculate external_reference_point for window '{window_id}': {str(e)}"
                 logger.error(error_msg)
                 raise ValueError(error_msg)
 

@@ -3,7 +3,7 @@ import logging
 from src.components.calculators.window_sill_height_calculator import WindowSillHeightCalculator
 from src.components.calculators.window_height_calculator import WindowHeightCalculator
 
-logger = logging.getLogger("logger")
+logger = logging.getLogger(__name__)
 
 
 class ParameterCalculatorRegistry:

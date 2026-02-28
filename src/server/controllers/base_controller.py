@@ -1,8 +1,9 @@
 from typing import Dict, Any, Optional
 import logging
 
-from src.server.enums import ServerStatus
-logger = logging.getLogger("logger")
+from src.core.enums import ResponseKey
+from src.server.enums import ModelStatus, ServerStatus
+logger = logging.getLogger(__name__)
 
 class ServerController:
     """Generic server controller implementing IServerController interface"""
@@ -49,9 +50,9 @@ class ServerController:
             if hasattr(service, 'get_status'):
                 components[service_name] = service.get_status()
             else:
-                components[service_name] = "ready"
+                components[service_name] = ModelStatus.READY.value
 
         return {
-            "status": self._status.value,
-            "services": components
+            ResponseKey.STATUS.value: self._status.value,
+            ResponseKey.SERVICES.value: components
         }

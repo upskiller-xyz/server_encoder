@@ -6,6 +6,7 @@ from src.models.i_region_encoder import IRegionEncoder
 from src.models.reflectance_parameters import ReflectanceParameters
 from src.models.window_request import WindowRequest
 from src.models.room_encoding_request import RoomEncodingRequest
+from src.models.reference_point_result import ReferencePointResult, CoordinateAxis
 
 __all__ = [
     "RegionParameters",
@@ -16,4 +17,6 @@ __all__ = [
     "ReflectanceParameters",
     "WindowRequest",
     "RoomEncodingRequest",
+    "ReferencePointResult",
+    "CoordinateAxis",
 ]
