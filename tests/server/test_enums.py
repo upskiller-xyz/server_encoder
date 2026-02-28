@@ -46,14 +46,19 @@ class TestEndpointEnum:
         """Test GET_REFERENCE_POINT endpoint value"""
         assert Endpoint.GET_REFERENCE_POINT.value == "get_reference_point"
 
+    def test_get_external_reference_point_value(self):
+        """Test GET_EXTERNAL_REFERENCE_POINT endpoint value"""
+        assert Endpoint.GET_EXTERNAL_REFERENCE_POINT.value == "get_external_reference_point"
+
     def test_endpoint_all_members(self):
         """Test all Endpoint members are defined"""
         members = [m for m in Endpoint]
-        assert len(members) == 4
+        assert len(members) == 5
         assert Endpoint.STATUS in members
         assert Endpoint.ENCODE in members
         assert Endpoint.CALCULATE_DIRECTION in members
         assert Endpoint.GET_REFERENCE_POINT in members
+        assert Endpoint.GET_EXTERNAL_REFERENCE_POINT in members
 
     def test_endpoint_enum_names(self):
         """Test endpoint enum member names"""

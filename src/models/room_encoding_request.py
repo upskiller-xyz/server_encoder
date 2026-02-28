@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple, Union
 import numpy as np
 from src.core import ModelType, ParameterName
+from src.core.enums import REQUIRED_WINDOW_COORDINATES
 from src.models.window_request import WindowRequest
 from src.models.reflectance_parameters import ReflectanceParameters
 
@@ -187,7 +188,7 @@ class RoomEncodingRequest:
         windows = {}
 
         # Check for single window (flat structure)
-        if all(k in params for k in [ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value, ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value]):
+        if all(k in params for k in REQUIRED_WINDOW_COORDINATES):
             windows['window_0'] = WindowRequest.from_dict(params)
         # Check for multiple windows (nested structure)
         elif ParameterName.WINDOWS.value in params:

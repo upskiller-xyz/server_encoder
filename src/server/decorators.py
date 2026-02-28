@@ -10,7 +10,7 @@ import logging
 from src.core import ResponseKey
 from src.server.enums import Endpoint, HTTPStatus
 
-logger = logging.getLogger("logger")
+logger = logging.getLogger(__name__)
 
 
 def endpoint_error_handler(

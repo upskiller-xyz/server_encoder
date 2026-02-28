@@ -148,10 +148,33 @@ class ReferencePointResponse(BaseModel):
         }
 
 
+class ExternalReferencePointResponse(BaseModel):
+    """
+    External reference point calculation response model for type safety.
+
+    Used to structure and validate response data from external reference point calculations.
+    The external reference point is on the opposite edge of the window from the room polygon.
+    """
+    external_reference_point: Dict[str, ReferencePoint] = Field(
+        ...,
+        description="External reference point coordinates for each window"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "external_reference_point": {
+                    "window1": {"x": 0.3, "y": 0.4, "z": 1.75},
+                    "window2": {"x": 2.3, "y": 1.4, "z": 1.5}
+                }
+            }
+        }
+
+
 class ErrorResponse(BaseModel):
     """
     Standard error response model for type safety.
-    
+
     Returned by endpoint error handler on validation or processing errors.
     """
     error: str = Field(..., description="Error message")

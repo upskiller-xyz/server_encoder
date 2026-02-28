@@ -388,6 +388,46 @@ class WindowGeometry:
 
         return Point3D(projected_point.x, projected_point.y, ref_z)
 
+    def calculate_external_reference_point_from_polygon(
+        self,
+        room_polygon,
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+    ) -> Point3D:
+        """
+        Calculate external window reference point (opposite edge from room polygon)
+
+        This calculates the reference point on the opposite edge of the window rectangle
+        from the edge that lies on the room polygon. This represents the external face
+        of the window.
+
+        Args:
+            room_polygon: The room polygon containing this window
+            tolerance: Distance tolerance for edge matching (meters)
+
+        Returns:
+            Point3D with (x, y, z) coordinates where z is the vertical center of the window
+
+        Raises:
+            ValueError: If direction_angle is not set or cannot be calculated
+        """
+        # Get internal reference point (on room polygon edge)
+        internal_point = self.calculate_reference_point_from_polygon(room_polygon, tolerance)
+
+        # Calculate direction angle if not already set
+        direction_angle = self._direction_angle
+        if direction_angle is None:
+            direction_angle = self.calculate_direction_from_polygon(room_polygon, tolerance)
+
+        # Get wall thickness (distance to opposite edge)
+        wall_thickness = self.wall_thickness
+
+        # Calculate external point by moving from internal point in direction_angle direction
+        # The external point is wall_thickness distance away in the direction the window faces
+        external_x = internal_point.x + wall_thickness * math.cos(direction_angle)
+        external_y = internal_point.y + wall_thickness * math.sin(direction_angle)
+
+        return Point3D(external_x, external_y, internal_point.z)
+
     def calculate_direction_from_polygon(
         self,
         room_polygon,

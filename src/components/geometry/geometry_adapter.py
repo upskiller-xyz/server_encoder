@@ -4,7 +4,7 @@ import numpy as np
 from shapely.geometry import Polygon as ShapelyPolygon
 from src.core import GeometryType
 
-logger = logging.Logger("logger")
+logger = logging.Logger(__name__)
 
 
 class GeometryAdapter:

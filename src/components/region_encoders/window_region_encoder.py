@@ -1,6 +1,7 @@
 from typing import Tuple, Any, Dict
 import numpy as np
 from src.core import RegionType, ParameterName, EncodingScheme
+from src.core.enums import REQUIRED_WINDOW_COORDINATES
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
 from src.components.region_encoders.validation_helpers import validate_required_parameters
 from src.components.geometry import WindowGeometry
@@ -52,10 +53,7 @@ class WindowRegionEncoder(BaseRegionEncoder):
         # Also need window geometry (either window_geometry or individual coords)
         has_geometry = (
             ParameterName.WINDOW_GEOMETRY.value in parameters or
-            all(key in parameters for key in [
-                ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value,
-                ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value
-            ])
+            all(key in parameters for key in REQUIRED_WINDOW_COORDINATES)
         )
 
         if not has_geometry:
