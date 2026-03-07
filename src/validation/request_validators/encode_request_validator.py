@@ -62,11 +62,14 @@ class EncodeRequestValidator(BaseValidator):
             ResponseKey.PARAMETERS.value,
         }
 
-        # Required parameters
+        # Required parameters (must align with EncodingService._validate_flat_parameters)
         self._required_parameters = {
             ParameterName.ROOM_POLYGON.value,
             ParameterName.HEIGHT_ROOF_OVER_FLOOR.value,
             ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value,
+            ParameterName.WINDOW_FRAME_RATIO.value,
+            ParameterName.HORIZON.value,
+            ParameterName.ZENITH.value,
         }
 
     def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:

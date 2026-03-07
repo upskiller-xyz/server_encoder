@@ -1,5 +1,5 @@
 """Validator for window coordinates (SRP: validates only window coordinate structures)"""
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Optional
 from src.validation.base import BaseValidator, ValidationResult, ValidationError
 from src.validation.enums import ValidationErrorType
 from src.core.enums import ParameterName, REQUIRED_WINDOW_COORDINATES, REQUIRED_WINDOW_2D_COORDINATES

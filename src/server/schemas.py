@@ -89,7 +89,7 @@ class ReferencePointRequest(BaseModel):
                         "y1": 0.0,
                         "z1": 1.0,
                         "x2": 0.6,
-                        "y2": 0.0,
+                        "y2": 0.4,
                         "z2": 2.5
                     }
                 }
