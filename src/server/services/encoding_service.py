@@ -3,20 +3,17 @@ import numpy as np
 import cv2
 import logging
 
-from src.components.geometry.point_3d import Point3D
-from src.core.enums import FileFormat, REQUIRED_WINDOW_COORDINATES, REQUIRED_WINDOW_2D_COORDINATES
+from src.core.enums import FileFormat
 from src.models import EncodingResult, EncodedBytesResult, RoomEncodingRequest, ReferencePointResult
 from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.parameter_encoders import EncoderFactory
-from src.components.geometry import WindowBorderValidator, WindowHeightValidator, WindowGeometry, RoomPolygon
+from src.components.geometry import WindowGeometry, RoomPolygon
 from src.components.calculators import ParameterCalculatorRegistry
-from src.validation import ValidationResult, ValidationUtils, ValidatorManager, RequestType
+from src.validation import ValidationUtils, ValidatorManager, RequestType
 from src.validation.parameter_validators import (
     WindowBorderValidator as ValidationWindowBorderValidator,
     WindowHeightValidator as ValidationWindowHeightValidator,
-    RequiredParametersValidator,
-    ParameterRangeValidator,
 )
 
 logger = logging.getLogger(__name__)

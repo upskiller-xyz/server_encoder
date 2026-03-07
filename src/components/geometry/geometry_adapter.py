@@ -4,8 +4,6 @@ import numpy as np
 from shapely.geometry import Polygon as ShapelyPolygon
 from src.core import GeometryType
 
-logger = logging.Logger(__name__)
-
 
 class GeometryAdapter:
     """
@@ -82,6 +80,6 @@ class GeometryAdapter:
 
         # Fallback: use provided fallback coordinates or empty polygon
         if fallback_coords:
-            logger.info("[GEOMETRY ADAPTER]: Using fallback coordinates")
+            logging.info("[GEOMETRY ADAPTER]: Using fallback coordinates")
             return np.array([fallback_coords], dtype=np.int32)
         return np.array([[[0, 0]]], dtype=np.int32)
