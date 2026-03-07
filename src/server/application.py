@@ -327,7 +327,7 @@ class ServerApplication:
         spec = OpenAPISpecGenerator.generate_spec(
             title="Server Encoder API",
             description="Room encoding service with support for multiple encoding schemes",
-            version="1.0.0",
+            version="0.1.0",
             base_url="/"
         )
         return jsonify(spec)

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "room-encoder-server"
-version = "1.0.0"
+version = "0.1.0"
 description = "Encode room geometry and parameters into images for daylight prediction models"
 authors = ["stasja fedorova <stasja.fedorova@upskiller.xyz>"]
 readme = "README.md"
