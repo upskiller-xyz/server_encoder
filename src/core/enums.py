@@ -29,6 +29,8 @@ class ResponseKey(Enum):
     ERROR_TYPE = "error_type"
     PARAMETERS = "parameters"
     MODEL_TYPE = "model_type"
+    STATUS = "status"
+    SERVICES = "services"
 
 
 class RegionType(Enum):
@@ -149,6 +151,25 @@ class ParameterName(Enum):
     Z = "z"
 
     RIGHT_WALL = '_room_facade_right_edge'
+
+
+# Required window coordinate parameters (frozen set for constant validation)
+REQUIRED_WINDOW_COORDINATES = frozenset([
+    ParameterName.X1.value,
+    ParameterName.Y1.value,
+    ParameterName.Z1.value,
+    ParameterName.X2.value,
+    ParameterName.Y2.value,
+    ParameterName.Z2.value
+])
+
+# Required 2D window coordinates (for direction calculation)
+REQUIRED_WINDOW_2D_COORDINATES = frozenset([
+    ParameterName.X1.value,
+    ParameterName.Y1.value,
+    ParameterName.X2.value,
+    ParameterName.Y2.value
+])
 
 
 # Validation map: RegionType -> List of required ParameterName values (Strategy Pattern)

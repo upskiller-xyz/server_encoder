@@ -1,13 +1,14 @@
 """Server application implementation"""
 from typing import Dict, Any
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify, render_template
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 import logging
+import os
 
 from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.core.model_type_manager import ModelTypeManager
-from src.server.enums import HTTPStatus, Endpoint
+from src.server.enums import HTTPStatus, Endpoint, ServiceName
 from src.server.services import EncodingServiceFactory
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
@@ -34,22 +35,21 @@ class ServerApplication:
         Args:
             app_name: Name of the Flask application
         """
-        self._app: Flask = Flask(app_name)
+        template_folder = os.path.join(os.path.dirname(__file__), "templates")
+        self._app: Flask = Flask(app_name, template_folder=template_folder)
         CORS(self._app)
         self._controller: ServerController | None = None
-        self._encoding_service_hsv = None
-        self._encoding_service_rgb = None
+        self._encoding_service_hsv = EncodingServiceFactory.get_instance(EncodingScheme.HSV)
+        self._encoding_service_rgb = EncodingServiceFactory.get_instance(EncodingScheme.RGB)
         self._setup_dependencies()
         self._setup_routes()
 
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
         # Encoding services (both RGB and HSV)
-        self._encoding_service_hsv = EncodingServiceFactory.get_instance(EncodingScheme.HSV)
-        self._encoding_service_rgb = EncodingServiceFactory.get_instance(EncodingScheme.RGB)
 
         # Services dict (default to HSV)
-        from src.server.enums import ServiceName
+        
         services = {
             ServiceName.ENCODING_SERVICE.value: self._encoding_service_hsv,
             ServiceName.ENCODING_SERVICE_HSV.value: self._encoding_service_hsv,
@@ -78,20 +78,28 @@ class ServerApplication:
             self._get_reference_point,
             methods=["POST"]
         )
-        
+        self._app.add_url_rule(
+            "/get-external-reference-point",
+            "get_external_reference_point",
+            self._get_external_reference_point,
+            methods=["POST"]
+        )
+
         # Documentation endpoints
         self._app.add_url_rule("/openapi.json", "openapi_spec", self._openapi_spec, methods=["GET"])
         self._app.add_url_rule("/docs", "swagger_ui", self._swagger_ui, methods=["GET"])
         self._app.add_url_rule("/redoc", "redoc", self._redoc, methods=["GET"])
 
-    def _get_status(self) -> Dict[str, Any]:
+    def _get_status(self) -> Response:
         """
         Get server status endpoint.
         
         Returns:
             JSON response with server status information
         """
-        return jsonify(self._controller.get_status())
+        if self._controller:
+            return jsonify(self._controller.get_status())
+        return jsonify({ResponseKey.STATUS.value: "failed to start"})
 
 
 
@@ -257,11 +265,59 @@ class ServerApplication:
             f"window_count: {len(reference_points)}"
         )
 
+        # Convert ReferencePointResult objects to dict using to_dict property
+        reference_points_dict = {
+            window_id: result.to_dict
+            for window_id, result in reference_points.items()
+        }
+
         return jsonify({
-            "reference_point": reference_points
+            "reference_point": reference_points_dict
         }), HTTPStatus.OK.value
 
-    def _openapi_spec(self) -> Dict[str, Any]:
+    @endpoint_error_handler(Endpoint.GET_EXTERNAL_REFERENCE_POINT)
+    def _get_external_reference_point(self, data: Dict[str, Any]) -> tuple:
+        """
+        Calculate external reference point for window(s) from room polygon and window coordinates.
+
+        The external reference point is on the opposite edge of the window rectangle
+        from the edge that lies on the room polygon (i.e., the external face of the window).
+
+        Expected JSON payload:
+        {
+            "room_polygon": [[x1, y1], [x2, y2], [x3, y3], ...],
+            "windows": {
+                "window1": {
+                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
+                    "x2": 0.6, "y2": 0.0, "z2": 2.5
+                },
+                "window2": {...}
+            }
+        }
+
+        Returns:
+            tuple: (response_dict, status_code) with external_reference_point for each window
+        """
+        # Calculate external reference points (use HSV service, but doesn't matter which)
+        external_reference_points = self._encoding_service_hsv.calculate_external_reference_point(data)
+
+        # Log success
+        logger.info(
+            f"External reference point calculation successful - "
+            f"window_count: {len(external_reference_points)}"
+        )
+
+        # Convert ReferencePointResult objects to dict using to_dict property
+        external_reference_points_dict = {
+            window_id: result.to_dict
+            for window_id, result in external_reference_points.items()
+        }
+
+        return jsonify({
+            "external_reference_point": external_reference_points_dict
+        }), HTTPStatus.OK.value
+
+    def _openapi_spec(self) -> Response:
         """
         Return OpenAPI 3.0 specification.
         
@@ -279,69 +335,18 @@ class ServerApplication:
     def _swagger_ui(self) -> str:
         """
         Return Swagger UI HTML.
-        
+
         Interactive API documentation at /docs
         """
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Server Encoder API - Swagger UI</title>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css">
-        </head>
-        <body>
-            <div id="swagger-ui"></div>
-            <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
-            <script>
-            window.onload = function() {
-                window.ui = SwaggerUIBundle({
-                    url: "/openapi.json",
-                    dom_id: '#swagger-ui',
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIBundle.SwaggerUIStandalonePreset
-                    ],
-                    layout: "BaseLayout",
-                    requestInterceptor: (request) => {
-                        request.headers['X-API-Version'] = '1.0.0';
-                        return request;
-                    }
-                })
-            }
-            </script>
-        </body>
-        </html>
-        """
+        return render_template("swagger_ui.html")
 
     def _redoc(self) -> str:
         """
         Return ReDoc HTML.
-        
+
         Alternative interactive API documentation at /redoc
         """
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Server Encoder API - ReDoc</title>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-            <style>
-              body {
-                margin: 0;
-                padding: 0;
-              }
-            </style>
-        </head>
-        <body>
-            <redoc spec-url='/openapi.json'></redoc>
-            <script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script>
-        </body>
-        </html>
-        """
+        return render_template("redoc.html")
 
     @property
     def app(self) -> Flask:

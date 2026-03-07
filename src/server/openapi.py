@@ -6,6 +6,7 @@ from src.server.schemas import (
     ReferencePointRequest,
     DirectionAngleResponse,
     ReferencePointResponse,
+    ExternalReferencePointResponse,
     ErrorResponse,
 )
 
@@ -183,6 +184,47 @@ class OpenAPISpecGenerator:
                         }
                     }
                 }
+            },
+            "/get-external-reference-point": {
+                "post": {
+                    "summary": "Calculate external reference points",
+                    "description": "Calculate external reference point for window(s) - the point on the opposite edge from the room polygon (external face)",
+                    "tags": ["Calculations"],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/ReferencePointRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success - External reference points for windows",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ExternalReferencePointResponse"}
+                                }
+                            }
+                        },
+                        "400": {
+                            "description": "Validation error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            }
+                        },
+                        "500": {
+                            "description": "Server error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -195,5 +237,6 @@ class OpenAPISpecGenerator:
             "ReferencePointRequest": ReferencePointRequest.model_json_schema(),
             "DirectionAngleResponse": DirectionAngleResponse.model_json_schema(),
             "ReferencePointResponse": ReferencePointResponse.model_json_schema(),
+            "ExternalReferencePointResponse": ExternalReferencePointResponse.model_json_schema(),
             "ErrorResponse": ErrorResponse.model_json_schema(),
         }

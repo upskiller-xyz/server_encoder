@@ -51,3 +51,5 @@ class Endpoint(Enum):
     ENCODE = "encode"
     CALCULATE_DIRECTION = "calculate_direction"
     GET_REFERENCE_POINT = "get_reference_point"
+    GET_EXTERNAL_REFERENCE_POINT = "get_external_reference_point"
+

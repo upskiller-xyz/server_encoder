@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 from src.core import ParameterName
+from src.core.enums import REQUIRED_WINDOW_COORDINATES
 from src.components.geometry import WindowGeometry, RoomPolygon
 
 
@@ -30,10 +31,7 @@ class ParameterNormalizer:
             return WindowGeometry.from_dict(geom)
 
         # Check if individual coordinates exist
-        if all(k in window_params for k in [
-            ParameterName.X1.value, ParameterName.Y1.value, ParameterName.Z1.value,
-            ParameterName.X2.value, ParameterName.Y2.value, ParameterName.Z2.value
-        ]):
+        if all(k in window_params for k in REQUIRED_WINDOW_COORDINATES):
             return WindowGeometry(
                 x1=window_params[ParameterName.X1.value],
                 y1=window_params[ParameterName.Y1.value],
