@@ -127,7 +127,7 @@ class TestOpenAPISpecGenerator:
         spec = OpenAPISpecGenerator.generate_spec()
         
         assert spec["info"]["title"] == "Server Encoder API"
-        assert spec["info"]["version"] == "1.0.0"
+        assert spec["info"]["version"] == "0.1.0"
         assert "Room encoding service" in spec["info"]["description"]
 
     def test_generate_spec_is_valid_json_serializable(self):
