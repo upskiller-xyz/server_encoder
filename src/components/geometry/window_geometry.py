@@ -418,6 +418,10 @@ class WindowGeometry:
         if direction_angle is None:
             direction_angle = self.calculate_direction_from_polygon(room_polygon, tolerance)
 
+        # Store the calculated direction so dependent properties (e.g., wall_thickness)
+        # can use the correct non-axis-aligned window direction
+        self._direction_angle = direction_angle
+
         # Get wall thickness (distance to opposite edge)
         wall_thickness = self.wall_thickness
 
