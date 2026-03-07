@@ -18,7 +18,7 @@ class OpenAPISpecGenerator:
     def generate_spec(
         title: str = "Server Encoder API",
         description: str = "Room encoding service with support for multiple encoding schemes",
-        version: str = "1.0.0",
+        version: str = "0.1.0",
         base_url: str = "/"
     ) -> Dict[str, Any]:
         """
