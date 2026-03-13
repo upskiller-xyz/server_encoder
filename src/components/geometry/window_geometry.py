@@ -127,10 +127,24 @@ class WindowGeometry:
         """Get z1 coordinate"""
         return self._corner1.z
 
+    @z1.setter
+    def z1(self, value: float) -> None:
+        """Set z1 coordinate and update cached z bounds."""
+        self._corner1.z = value
+        self._z_min = min(self._corner1.z, self._corner2.z)
+        self._z_max = max(self._corner1.z, self._corner2.z)
+
     @property
     def z2(self) -> float:
         """Get z2 coordinate"""
         return self._corner2.z
+
+    @z2.setter
+    def z2(self, value: float) -> None:
+        """Set z2 coordinate and update cached z bounds."""
+        self._corner2.z = value
+        self._z_min = min(self._corner1.z, self._corner2.z)
+        self._z_max = max(self._corner1.z, self._corner2.z)
 
     @property
     def niche_center(self) -> Point2D:
