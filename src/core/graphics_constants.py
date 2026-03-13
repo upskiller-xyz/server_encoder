@@ -36,7 +36,7 @@ class ImageGraphicsConstants:
 
     # Window placement tolerance (meters) for edge matching
     WINDOW_PLACEMENT_TOLERANCE: float = 0.05
-    WINDOW_HEIGHT_TOLERANCE:float =  1e-6
+    WINDOW_HEIGHT_CORRECTION_TOLERANCE: float = 0.15  # 15cm - BIM frames may extend slightly beyond floor/roof
 
     @classmethod
     def get_pixel_value(cls, value:float, 
