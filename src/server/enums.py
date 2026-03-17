@@ -45,6 +45,7 @@ class ServiceName(Enum):
     ENCODING_SERVICE_V2 = "encoding_service_v2"
     ENCODING_SERVICE_V3 = "encoding_service_v3"
     ENCODING_SERVICE_V4 = "encoding_service_v4"
+    ENCODING_SERVICE_V5 = "encoding_service_v5"
 
 
 class Endpoint(Enum):

@@ -10,6 +10,7 @@ from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.core.model_type_manager import ModelTypeManager
 from src.server.enums import HTTPStatus, Endpoint, ServiceName
 from src.server.services import EncodingServiceFactory
+from src.server.services.encoding_service_v5 import V5EncodingService
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
 from src.server.key_manager import KeyManager
@@ -43,6 +44,7 @@ class ServerApplication:
         self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
         self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
         self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
+        self._encoding_service_v5 = V5EncodingService()
         self._setup_dependencies()
         self._setup_routes()
 
@@ -57,6 +59,7 @@ class ServerApplication:
             ServiceName.ENCODING_SERVICE_V2.value: self._encoding_service_v2,
             ServiceName.ENCODING_SERVICE_V3.value: self._encoding_service_v3,
             ServiceName.ENCODING_SERVICE_V4.value: self._encoding_service_v4,
+            ServiceName.ENCODING_SERVICE_V5.value: self._encoding_service_v5,
         }
 
         # Controller
@@ -142,6 +145,7 @@ class ServerApplication:
             EncodingScheme.V2: self._encoding_service_v2,
             EncodingScheme.V3: self._encoding_service_v3,
             EncodingScheme.V4: self._encoding_service_v4,
+            EncodingScheme.V5: self._encoding_service_v5,
         }
         encoding_service = encoding_service_map.get(encoding_scheme, self._encoding_service_v2)
 

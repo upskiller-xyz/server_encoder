@@ -26,15 +26,20 @@ class TestServiceNameEnum:
         """Test ENCODING_SERVICE_V4 enum value"""
         assert ServiceName.ENCODING_SERVICE_V4.value == "encoding_service_v4"
 
+    def test_encoding_service_v5_value(self):
+        """Test ENCODING_SERVICE_V5 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V5.value == "encoding_service_v5"
+
     def test_service_name_all_members(self):
         """Test all ServiceName members are defined"""
         members = [m for m in ServiceName]
-        assert len(members) == 5
+        assert len(members) == 6
         assert ServiceName.ENCODING_SERVICE in members
         assert ServiceName.ENCODING_SERVICE_V1 in members
         assert ServiceName.ENCODING_SERVICE_V2 in members
         assert ServiceName.ENCODING_SERVICE_V3 in members
         assert ServiceName.ENCODING_SERVICE_V4 in members
+        assert ServiceName.ENCODING_SERVICE_V5 in members
 
 
 class TestEndpointEnum:

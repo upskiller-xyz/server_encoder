@@ -262,6 +262,7 @@ class EncodingScheme(str, Enum):
     V2 = "v2"  # HSV-style: obstruction bar, HSV channel mapping (default)
     V3 = "v3"  # HSV-style: no obstruction bar
     V4 = "v4"  # HSV-style: no obstruction bar, obstruction vector applied to floor plan bounding box
+    V5 = "v5"  # Geometric mask: single-channel float32 (background=0, room=1, window=0.6)
 
 
 # Default parameter values map (Strategy Pattern)
@@ -289,6 +290,13 @@ DEFAULT_PARAMETER_VALUES = {
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
 # V2, V3, V4 all use HSV-style encoding (V3/V4 differ only in obstruction handling)
 HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4})
+
+# V5 geometric mask values: fixed intensity per region, single float32 channel
+V5_MASK_VALUES = {
+    RegionType.BACKGROUND: 0.0,
+    RegionType.ROOM: 1.0,
+    RegionType.WINDOW: 0.6,
+}
 
 
 # Default pixel values for HSV-style encoding schemes (Strategy Pattern)

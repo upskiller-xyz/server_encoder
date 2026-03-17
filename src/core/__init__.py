@@ -14,6 +14,7 @@ from src.core.enums import (
     get_channel_mapping,
     HSV_DEFAULT_PIXEL_OVERRIDES,
     HSV_STYLE_SCHEMES,
+    V5_MASK_VALUES,
 )
 from src.core.exceptions import (
     WindowEncoderException,
@@ -42,6 +43,7 @@ __all__ = [
     "get_channel_mapping",
     "HSV_DEFAULT_PIXEL_OVERRIDES",
     "HSV_STYLE_SCHEMES",
+    "V5_MASK_VALUES",
     "WindowEncoderException",
     "GeometryValidationError",
     "WindowNotOnPolygonError",
