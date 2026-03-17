@@ -10,7 +10,7 @@ class TestValidatorIntegration:
     @pytest.fixture
     def encoding_service(self):
         """Create encoding service instance"""
-        return EncodingService(encoding_scheme=EncodingScheme.HSV)
+        return EncodingService(encoding_scheme=EncodingScheme.V2)
 
     def test_calculate_direction_missing_room_polygon(self, encoding_service):
         """Test that validator catches missing room_polygon"""

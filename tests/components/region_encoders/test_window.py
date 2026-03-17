@@ -15,7 +15,7 @@ import unittest
 import numpy as np
 from src.components.region_encoders import WindowRegionEncoder
 from src.components.geometry import WindowGeometry
-from src.core import ModelType, RegionType
+from src.core import ModelType, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -265,11 +265,11 @@ class TestWindowDimensions(unittest.TestCase):
 
 
 class TestWindowColorEncoding(unittest.TestCase):
-    """Test window encodes colors correctly"""
+    """Test window encodes colors correctly using V1 mapping (no pixel overrides)"""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.encoder = WindowRegionEncoder()
+        """Set up test fixtures - use V1 to test raw channel encoding without overrides"""
+        self.encoder = WindowRegionEncoder(encoding_scheme=EncodingScheme.V1)
         self.model_type = ModelType.DF_DEFAULT
 
     def test_red_channel_window_height(self):

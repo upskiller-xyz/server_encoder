@@ -24,7 +24,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
     - Alpha: ceiling_reflectance (0.5-1 → 0-1, default=1) [OPTIONAL]
     """
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.ROOM, encoding_scheme)
 
     def _get_area_mask(

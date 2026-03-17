@@ -258,8 +258,10 @@ class GeometryType(str, Enum):
 
 class EncodingScheme(str, Enum):
     """Encoding scheme enumeration for different parameter-to-channel mappings"""
-    RGB = "rgb"
-    HSV = "hsv"
+    V1 = "v1"  # RGB-style: obstruction bar, RGB channel mapping
+    V2 = "v2"  # HSV-style: obstruction bar, HSV channel mapping (default)
+    V3 = "v3"  # HSV-style: no obstruction bar
+    V4 = "v4"  # HSV-style: no obstruction bar, obstruction vector applied to floor plan bounding box
 
 
 # Default parameter values map (Strategy Pattern)
@@ -284,7 +286,12 @@ DEFAULT_PARAMETER_VALUES = {
 }
 
 
-# Default pixel values for HSV encoding scheme (Strategy Pattern)
+# Encoding schemes that use HSV-style channel mapping and default pixel overrides
+# V2, V3, V4 all use HSV-style encoding (V3/V4 differ only in obstruction handling)
+HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4})
+
+
+# Default pixel values for HSV-style encoding schemes (Strategy Pattern)
 # These override the encoded values for specific parameters when using default materials
 # Format: {(RegionType, ChannelType, ModelType): pixel_value}
 # Only specified combinations are overridden; others use normal encoding of DEFAULT_PARAMETER_VALUES
@@ -330,8 +337,8 @@ HSV_DEFAULT_PIXEL_OVERRIDES = {
 
 
 # Channel mapping: defines which parameter goes into which channel for each region (Strategy Pattern)
-# RGB Color Space Mapping (Legacy)
-REGION_CHANNEL_MAPPING_RGB = {
+# V1 Channel Mapping (formerly RGB)
+REGION_CHANNEL_MAPPING_V1 = {
     RegionType.BACKGROUND: {
         ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,
         ChannelType.GREEN: ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
@@ -358,10 +365,10 @@ REGION_CHANNEL_MAPPING_RGB = {
     },
 }
 
-# HSV Encoding Scheme Mapping (Default)
-# Note: "HSV" refers to Hue/Saturation/Value parameter assignment, not color space conversion
+# V2 Channel Mapping (formerly HSV)
+# Note: "V2" refers to the second encoding version; HSV designates Hue/Saturation/Value parameter assignment, not color space conversion
 # All channels remain RGBA in the actual image
-REGION_CHANNEL_MAPPING_HSV = {
+REGION_CHANNEL_MAPPING_V2 = {
     RegionType.BACKGROUND: {
         ChannelType.ALPHA: ParameterName.WINDOW_ORIENTATION,  # alpha channel
         ChannelType.BLUE: ParameterName.FACADE_REFLECTANCE,  # hue → red channel
@@ -388,28 +395,27 @@ REGION_CHANNEL_MAPPING_HSV = {
     },
 }
 
-# Default mapping (backward compatibility - will be overridden)
-REGION_CHANNEL_MAPPING = REGION_CHANNEL_MAPPING_RGB
-
-
 # Encoding scheme mapping selector (Strategy Pattern)
+# V3 and V4 reuse V2's channel mappings; their difference is in obstruction handling
 ENCODING_SCHEME_MAPPINGS = {
-    EncodingScheme.RGB: REGION_CHANNEL_MAPPING_RGB,
-    EncodingScheme.HSV: REGION_CHANNEL_MAPPING_HSV,
+    EncodingScheme.V1: REGION_CHANNEL_MAPPING_V1,
+    EncodingScheme.V2: REGION_CHANNEL_MAPPING_V2,
+    EncodingScheme.V3: REGION_CHANNEL_MAPPING_V2,  # Same channels as V2; no obstruction bar
+    EncodingScheme.V4: REGION_CHANNEL_MAPPING_V2,  # Same channels as V2; bounding box obstruction
 }
 
 
-def get_channel_mapping(encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+def get_channel_mapping(encoding_scheme: EncodingScheme = EncodingScheme.V2):
     """
     Get channel mapping for specified encoding scheme
 
     Args:
-        encoding_scheme: Encoding scheme enum (default: HSV)
+        encoding_scheme: Encoding scheme enum (default: V2)
 
     Returns:
         Channel mapping dictionary for the encoding scheme
     """
-    return ENCODING_SCHEME_MAPPINGS.get(encoding_scheme, REGION_CHANNEL_MAPPING_HSV)
+    return ENCODING_SCHEME_MAPPINGS.get(encoding_scheme, REGION_CHANNEL_MAPPING_V2)
 
 
 

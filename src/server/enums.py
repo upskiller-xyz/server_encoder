@@ -41,8 +41,10 @@ class HTTPStatus(Enum):
 class ServiceName(Enum):
     """Service names for dependency injection"""
     ENCODING_SERVICE = "encoding_service"
-    ENCODING_SERVICE_HSV = "encoding_service_hsv"
-    ENCODING_SERVICE_RGB = "encoding_service_rgb"
+    ENCODING_SERVICE_V1 = "encoding_service_v1"
+    ENCODING_SERVICE_V2 = "encoding_service_v2"
+    ENCODING_SERVICE_V3 = "encoding_service_v3"
+    ENCODING_SERVICE_V4 = "encoding_service_v4"
 
 
 class Endpoint(Enum):

@@ -25,7 +25,7 @@ class EncodingService:
     Follows Dependency Injection and Single Responsibility principles
     """
 
-    def __init__(self,  encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self,  encoding_scheme: EncodingScheme = EncodingScheme.V2):
         """
         Initialize encoding service
 
@@ -35,7 +35,7 @@ class EncodingService:
         """
         self._encoding_scheme = encoding_scheme
         self._builder = RoomImageBuilder(encoding_scheme=encoding_scheme)
-        self._director = RoomImageDirector(self._builder)
+        self._director = RoomImageDirector(self._builder, encoding_scheme=encoding_scheme)
         self._encoder_factory = EncoderFactory()
 
     def parse_request(self, data: Dict[str, Any]) -> RoomEncodingRequest:

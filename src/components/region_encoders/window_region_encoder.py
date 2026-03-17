@@ -26,7 +26,7 @@ class WindowRegionEncoder(BaseRegionEncoder):
     - Alpha: window_frame_reflectance (0-1 input → 0-1 normalized, optional, default=0.8)
     """
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.WINDOW, encoding_scheme)
 
     def _update_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:

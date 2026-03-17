@@ -9,7 +9,7 @@ class EncodingServiceFactory:
     _instances: Dict[EncodingScheme, EncodingService] = {}
 
     @classmethod
-    def get_instance(cls,  encoding_scheme: EncodingScheme = EncodingScheme.RGB) -> EncodingService:
+    def get_instance(cls,  encoding_scheme: EncodingScheme = EncodingScheme.V2) -> EncodingService:
         """
         Get singleton instance of encoding service for specified encoding scheme
 

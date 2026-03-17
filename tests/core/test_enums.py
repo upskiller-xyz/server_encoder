@@ -162,11 +162,15 @@ class TestEncodingScheme:
     """Tests for EncodingScheme enum"""
 
     def test_encoding_schemes_exist(self):
-        """Test that encoding schemes are defined"""
-        assert EncodingScheme.RGB.value == "rgb"
-        assert EncodingScheme.HSV.value == "hsv"
+        """Test that all encoding scheme versions are defined"""
+        assert EncodingScheme.V1.value == "v1"
+        assert EncodingScheme.V2.value == "v2"
+        assert EncodingScheme.V3.value == "v3"
+        assert EncodingScheme.V4.value == "v4"
 
     def test_encoding_scheme_by_value(self):
         """Test accessing encoding scheme by value"""
-        assert EncodingScheme("rgb") == EncodingScheme.RGB
-        assert EncodingScheme("hsv") == EncodingScheme.HSV
+        assert EncodingScheme("v1") == EncodingScheme.V1
+        assert EncodingScheme("v2") == EncodingScheme.V2
+        assert EncodingScheme("v3") == EncodingScheme.V3
+        assert EncodingScheme("v4") == EncodingScheme.V4

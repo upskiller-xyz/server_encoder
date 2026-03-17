@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 import numpy as np
-from src.core import RegionType, ModelType, ChannelType, ParameterName, ImageDimensions, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES
+from src.core import RegionType, ModelType, ChannelType, ParameterName, ImageDimensions, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES, HSV_STYLE_SCHEMES
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
 from src.components.region_encoders.validation_helpers import validate_required_parameters
 from src.core import GRAPHICS_CONSTANTS
@@ -17,7 +17,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     - Alpha: balcony_reflectance (0-1 input → 0-1 normalized, default=0.8)
     """
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.OBSTRUCTION_BAR, encoding_scheme)
 
     def encode_region(
@@ -123,7 +123,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     def _encode_override(self, channel_type:ChannelType, bar_height:int,model_type:ModelType, is_using_default:bool)->np.ndarray | None:
 
         if (is_using_default and
-            self._encoding_scheme == EncodingScheme.HSV and
+            self._encoding_scheme in HSV_STYLE_SCHEMES and
             model_type is not None):
             override_key = (self._region_type, channel_type, model_type)
             if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:

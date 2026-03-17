@@ -21,7 +21,7 @@ class RoomImageBuilder:
     def _is_empty(cls, arr)->bool:
         return np.array_equal(arr, cls._empty())
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         self._image: np.ndarray = self._empty()
         self._model_type: ModelType = ModelType.DF_DEFAULT
         self._encoding_scheme = encoding_scheme

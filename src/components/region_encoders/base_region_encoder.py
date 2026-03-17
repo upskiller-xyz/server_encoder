@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 import numpy as np
 from src.models import IRegionEncoder
-from src.core import RegionType, ModelType, ChannelType, ParameterName, DEFAULT_PARAMETER_VALUES, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES
+from src.core import RegionType, ModelType, ChannelType, ParameterName, DEFAULT_PARAMETER_VALUES, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES, HSV_STYLE_SCHEMES
 from src.components.parameter_encoders import EncoderFactory as ParameterEncoderFactory
 from src.components.region_encoders.validation_helpers import validate_required_parameters
 
@@ -9,7 +9,7 @@ from src.components.region_encoders.validation_helpers import validate_required_
 class BaseRegionEncoder(IRegionEncoder):
     """Base class for region encoders with common functionality"""
 
-    def __init__(self, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         self._region_type = region_type
         self._encoder_factory = ParameterEncoderFactory()
         self._encoding_scheme = encoding_scheme
@@ -150,10 +150,10 @@ class BaseRegionEncoder(IRegionEncoder):
 
             )
 
-        # Check if this is a default value and HSV encoding with an override
+        # Check if this is a default value and using an HSV-style scheme (V2/V3/V4)
         is_using_default = param_name.value not in parameters
         if (is_using_default and
-            self._encoding_scheme == EncodingScheme.HSV and
+            self._encoding_scheme in HSV_STYLE_SCHEMES and
             model_type is not None):
             # Check for HSV pixel override
             override_key = (self._region_type, channel_type, model_type)

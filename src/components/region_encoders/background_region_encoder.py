@@ -15,5 +15,5 @@ class BackgroundRegionEncoder(BaseRegionEncoder):
     - Alpha: window_orientation (0-2π rad → 0-1, math convention 0=East CCW) [AUTO from direction_angle]
     """
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.BACKGROUND, encoding_scheme)

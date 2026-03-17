@@ -17,13 +17,13 @@ class EncodeRequest(BaseModel):
     """
     model_type: str = Field(..., description="Model type (e.g., 'df_default', 'da_custom')")
     parameters: Dict[str, Any] = Field(..., description="Encoding parameters")
-    encoding_scheme: str = Field(default="hsv", description="Encoding scheme: 'hsv' or 'rgb'")
+    encoding_scheme: str = Field(default="v2", description="Encoding scheme: 'v1' (RGB), 'v2' (HSV, default), 'v3' (no obstruction bar), 'v4' (bounding box obstruction)")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "model_type": "df_default",
-                "encoding_scheme": "hsv",
+                "encoding_scheme": "v2",
                 "parameters": {
                     "window_orientation": 3.14159,
                     "facade_reflectance": 1.0,
