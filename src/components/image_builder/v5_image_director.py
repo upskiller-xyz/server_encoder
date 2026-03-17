@@ -12,9 +12,12 @@ on which region it belongs to:
 No obstruction bar, no parameter encoding.
 """
 from typing import Dict, Any, Optional, Tuple
+import logging
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from src.core import ModelType, ParameterName, RegionType, V5_MASK_VALUES
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
@@ -111,11 +114,12 @@ class V5ImageDirector:
         mask = np.zeros((h, w), dtype=np.uint8)
         cv2.fillPoly(mask, pixel_coords, 1)  # type: ignore
 
-        # Enforce border
+        # Enforce border (all four edges must remain background)
         border = GRAPHICS_CONSTANTS.BORDER_PX
         mask[:border, :] = 0
         mask[h - border :, :] = 0
         mask[:, :border] = 0
+        mask[:, w - border :] = 0
 
         image[mask.astype(bool)] = V5_MASK_VALUES[RegionType.ROOM]
         return mask
@@ -135,8 +139,8 @@ class V5ImageDirector:
                 dummy_rgba, updated
             )
             image[y_start:y_end, x_start:x_end] = V5_MASK_VALUES[RegionType.WINDOW]
-        except Exception:
-            pass  # Window drawing is best-effort; missing coordinates → no window area
+        except (KeyError, ValueError) as exc:
+            logger.warning("V5 window drawing skipped: %s", exc)
 
     # ------------------------------------------------------------------
     # Geometry rotation (mirrors RoomImageDirector logic)

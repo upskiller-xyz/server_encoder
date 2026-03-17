@@ -215,6 +215,46 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         if missing:
             raise ValueError(f"Missing required obstruction bar parameters: {', '.join(missing)}")
 
+    def compute_obstruction_vector(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+        height: int,
+    ) -> np.ndarray:
+        """
+        Compute the RGBA obstruction vector for a given height.
+
+        Returns a (height, 4) float64 array where each row holds the encoded
+        [R, G, B, A] obstruction values.  Intended for use by strategies that
+        need the obstruction data without rendering a bar on the image (e.g.
+        BoundingBoxObstructionStrategy).
+
+        Args:
+            parameters: Obstruction parameters (horizon, zenith, …)
+            model_type: Model type for HSV pixel-override lookup
+            height: Desired vector height in pixels
+
+        Returns:
+            (height, 4) float64 array of encoded obstruction values
+        """
+        channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
+        channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        vector = np.zeros((height, 4), dtype=np.float64)
+
+        for col_idx, channel_type in enumerate(channel_order):
+            encoded = self._encode_channel(
+                parameters, channel_map, channel_type, model_type,
+                bar_height=height, actual_bar_height=height,
+            )
+            encoded = np.squeeze(encoded)
+            if encoded.ndim == 0:
+                vector[:, col_idx] = float(encoded)
+            else:
+                length = min(len(encoded), height)
+                vector[:length, col_idx] = encoded[:length]
+
+        return vector
+
     @staticmethod
     def _upsample_values(values: list, expected_length: int) -> list:
         """Upsample: Distribute values evenly when we have fewer values than needed"""

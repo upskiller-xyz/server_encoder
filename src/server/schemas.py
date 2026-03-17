@@ -17,7 +17,7 @@ class EncodeRequest(BaseModel):
     """
     model_type: str = Field(..., description="Model type (e.g., 'df_default', 'da_custom')")
     parameters: Dict[str, Any] = Field(..., description="Encoding parameters")
-    encoding_scheme: str = Field(default="v2", description="Encoding scheme: 'v1' (RGB), 'v2' (HSV, default), 'v3' (no obstruction bar), 'v4' (bounding box obstruction)")
+    encoding_scheme: str = Field(default="v2", description="Encoding scheme: 'v1' (RGB), 'v2' (HSV, default), 'v3' (no obstruction bar), 'v4' (bounding box obstruction), 'v5' (geometric mask, single-channel float32)")
 
     class Config:
         json_schema_extra = {

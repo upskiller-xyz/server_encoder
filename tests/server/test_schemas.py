@@ -52,6 +52,15 @@ class TestEncodeRequest:
         )
         assert request.encoding_scheme == "v4"
 
+    def test_valid_encode_request_with_v5(self):
+        """Test creating valid EncodeRequest with V5 encoding scheme"""
+        request = EncodeRequest(
+            model_type="df_default",
+            parameters={"room_polygon": [[-3, 0], [3, 0], [3, 5], [-3, 5]]},
+            encoding_scheme="v5"
+        )
+        assert request.encoding_scheme == "v5"
+
     def test_encode_request_missing_model_type(self):
         """Test EncodeRequest validation fails without model_type"""
         with pytest.raises(ValidationError):

@@ -142,6 +142,7 @@ class TestServerApplicationDependencies:
         assert server_app._encoding_service_v2 is not None
         assert server_app._encoding_service_v3 is not None
         assert server_app._encoding_service_v4 is not None
+        assert server_app._encoding_service_v5 is not None
 
     def test_app_initializes_model_definitions(self):
         """Test that ServerApplication initializes model definitions via controller"""

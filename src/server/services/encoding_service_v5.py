@@ -13,9 +13,7 @@ import logging
 from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder.v5_image_director import V5ImageDirector
 from src.components.parameter_encoders import EncoderFactory
-from src.components.geometry import WindowGeometry, RoomPolygon
-from src.components.calculators import ParameterCalculatorRegistry
-from src.models import EncodingResult, RoomEncodingRequest
+from src.models import EncodingResult
 from src.validation import ValidationUtils
 from src.server.services.encoding_service import EncodingService
 
@@ -26,12 +24,14 @@ class V5EncodingService(EncodingService):
     """
     Encoding service for V5: geometric mask, single-channel float32 output.
 
-    Inherits request parsing, direction-angle calculation, and multi-window
-    orchestration from EncodingService.  Overrides:
+    Inherits request parsing and direction-angle calculation from EncodingService.
+    Overrides:
     - __init__: uses V5ImageDirector instead of RoomImageBuilder + RoomImageDirector
     - validate_parameters: only geometry is required (no reflectances/obstruction)
-    - encode_room_image_arrays: skips uint8 cast; returns float32
-    - encode_room_image: not supported for V5 (PNG encoding of float single-channel is uncommon)
+    - encode_room_image_arrays: skips uint8 cast; returns float32 (H, W, 1)
+    - encode_room_image: raises NotImplementedError (PNG export of float32 single-channel
+      is not supported; callers should use encode_room_image_arrays instead)
+    - encode_multi_window_images: raises NotImplementedError for the same reason
     """
 
     def __init__(self) -> None:
@@ -146,3 +146,23 @@ class V5EncodingService(EncodingService):
 
         logger.info(f"Multi-window V5 masks encoded - count: {len(result.images)}")
         return result
+
+    def encode_room_image(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+    ):
+        raise NotImplementedError(
+            "V5 encoding produces a float32 single-channel array and cannot be exported "
+            "as a PNG byte stream. Use encode_room_image_arrays() instead."
+        )
+
+    def encode_multi_window_images(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+    ):
+        raise NotImplementedError(
+            "V5 encoding produces float32 single-channel arrays and cannot be exported "
+            "as PNG byte streams. Use encode_multi_window_images_arrays() instead."
+        )

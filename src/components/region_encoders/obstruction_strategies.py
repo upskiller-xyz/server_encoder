@@ -15,12 +15,9 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from src.core.enums import (
-    ChannelType,
     EncodingScheme,
     ModelType,
     RegionType,
-    HSV_STYLE_SCHEMES,
-    get_channel_mapping,
 )
 
 
@@ -131,25 +128,9 @@ class BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
             return image
 
         # Build the 4-channel obstruction vector for the bounding-box height
-        channel_map = get_channel_mapping(EncodingScheme.V2)[RegionType.OBSTRUCTION_BAR]
-        channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
-        obstruction_vector = np.zeros((bbox_height, 4), dtype=np.float64)
-
-        for channel_idx, channel_type in enumerate(channel_order):
-            encoded = self._encoder._encode_channel(
-                parameters,
-                channel_map,
-                channel_type,
-                model_type,
-                bar_height=bbox_height,
-                actual_bar_height=bbox_height,
-            )
-            encoded = np.squeeze(encoded)
-            if encoded.ndim == 0:
-                obstruction_vector[:, channel_idx] = float(encoded)
-            else:
-                length = min(len(encoded), bbox_height)
-                obstruction_vector[:length, channel_idx] = encoded[:length]
+        obstruction_vector = self._encoder.compute_obstruction_vector(
+            parameters, model_type, bbox_height
+        )
 
         # Expand the vector horizontally: (H, 1, 4) broadcasts over (H, W, 4)
         obs_expanded = obstruction_vector[:, np.newaxis, :]  # (bbox_height, 1, 4)

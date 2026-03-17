@@ -30,8 +30,7 @@ class EncodingService:
         Initialize encoding service
 
         Args:
-            logger: Logger instance for structured logging
-            encoding_scheme: Encoding scheme to use (default: HSV)
+            encoding_scheme: Encoding scheme to use (default: V2)
         """
         self._encoding_scheme = encoding_scheme
         self._builder = RoomImageBuilder(encoding_scheme=encoding_scheme)

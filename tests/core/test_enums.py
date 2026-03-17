@@ -167,6 +167,7 @@ class TestEncodingScheme:
         assert EncodingScheme.V2.value == "v2"
         assert EncodingScheme.V3.value == "v3"
         assert EncodingScheme.V4.value == "v4"
+        assert EncodingScheme.V5.value == "v5"
 
     def test_encoding_scheme_by_value(self):
         """Test accessing encoding scheme by value"""
@@ -174,3 +175,4 @@ class TestEncodingScheme:
         assert EncodingScheme("v2") == EncodingScheme.V2
         assert EncodingScheme("v3") == EncodingScheme.V3
         assert EncodingScheme("v4") == EncodingScheme.V4
+        assert EncodingScheme("v5") == EncodingScheme.V5
