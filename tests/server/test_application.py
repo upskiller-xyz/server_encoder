@@ -268,7 +268,7 @@ class TestServerApplicationIntegration:
     def test_server_app_has_required_attributes(self):
         """Test that ServerApplication has all required attributes"""
         server_app = ServerApplication()
-        required_attrs = ['_app', '_controller', '_encoding_service_v1', '_encoding_service_v2', '_encoding_service_v3', '_encoding_service_v4']
+        required_attrs = ['_app', '_controller', '_encoding_service_v1', '_encoding_service_v2', '_encoding_service_v3', '_encoding_service_v4', '_encoding_service_v5']
         
         for attr in required_attrs:
             assert hasattr(server_app, attr), f"Missing attribute: {attr}"
