@@ -50,7 +50,7 @@ class ServerApplication:
 
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
-        # Encoding services (V1, V2, V3, V4)
+        # Encoding services (V1, V2, V3, V4, V5)
 
         # Services dict (default to V2)
         services = {
