@@ -13,7 +13,7 @@ import logging
 from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder.v5_image_director import V5ImageDirector
 from src.components.parameter_encoders import EncoderFactory
-from src.models import EncodingResult
+from src.models import EncodingResult, RoomEncodingRequest
 from src.validation import ValidationUtils
 from src.server.services.encoding_service import EncodingService
 
@@ -40,6 +40,27 @@ class V5EncodingService(EncodingService):
         self._encoding_scheme = EncodingScheme.V5
         self._director = V5ImageDirector()
         self._encoder_factory = EncoderFactory()
+
+    # ------------------------------------------------------------------
+    # Request parsing (inject defaults for fields required by RoomEncodingRequest
+    # but not used by V5; avoids validation errors for missing height parameters)
+    # ------------------------------------------------------------------
+
+    def parse_request(self, data: dict) -> RoomEncodingRequest:
+        """
+        Parse a V5 encode request.
+
+        RoomEncodingRequest.from_dict() requires height_roof_over_floor and
+        floor_height_above_terrain even though V5 never uses them.  Inject
+        neutral defaults so the shared parsing logic can run without error.
+        """
+        params = dict(data.get(ParameterName.PARAMETERS.value, {}))
+        if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value not in params:
+            params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = 1.0
+        if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value not in params:
+            params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = 0.0
+        patched_data = {**data, ParameterName.PARAMETERS.value: params}
+        return super().parse_request(patched_data)
 
     # ------------------------------------------------------------------
     # Validation (geometry-only)

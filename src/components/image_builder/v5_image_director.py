@@ -17,17 +17,16 @@ import logging
 import cv2
 import numpy as np
 
-logger = logging.getLogger(__name__)
-
 from src.core import ModelType, ParameterName, RegionType, V5_MASK_VALUES
+from src.core.enums import EncodingScheme, PARAMETER_REGIONS
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
 from src.components.geometry import RoomPolygon, WindowGeometry
 from src.components.image_builder.parameter_normalizer import ParameterNormalizer
 from src.components.image_builder.geometry_rotator import GeometryRotator
 from src.components.region_encoders.window_region_encoder import WindowRegionEncoder
-from src.core.enums import EncodingScheme
 from src.models import EncodingParameters, EncodingResult
-from src.core.enums import PARAMETER_REGIONS
+
+logger = logging.getLogger(__name__)
 
 
 class V5ImageDirector:
@@ -134,9 +133,8 @@ class V5ImageDirector:
         dummy_rgba = np.zeros((h, w, 4), dtype=np.uint8)
 
         try:
-            updated = self._window_encoder._update_parameters(dict(window_params))
-            x_start, y_start, x_end, y_end = self._window_encoder._get_window_bounds(
-                dummy_rgba, updated
+            x_start, y_start, x_end, y_end = self._window_encoder.get_pixel_bounds(
+                dummy_rgba, dict(window_params)
             )
             image[y_start:y_end, x_start:x_end] = V5_MASK_VALUES[RegionType.WINDOW]
         except (KeyError, ValueError) as exc:

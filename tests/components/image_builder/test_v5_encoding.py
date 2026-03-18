@@ -196,6 +196,16 @@ class TestV5EncodingService:
         image, _ = service.encode_room_image_arrays(params, _MODEL)
         assert image is not None
 
+    def test_parse_request_does_not_require_height_fields(self):
+        """V5 parse_request should not fail when height_roof_over_floor or
+        floor_height_above_terrain are absent (they are unused by V5)."""
+        service = V5EncodingService()
+        geometry_only = {k: v for k, v in _PARAMS.items()
+                         if k not in {"height_roof_over_floor", "floor_height_above_terrain"}}
+        request_data = {"model_type": "df_default", "parameters": geometry_only}
+        req = service.parse_request(request_data)
+        assert req.model_type.value == "df_default"
+
 
 # ---------------------------------------------------------------------------
 # V5_MASK_VALUES constant

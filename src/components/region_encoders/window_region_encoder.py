@@ -29,6 +29,28 @@ class WindowRegionEncoder(BaseRegionEncoder):
     def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.WINDOW, encoding_scheme)
 
+    def get_pixel_bounds(
+        self,
+        image: np.ndarray,
+        parameters: dict,
+    ) -> tuple:
+        """
+        Public helper: compute window pixel bounds from parameters.
+
+        Derives window coordinates, calculates pixel bounds, applies wall-snapping
+        and border enforcement.  Intended for callers (e.g. V5ImageDirector) that
+        need only the geometry without performing full channel encoding.
+
+        Args:
+            image: Reference image (used for size; not modified)
+            parameters: Window parameters (raw dict; derived fields are calculated)
+
+        Returns:
+            (x_start, y_start, x_end, y_end) tuple in pixel coordinates
+        """
+        updated = self._update_parameters(parameters)
+        return self._get_window_bounds(image, updated)
+
     def _update_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Calculate derived parameters for window region
         calculated_params = ParameterCalculatorRegistry.calculate_derived_parameters(params)
