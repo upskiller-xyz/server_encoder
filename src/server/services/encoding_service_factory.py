@@ -11,11 +11,10 @@ class EncodingServiceFactory:
     @classmethod
     def get_instance(cls,  encoding_scheme: EncodingScheme = EncodingScheme.V2) -> EncodingService:
         """
-        Get singleton instance of encoding service for specified encoding scheme
+        Get singleton instance of encoding service for specified encoding scheme.
 
         Args:
-            logger: Logger instance
-            encoding_scheme: Encoding scheme to use (default: HSV)
+            encoding_scheme: Encoding scheme to use (default: EncodingScheme.V2)
 
         Returns:
             EncodingService instance
