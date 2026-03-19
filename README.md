@@ -54,6 +54,7 @@
     <li><a href="#design">Design</a></li>
     <li><a href="#testing">Testing</a></li>
     <li><a href="#documentation">Documentation</a></li>
+    <li><a href="#encoding-schemes">Encoding Schemes</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contribution">Contribution</a></li>
     <li><a href="#license">License</a></li>
@@ -73,6 +74,7 @@ The **Room Encoding Server** transforms 3D room geometry and physical parameters
 - Direction angle calculated from room polygon (outward-facing)
 - Multiple model types: DF/DA with default or custom materials
 - Room mask generation (1=room area, 0=background)
+- Five encoding schemes (V1–V5) including a geometry-only float32 mask (V5)
 - RESTful API with comprehensive validation and error handling
 - Object-oriented design following SOLID principles and design patterns
 
@@ -240,6 +242,22 @@ See [API Reference](docs/api_reference.md) and [Room Mask Feature](docs/ROOM_MAS
 | `df_custom` | Daylight Factor with custom material reflectances |
 | `da_custom` | Daylight Autonomy with custom material reflectances |
 
+### Encoding Schemes
+
+Select the scheme with `"encoding_scheme"` in the request body (default: `v2`).
+
+| Scheme | Output | Description |
+|--------|--------|-------------|
+| `v1` | `uint8` RGBA 128×128 | Legacy RGB-style channel mapping; obstruction bar at right edge |
+| `v2` | `uint8` RGBA 128×128 | **Default.** HSV-style mapping; obstruction bar at right edge |
+| `v3` | `uint8` RGBA 128×128 | HSV-style, no obstruction bar |
+| `v4` | `uint8` RGBA 128×128 | HSV-style, compact bounding-box obstruction |
+| `v5` | `float32` single-channel 128×128 | Geometry-only mask: background=0, room=1, window=0.6 |
+
+V5 only requires `room_polygon` and window bounding-box coordinates — reflectance and obstruction parameters are not needed.
+
+See [Encoding Schemes](docs/encoding_schemes.md) for the full specification.
+
 ### Multi-Window Support
 
 For rooms with windows on different facades:
@@ -371,6 +389,7 @@ Comprehensive documentation available in the `docs/` directory:
 
 - **[API Reference](docs/api_reference.md)** - Endpoint documentation and examples
 - **[Request Schema](docs/request_schema.md)** - Complete parameter reference and validation
+- **[Encoding Schemes](docs/encoding_schemes.md)** - Full specification for V1–V5 encoding schemes
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
