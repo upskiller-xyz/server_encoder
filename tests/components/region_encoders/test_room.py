@@ -14,7 +14,7 @@ import unittest
 import numpy as np
 from src.components.region_encoders import RoomRegionEncoder
 from src.components.geometry import RoomPolygon
-from src.core import ModelType, ImageDimensions, RegionType
+from src.core import ModelType, ImageDimensions, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -145,11 +145,11 @@ class TestRoomDimensions(unittest.TestCase):
 
 
 class TestRoomColorEncoding(unittest.TestCase):
-    """Test room encodes colors correctly"""
+    """Test room encodes colors correctly using V1 mapping (no pixel overrides)"""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.encoder = RoomRegionEncoder()
+        """Set up test fixtures - use V1 to test raw channel encoding without overrides"""
+        self.encoder = RoomRegionEncoder(encoding_scheme=EncodingScheme.V1)
         self.model_type = ModelType.DF_DEFAULT
         self.room_polygon = [
             {"x": -1.5, "y": 0.0},

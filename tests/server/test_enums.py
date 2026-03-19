@@ -10,21 +10,36 @@ class TestServiceNameEnum:
         """Test ENCODING_SERVICE enum value"""
         assert ServiceName.ENCODING_SERVICE.value == "encoding_service"
 
-    def test_encoding_service_hsv_value(self):
-        """Test ENCODING_SERVICE_HSV enum value"""
-        assert ServiceName.ENCODING_SERVICE_HSV.value == "encoding_service_hsv"
+    def test_encoding_service_v1_value(self):
+        """Test ENCODING_SERVICE_V1 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V1.value == "encoding_service_v1"
 
-    def test_encoding_service_rgb_value(self):
-        """Test ENCODING_SERVICE_RGB enum value"""
-        assert ServiceName.ENCODING_SERVICE_RGB.value == "encoding_service_rgb"
+    def test_encoding_service_v2_value(self):
+        """Test ENCODING_SERVICE_V2 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V2.value == "encoding_service_v2"
+
+    def test_encoding_service_v3_value(self):
+        """Test ENCODING_SERVICE_V3 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V3.value == "encoding_service_v3"
+
+    def test_encoding_service_v4_value(self):
+        """Test ENCODING_SERVICE_V4 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V4.value == "encoding_service_v4"
+
+    def test_encoding_service_v5_value(self):
+        """Test ENCODING_SERVICE_V5 enum value"""
+        assert ServiceName.ENCODING_SERVICE_V5.value == "encoding_service_v5"
 
     def test_service_name_all_members(self):
         """Test all ServiceName members are defined"""
         members = [m for m in ServiceName]
-        assert len(members) == 3
+        assert len(members) == 6
         assert ServiceName.ENCODING_SERVICE in members
-        assert ServiceName.ENCODING_SERVICE_HSV in members
-        assert ServiceName.ENCODING_SERVICE_RGB in members
+        assert ServiceName.ENCODING_SERVICE_V1 in members
+        assert ServiceName.ENCODING_SERVICE_V2 in members
+        assert ServiceName.ENCODING_SERVICE_V3 in members
+        assert ServiceName.ENCODING_SERVICE_V4 in members
+        assert ServiceName.ENCODING_SERVICE_V5 in members
 
 
 class TestEndpointEnum:

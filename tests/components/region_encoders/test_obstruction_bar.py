@@ -13,7 +13,7 @@ Tests verify:
 import unittest
 import numpy as np
 from src.components.region_encoders import ObstructionBarEncoder
-from src.core import ModelType, ImageDimensions, RegionType
+from src.core import ModelType, ImageDimensions, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -172,11 +172,11 @@ class TestObstructionBarDimensions(unittest.TestCase):
 
 
 class TestObstructionBarColorEncoding(unittest.TestCase):
-    """Test obstruction bar encodes colors correctly"""
+    """Test obstruction bar encodes colors correctly using V1 mapping (no pixel overrides)"""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.encoder = ObstructionBarEncoder()
+        """Set up test fixtures - use V1 to test raw channel encoding without overrides"""
+        self.encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V1)
         self.model_type = ModelType.DF_DEFAULT
 
     def test_blue_channel_horizon_angle(self):
@@ -568,11 +568,11 @@ class TestObstructionBarIntegration(unittest.TestCase):
 
 
 class TestBalconyUndersideReflectance(unittest.TestCase):
-    """Test balcony_reflectance parameter encoding"""
+    """Test balcony_reflectance parameter encoding using V1 mapping (no pixel overrides)"""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.encoder = ObstructionBarEncoder()
+        """Set up test fixtures - use V1 to test raw channel encoding without overrides"""
+        self.encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V1)
         self.model_type = ModelType.DF_CUSTOM
         self.image = np.zeros((128, 128, 4), dtype=np.uint8)
 

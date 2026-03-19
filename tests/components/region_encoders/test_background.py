@@ -16,7 +16,7 @@ import unittest
 import numpy as np
 
 from src.components.region_encoders import BackgroundRegionEncoder
-from src.core import ModelType, ImageDimensions, RegionType
+from src.core import ModelType, ImageDimensions, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
 
 
@@ -59,11 +59,11 @@ class TestBackgroundConstruction(unittest.TestCase):
 
 
 class TestBackgroundColorEncoding(unittest.TestCase):
-    """Test background encodes colors correctly"""
+    """Test background encodes colors correctly using V1 channel mapping (no pixel overrides)"""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.encoder = BackgroundRegionEncoder()
+        """Set up test fixtures - use V1 encoding to test raw channel encoding without overrides"""
+        self.encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.V1)
         self.model_type = ModelType.DF_DEFAULT
 
     def test_green_channel_floor_height_above_terrain(self):

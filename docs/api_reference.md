@@ -28,7 +28,7 @@ Encode room geometry and parameters into daylight prediction images.
 ```json
 {
   "model_type": "df_default" | "da_default" | "df_custom" | "da_custom",
-  "encoding_scheme": "hsv" | "rgb" (optional, default: "hsv"),
+  "encoding_scheme": "v1" | "v2" | "v3" | "v4" | "v5" (optional, default: "v2"),
   "parameters": {
     // See request_schema.md for complete structure
   }
@@ -71,12 +71,39 @@ Encode room geometry and parameters into daylight prediction images.
 
 ## Encoding Schemes
 
-| Value | Description |
-|-------|-------------|
-| `hsv` | **HSV encoding scheme** (Default) - Parameters mapped to RGBA channels as Hue/Saturation/Value/Alpha. See [docs_internal/hsv_encoding.csv](../docs_internal/hsv_encoding.csv) for complete mapping. |
-| `rgb` | **RGB encoding scheme** (Legacy) - Original parameter-to-channel mapping. |
+| Value | Output | Description |
+|-------|--------|-------------|
+| `v1` | `uint8` RGBA | Legacy RGB-style channel mapping; obstruction bar at right edge |
+| `v2` | `uint8` RGBA | **Default.** HSV-style channel mapping; obstruction bar at right edge |
+| `v3` | `uint8` RGBA | HSV-style, no obstruction bar |
+| `v4` | `uint8` RGBA | HSV-style, compact bounding-box obstruction |
+| `v5` | `float32` single-channel | Geometry-only mask (background=0, room=1, window=0.6); no parameter encoding |
 
-**Note:** Both schemes use RGBA channels (Red, Green, Blue, Alpha). The "HSV" name refers to the parameter assignment convention (Hue/Saturation/Value), not color space conversion.
+**Note:** V1–V4 use RGBA channels (128×128×4 uint8). V5 returns a single-channel float32 array (128×128×1). See [encoding_schemes.md](encoding_schemes.md) for full details.
+
+### Python Example (V5 geometry-only)
+```python
+import requests, numpy as np, io
+
+payload = {
+    "model_type": "df_default",
+    "encoding_scheme": "v5",
+    "parameters": {
+        "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
+        "windows": {
+            "main_window": {
+                "x1": -0.6, "y1": 0.0, "z1": 0.9,
+                "x2":  0.6, "y2": 0.0, "z2": 2.4
+            }
+        }
+    }
+}
+
+response = requests.post("http://localhost:8081/encode", json=payload)
+npz = np.load(io.BytesIO(response.content))
+image = npz["main_window_image"]  # (128, 128, 1) float32
+print(image.shape, image.dtype)   # (128, 128, 1) float32
+```
 
 ## Examples
 
@@ -96,7 +123,7 @@ curl -X POST http://localhost:8081/encode \
   -o encoded_room_windows.zip
 ```
 
-### Python Example (HSV encoding - default)
+### Python Example (V2 encoding - default)
 ```python
 import requests
 import json
@@ -104,7 +131,7 @@ import json
 url = "http://localhost:8081/encode"
 payload = {
     "model_type": "df_default",
-    "encoding_scheme": "hsv",  # Optional - HSV is default
+    "encoding_scheme": "v2",  # Optional - v2 is default
     "parameters": {
         "height_roof_over_floor": 2.7,
         "floor_height_above_terrain": 3.0,
@@ -132,12 +159,12 @@ else:
     print(f"Error: {response.json()}")
 ```
 
-### Python Example (RGB encoding - legacy)
+### Python Example (V1 encoding - legacy RGB)
 ```python
-# Same as above, but specify "encoding_scheme": "rgb" for legacy encoding
+# Same as above, but specify "encoding_scheme": "v1" for legacy RGB encoding
 payload = {
     "model_type": "df_default",
-    "encoding_scheme": "rgb",  # Use RGB (legacy) encoding
+    "encoding_scheme": "v1",  # Legacy RGB channel mapping
     "parameters": {
         # ... same parameters as above
     }

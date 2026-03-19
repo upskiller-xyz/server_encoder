@@ -17,7 +17,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_background_df_default_hsv_defaults(self):
         """Test background region with DF_DEFAULT model uses HSV pixel overrides"""
-        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.V2)
 
         # Minimal parameters - only required, no optional reflectances/orientation
         params = {
@@ -46,7 +46,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_background_da_default_hsv_defaults(self):
         """Test background region with DA_DEFAULT model uses different HSV pixel overrides"""
-        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.V2)
 
         params = {
             "floor_height_above_terrain": 2.0,
@@ -73,7 +73,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_room_hsv_defaults_all_models(self):
         """Test room region HSV defaults are consistent across all model types"""
-        encoder = RoomRegionEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = RoomRegionEncoder(encoding_scheme=EncodingScheme.V2)
 
         for model_type in [ModelType.DF_DEFAULT, ModelType.DA_DEFAULT, ModelType.DF_CUSTOM, ModelType.DA_CUSTOM]:
             params = {
@@ -106,7 +106,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_obstruction_bar_hsv_defaults(self):
         """Test obstruction bar HSV defaults"""
-        encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V2)
 
         params = {
             "floor_height_above_terrain": 2.0,
@@ -132,7 +132,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_window_hsv_defaults(self):
         """Test window HSV defaults"""
-        encoder = WindowRegionEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = WindowRegionEncoder(encoding_scheme=EncodingScheme.V2)
 
         params = {
             "floor_height_above_terrain": 2.0,
@@ -155,9 +155,9 @@ class TestHSVDefaultPixelOverrides:
         if not np.array_equal(window_pixel, [0, 0, 0, 0]):  # If this is actually window
             assert window_pixel[3] == 230, f"Window alpha should be 230, got {window_pixel[3]}"
 
-    def test_rgb_encoding_no_overrides(self):
-        """Test that RGB encoding does NOT use HSV overrides"""
-        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.RGB)
+    def test_v1_encoding_no_overrides(self):
+        """Test that V1 encoding does NOT use V2/HSV-style overrides"""
+        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.V1)
 
         params = {
             "floor_height_above_terrain": 2.0,
@@ -181,7 +181,7 @@ class TestHSVDefaultPixelOverrides:
 
     def test_custom_model_uses_actual_encoding_for_custom_params(self):
         """Test that CUSTOM models use actual encoding when ✅ is shown in CSV"""
-        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.HSV)
+        encoder = BackgroundRegionEncoder(encoding_scheme=EncodingScheme.V2)
 
         params = {
             "floor_height_above_terrain": 2.0,

@@ -1,10 +1,11 @@
 from typing import Dict, Any, Optional, Tuple
-from src.core import ModelType, RegionType, ParameterName, PARAMETER_REGIONS
+from src.core import ModelType, RegionType, ParameterName, PARAMETER_REGIONS, EncodingScheme
 from src.models import EncodingParameters, EncodingResult
 from src.components.image_builder.room_image_builder import RoomImageBuilder
 from src.components.image_builder.parameter_normalizer import ParameterNormalizer
 from src.components.image_builder.geometry_rotator import GeometryRotator
 from src.components.geometry import WindowGeometry
+from src.components.region_encoders.obstruction_strategies import ObstructionStrategyFactory, ObstructionEncodingStrategy
 import numpy as np
 
 
@@ -12,11 +13,14 @@ class RoomImageDirector:
     """
     Director class for orchestrating image building (Director Pattern)
 
-    Provides high-level interface for building complete encoded images
+    Provides high-level interface for building complete encoded images.
+    Obstruction encoding is delegated to an ObstructionEncodingStrategy selected
+    from the builder's encoding scheme (V1/V2 → bar, V3 → none, V4 → bounding box).
     """
 
-    def __init__(self, builder: RoomImageBuilder):
+    def __init__(self, builder: RoomImageBuilder, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         self._builder = builder
+        self._obstruction_strategy: ObstructionEncodingStrategy = ObstructionStrategyFactory.create(encoding_scheme)
 
     def construct_full_image(
         self,
@@ -41,22 +45,25 @@ class RoomImageDirector:
         # Rotate geometry if window is not on south facade
         all_parameters = self._rotate_geometry_if_needed(all_parameters)
 
-        # Define region encoding order
+        # Encode background, room, and window regions
         region_order = [
             RegionType.BACKGROUND,
             RegionType.ROOM,
             RegionType.WINDOW,
-            RegionType.OBSTRUCTION_BAR
         ]
         params = [all_parameters.get_region(region).parameters for region in region_order]
-        # Encode regions in order using list comprehension
-        # EncodingParameters.from_dict(p) instead of p
         [self._builder.encode_region(region, p)
          for region, p in zip(region_order, params)
          if p]
 
-        # Build final image and get room mask
-        return self._builder.build(), self._builder.get_room_mask()
+        # Apply obstruction encoding via the selected strategy (V1/V2: bar, V3: none, V4: bounding box)
+        image = self._builder.build()
+        room_mask = self._builder.get_room_mask()
+        obstruction_params = all_parameters.get_region(RegionType.OBSTRUCTION_BAR).parameters
+        if obstruction_params:
+            image = self._obstruction_strategy.apply(image, room_mask, obstruction_params, model_type)
+
+        return image, room_mask
 
     def _rotate_geometry_if_needed(self, all_parameters: EncodingParameters) -> EncodingParameters:
         """

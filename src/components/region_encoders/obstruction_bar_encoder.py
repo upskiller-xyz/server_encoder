@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 import numpy as np
-from src.core import RegionType, ModelType, ChannelType, ParameterName, ImageDimensions, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES
+from src.core import RegionType, ModelType, ChannelType, ParameterName, ImageDimensions, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES, HSV_STYLE_SCHEMES
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
 from src.components.region_encoders.validation_helpers import validate_required_parameters
 from src.core import GRAPHICS_CONSTANTS
@@ -17,7 +17,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     - Alpha: balcony_reflectance (0-1 input → 0-1 normalized, default=0.8)
     """
 
-    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.RGB):
+    def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         super().__init__(RegionType.OBSTRUCTION_BAR, encoding_scheme)
 
     def encode_region(
@@ -123,7 +123,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
     def _encode_override(self, channel_type:ChannelType, bar_height:int,model_type:ModelType, is_using_default:bool)->np.ndarray | None:
 
         if (is_using_default and
-            self._encoding_scheme == EncodingScheme.HSV and
+            self._encoding_scheme in HSV_STYLE_SCHEMES and
             model_type is not None):
             override_key = (self._region_type, channel_type, model_type)
             if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
@@ -214,6 +214,46 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         missing = validate_required_parameters(self._region_type, parameters)
         if missing:
             raise ValueError(f"Missing required obstruction bar parameters: {', '.join(missing)}")
+
+    def compute_obstruction_vector(
+        self,
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+        height: int,
+    ) -> np.ndarray:
+        """
+        Compute the RGBA obstruction vector for a given height.
+
+        Returns a (height, 4) float64 array where each row holds the encoded
+        [R, G, B, A] obstruction values.  Intended for use by strategies that
+        need the obstruction data without rendering a bar on the image (e.g.
+        BoundingBoxObstructionStrategy).
+
+        Args:
+            parameters: Obstruction parameters (horizon, zenith, …)
+            model_type: Model type for HSV pixel-override lookup
+            height: Desired vector height in pixels
+
+        Returns:
+            (height, 4) float64 array of encoded obstruction values
+        """
+        channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
+        channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        vector = np.zeros((height, 4), dtype=np.float64)
+
+        for col_idx, channel_type in enumerate(channel_order):
+            encoded = self._encode_channel(
+                parameters, channel_map, channel_type, model_type,
+                bar_height=height, actual_bar_height=height,
+            )
+            encoded = np.squeeze(encoded)
+            if encoded.ndim == 0:
+                vector[:, col_idx] = float(encoded)
+            else:
+                length = min(len(encoded), height)
+                vector[:length, col_idx] = encoded[:length]
+
+        return vector
 
     @staticmethod
     def _upsample_values(values: list, expected_length: int) -> list:

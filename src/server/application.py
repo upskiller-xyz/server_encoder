@@ -10,6 +10,7 @@ from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.core.model_type_manager import ModelTypeManager
 from src.server.enums import HTTPStatus, Endpoint, ServiceName
 from src.server.services import EncodingServiceFactory
+from src.server.services.encoding_service_v5 import V5EncodingService
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
 from src.server.key_manager import KeyManager
@@ -39,21 +40,26 @@ class ServerApplication:
         self._app: Flask = Flask(app_name, template_folder=template_folder)
         CORS(self._app)
         self._controller: ServerController | None = None
-        self._encoding_service_hsv = EncodingServiceFactory.get_instance(EncodingScheme.HSV)
-        self._encoding_service_rgb = EncodingServiceFactory.get_instance(EncodingScheme.RGB)
+        self._encoding_service_v1 = EncodingServiceFactory.get_instance(EncodingScheme.V1)
+        self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
+        self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
+        self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
+        self._encoding_service_v5 = V5EncodingService()
         self._setup_dependencies()
         self._setup_routes()
 
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
-        # Encoding services (both RGB and HSV)
+        # Encoding services (V1, V2, V3, V4, V5)
 
-        # Services dict (default to HSV)
-        
+        # Services dict (default to V2)
         services = {
-            ServiceName.ENCODING_SERVICE.value: self._encoding_service_hsv,
-            ServiceName.ENCODING_SERVICE_HSV.value: self._encoding_service_hsv,
-            ServiceName.ENCODING_SERVICE_RGB.value: self._encoding_service_rgb
+            ServiceName.ENCODING_SERVICE.value: self._encoding_service_v2,
+            ServiceName.ENCODING_SERVICE_V1.value: self._encoding_service_v1,
+            ServiceName.ENCODING_SERVICE_V2.value: self._encoding_service_v2,
+            ServiceName.ENCODING_SERVICE_V3.value: self._encoding_service_v3,
+            ServiceName.ENCODING_SERVICE_V4.value: self._encoding_service_v4,
+            ServiceName.ENCODING_SERVICE_V5.value: self._encoding_service_v5,
         }
 
         # Controller
@@ -112,7 +118,7 @@ class ServerApplication:
         Expected JSON payload:
         {
             "model_type": "df_default",
-            "encoding_scheme": "hsv" (optional, defaults to hsv),
+            "encoding_scheme": "v2" (optional, defaults to v2),
             "parameters": {
                 ... encoding parameters ...
             }
@@ -122,8 +128,8 @@ class ServerApplication:
             tuple: (response, status_code) with NPZ file containing image and mask arrays
         """
 
-        # Parse encoding scheme (default to HSV)
-        encoding_scheme_str = data.get(ParameterName.ENCODING_SCHEME.value, EncodingScheme.HSV.value)
+        # Parse encoding scheme (default to V2)
+        encoding_scheme_str = data.get(ParameterName.ENCODING_SCHEME.value, EncodingScheme.V2.value)
         try:
             encoding_scheme = EncodingScheme(encoding_scheme_str)
         except ValueError:
@@ -133,11 +139,15 @@ class ServerApplication:
                 f"Valid schemes: {', '.join(valid_schemes)}"
             )
 
-        # Select encoding service based on encoding scheme
-        encoding_service = (
-            self._encoding_service_hsv if encoding_scheme == EncodingScheme.HSV
-            else self._encoding_service_rgb
-        )
+        # Select encoding service based on encoding scheme (Strategy Pattern)
+        encoding_service_map = {
+            EncodingScheme.V1: self._encoding_service_v1,
+            EncodingScheme.V2: self._encoding_service_v2,
+            EncodingScheme.V3: self._encoding_service_v3,
+            EncodingScheme.V4: self._encoding_service_v4,
+            EncodingScheme.V5: self._encoding_service_v5,
+        }
+        encoding_service = encoding_service_map.get(encoding_scheme, self._encoding_service_v2)
 
         # Handle versioned model types (e.g., "df_default_2.0.1" -> "df_default")
         if ResponseKey.MODEL_TYPE.value in data:
@@ -223,8 +233,8 @@ class ServerApplication:
         # Extract parameters from request (handle wrapper structure)
         parameters = data.get(ResponseKey.PARAMETERS.value, data)
 
-        # Calculate direction angles (use HSV service, but doesn't matter which)
-        direction_angles_rad = self._encoding_service_hsv.calculate_direction_angle(parameters)
+        # Calculate direction angles (use V2 service; encoding scheme is irrelevant here)
+        direction_angles_rad = self._encoding_service_v2.calculate_direction_angle(parameters)
 
         # Log success
         logger.info(
@@ -256,8 +266,8 @@ class ServerApplication:
         Returns:
             tuple: (response_dict, status_code) with reference_point for each window
         """
-        # Calculate reference points (use HSV service, but doesn't matter which)
-        reference_points = self._encoding_service_hsv.calculate_reference_point(data)
+        # Calculate reference points (use V2 service; encoding scheme is irrelevant here)
+        reference_points = self._encoding_service_v2.calculate_reference_point(data)
 
         # Log success
         logger.info(
@@ -298,8 +308,8 @@ class ServerApplication:
         Returns:
             tuple: (response_dict, status_code) with external_reference_point for each window
         """
-        # Calculate external reference points (use HSV service, but doesn't matter which)
-        external_reference_points = self._encoding_service_hsv.calculate_external_reference_point(data)
+        # Calculate external reference points (use V2 service; encoding scheme is irrelevant here)
+        external_reference_points = self._encoding_service_v2.calculate_external_reference_point(data)
 
         # Log success
         logger.info(

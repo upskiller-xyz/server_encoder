@@ -1,6 +1,7 @@
 from typing import Dict
 from src.core import EncodingScheme
 from src.server.services.encoding_service import EncodingService
+from src.server.services.encoding_service_v5 import V5EncodingService
 
 
 class EncodingServiceFactory:
@@ -9,19 +10,24 @@ class EncodingServiceFactory:
     _instances: Dict[EncodingScheme, EncodingService] = {}
 
     @classmethod
-    def get_instance(cls,  encoding_scheme: EncodingScheme = EncodingScheme.RGB) -> EncodingService:
+    def get_instance(cls, encoding_scheme: EncodingScheme = EncodingScheme.V2) -> EncodingService:
         """
-        Get singleton instance of encoding service for specified encoding scheme
+        Get singleton instance of encoding service for the specified encoding scheme.
+
+        V5 uses a dedicated V5EncodingService; all other schemes use the base
+        EncodingService.
 
         Args:
-            logger: Logger instance
-            encoding_scheme: Encoding scheme to use (default: HSV)
+            encoding_scheme: Encoding scheme to use (default: V2)
 
         Returns:
-            EncodingService instance
+            EncodingService instance for the requested scheme
         """
         if encoding_scheme not in cls._instances:
-            cls._instances[encoding_scheme] = EncodingService(encoding_scheme)
+            if encoding_scheme == EncodingScheme.V5:
+                cls._instances[encoding_scheme] = V5EncodingService()
+            else:
+                cls._instances[encoding_scheme] = EncodingService(encoding_scheme)
         return cls._instances[encoding_scheme]
 
     @classmethod

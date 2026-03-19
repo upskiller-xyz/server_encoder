@@ -13,7 +13,7 @@ def example_encode_validation():
     # Valid request
     valid_request = {
         "model_type": "df_default",
-        "encoding_scheme": "hsv",
+        "encoding_scheme": "v2",
         "parameters": {
             "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "height_roof_over_floor": 2.7,

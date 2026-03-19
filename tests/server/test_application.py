@@ -138,8 +138,11 @@ class TestServerApplicationDependencies:
         """Test that ServerApplication initializes encoding services"""
         server_app = ServerApplication()
         # Check that encoding services are initialized (private attributes)
-        assert server_app._encoding_service_hsv is not None
-        assert server_app._encoding_service_rgb is not None
+        assert server_app._encoding_service_v1 is not None
+        assert server_app._encoding_service_v2 is not None
+        assert server_app._encoding_service_v3 is not None
+        assert server_app._encoding_service_v4 is not None
+        assert server_app._encoding_service_v5 is not None
 
     def test_app_initializes_model_definitions(self):
         """Test that ServerApplication initializes model definitions via controller"""
@@ -265,7 +268,7 @@ class TestServerApplicationIntegration:
     def test_server_app_has_required_attributes(self):
         """Test that ServerApplication has all required attributes"""
         server_app = ServerApplication()
-        required_attrs = ['_app', '_controller', '_encoding_service_hsv', '_encoding_service_rgb']
+        required_attrs = ['_app', '_controller', '_encoding_service_v1', '_encoding_service_v2', '_encoding_service_v3', '_encoding_service_v4', '_encoding_service_v5']
         
         for attr in required_attrs:
             assert hasattr(server_app, attr), f"Missing attribute: {attr}"

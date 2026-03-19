@@ -23,16 +23,43 @@ class TestEncodeRequest:
         )
         assert request.model_type == "df_default"
         assert request.parameters == {"window_orientation": 3.14}
-        assert request.encoding_scheme == "hsv"
+        assert request.encoding_scheme == "v2"
 
-    def test_valid_encode_request_with_rgb(self):
-        """Test creating valid EncodeRequest with RGB encoding scheme"""
+    def test_valid_encode_request_with_v1(self):
+        """Test creating valid EncodeRequest with V1 encoding scheme"""
         request = EncodeRequest(
             model_type="da_custom",
             parameters={"facade_reflectance": 0.5},
-            encoding_scheme="rgb"
+            encoding_scheme="v1"
         )
-        assert request.encoding_scheme == "rgb"
+        assert request.encoding_scheme == "v1"
+
+    def test_valid_encode_request_with_v3(self):
+        """Test creating valid EncodeRequest with V3 encoding scheme"""
+        request = EncodeRequest(
+            model_type="df_default",
+            parameters={"facade_reflectance": 0.5},
+            encoding_scheme="v3"
+        )
+        assert request.encoding_scheme == "v3"
+
+    def test_valid_encode_request_with_v4(self):
+        """Test creating valid EncodeRequest with V4 encoding scheme"""
+        request = EncodeRequest(
+            model_type="df_default",
+            parameters={"facade_reflectance": 0.5},
+            encoding_scheme="v4"
+        )
+        assert request.encoding_scheme == "v4"
+
+    def test_valid_encode_request_with_v5(self):
+        """Test creating valid EncodeRequest with V5 encoding scheme"""
+        request = EncodeRequest(
+            model_type="df_default",
+            parameters={"room_polygon": [[-3, 0], [3, 0], [3, 5], [-3, 5]]},
+            encoding_scheme="v5"
+        )
+        assert request.encoding_scheme == "v5"
 
     def test_encode_request_missing_model_type(self):
         """Test EncodeRequest validation fails without model_type"""
@@ -49,12 +76,12 @@ class TestEncodeRequest:
         request = EncodeRequest(
             model_type="df_default",
             parameters={"test": "value"},
-            encoding_scheme="hsv"
+            encoding_scheme="v2"
         )
         data = request.model_dump()
         assert data["model_type"] == "df_default"
         assert data["parameters"] == {"test": "value"}
-        assert data["encoding_scheme"] == "hsv"
+        assert data["encoding_scheme"] == "v2"
 
 
 class TestCalculateDirectionRequest:
