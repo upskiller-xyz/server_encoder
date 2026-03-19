@@ -18,12 +18,11 @@ import cv2
 import numpy as np
 
 from src.core import ModelType, ParameterName, RegionType, V5_MASK_VALUES
-from src.core.enums import EncodingScheme, PARAMETER_REGIONS
+from src.core.enums import PARAMETER_REGIONS
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
 from src.components.geometry import RoomPolygon, WindowGeometry
 from src.components.image_builder.parameter_normalizer import ParameterNormalizer
 from src.components.image_builder.geometry_rotator import GeometryRotator
-from src.components.region_encoders.window_region_encoder import WindowRegionEncoder
 from src.models import EncodingParameters, EncodingResult
 
 logger = logging.getLogger(__name__)
@@ -38,9 +37,6 @@ class V5ImageDirector:
     """
 
     IMAGE_SIZE = 128
-
-    # Reuse a single WindowRegionEncoder instance for pixel-bound calculation
-    _window_encoder: WindowRegionEncoder = WindowRegionEncoder(EncodingScheme.V2)
 
     def construct_full_image(
         self,
@@ -130,23 +126,30 @@ class V5ImageDirector:
             return
 
         h, w = image.shape[:2]
-        dummy_rgba = np.zeros((h, w, 4), dtype=np.uint8)
 
         try:
-            # Strip direction_angle and window_geometry so WindowGeometry uses the
-            # max(x-span, y-span) fallback for window_width_3d.  After rotation the
-            # direction_angle still points in the pre-rotation direction, which would
-            # cause window_width_3d to project onto the wrong axis and return ≈0.
-            coords_only = {
-                k: v for k, v in window_params.items()
-                if k not in (
-                    ParameterName.DIRECTION_ANGLE.value,
-                    ParameterName.WINDOW_GEOMETRY.value,
-                )
-            }
-            x_start, y_start, x_end, y_end = self._window_encoder.get_pixel_bounds(
-                dummy_rgba, coords_only
+            # Build WindowGeometry from the (possibly rotated) scalar coordinates,
+            # intentionally omitting direction_angle.  After facade rotation,
+            # direction_angle still points in the original world direction, so
+            # window_width_3d would project onto the wrong axis and return ≈0.
+            # Without direction_angle, WindowGeometry falls back to
+            # max(x-span, y-span), which correctly gives the facade width.
+            window_geom = WindowGeometry(
+                x1=float(window_params[ParameterName.X1.value]),
+                y1=float(window_params[ParameterName.Y1.value]),
+                z1=float(window_params[ParameterName.Z1.value]),
+                x2=float(window_params[ParameterName.X2.value]),
+                y2=float(window_params[ParameterName.Y2.value]),
+                z2=float(window_params[ParameterName.Z2.value]),
             )
+            x_start, y_start, x_end, y_end = window_geom.get_pixel_bounds(image_size=w)
+
+            border = GRAPHICS_CONSTANTS.BORDER_PX
+            x_start = max(x_start, border)
+            y_start = max(y_start, border)
+            x_end = min(x_end, w - border)
+            y_end = min(y_end, h - border)
+
             image[y_start:y_end, x_start:x_end] = V5_MASK_VALUES[RegionType.WINDOW]
         except (KeyError, ValueError) as exc:
             logger.warning("V5 window drawing skipped: %s", exc)
