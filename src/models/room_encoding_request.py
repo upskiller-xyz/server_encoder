@@ -44,9 +44,10 @@ class RoomEncodingRequest:
     # Model configuration
     model_type: ModelType
 
-    # Required room parameters
-    height_roof_over_floor: float
-    floor_height_above_terrain: float
+    # Room height parameters — required for V1–V4, unused by V5 (optional here;
+    # encoding-scheme-specific validation enforces them where needed)
+    height_roof_over_floor: Optional[float] = None
+    floor_height_above_terrain: Optional[float] = None
 
     # Room geometry (optional but recommended)
     room_polygon: Optional[List[List[float]]] = None
@@ -72,12 +73,12 @@ class RoomEncodingRequest:
         Returns:
             (is_valid, error_message) tuple
         """
-        # Validate roof height
-        if self.height_roof_over_floor <= 0:
+        # Validate roof height when provided
+        if self.height_roof_over_floor is not None and self.height_roof_over_floor <= 0:
             return False, f"height_roof_over_floor must be positive, got {self.height_roof_over_floor}"
 
-        # Validate floor height
-        if self.floor_height_above_terrain < 0:
+        # Validate floor height when provided
+        if self.floor_height_above_terrain is not None and self.floor_height_above_terrain < 0:
             return False, f"floor_height_above_terrain must be non-negative, got {self.floor_height_above_terrain}"
 
         # Validate room polygon if provided
@@ -115,10 +116,11 @@ class RoomEncodingRequest:
         Returns:
             Flat dictionary with all parameters
         """
-        result = {
-            ParameterName.HEIGHT_ROOF_OVER_FLOOR.value: self.height_roof_over_floor,
-            ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value: self.floor_height_above_terrain,
-        }
+        result: Dict[str, Any] = {}
+        if self.height_roof_over_floor is not None:
+            result[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = self.height_roof_over_floor
+        if self.floor_height_above_terrain is not None:
+            result[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = self.floor_height_above_terrain
 
         # Add room polygon if present
         if self.room_polygon is not None:
@@ -178,11 +180,9 @@ class RoomEncodingRequest:
         # Get parameters section
         params = data.get(ParameterName.PARAMETERS.value, {})
 
-        # Parse required fields
-        if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value not in params:
-            raise ValueError(f"Missing required field: {ParameterName.HEIGHT_ROOF_OVER_FLOOR.value}")
-        if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value not in params:
-            raise ValueError(f"Missing required field: {ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value}")
+        # height_roof_over_floor and floor_height_above_terrain are optional here;
+        # encoding-scheme-specific validation (validate_parameters) enforces them
+        # for V1–V4 and skips them for V5.
 
         # Parse windows
         windows = {}
@@ -205,8 +205,8 @@ class RoomEncodingRequest:
 
         return cls(
             model_type=model_type,
-            height_roof_over_floor=float(params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value]),
-            floor_height_above_terrain=float(params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]),
+            height_roof_over_floor=float(params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value]) if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value in params else None,
+            floor_height_above_terrain=float(params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]) if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in params else None,
             room_polygon=params.get(ParameterName.ROOM_POLYGON.value),
             windows=windows,
             reflectance=reflectance,

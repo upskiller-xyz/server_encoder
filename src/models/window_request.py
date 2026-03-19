@@ -26,8 +26,8 @@ class WindowRequest:
     y2: float
     z2: float
 
-    # Required window parameters
-    window_frame_ratio: float
+    # Required for V1–V4; unused by V5 (optional here, enforced by validate_parameters)
+    window_frame_ratio: Optional[float] = None
 
     # Optional parameters (auto-calculated or defaulted)
     window_sill_height: Optional[float] = None
@@ -49,8 +49,8 @@ class WindowRequest:
         Returns:
             (is_valid, error_message) tuple
         """
-        # Validate frame ratio
-        if not 0 <= self.window_frame_ratio <= 1:
+        # Validate frame ratio when provided
+        if self.window_frame_ratio is not None and not 0 <= self.window_frame_ratio <= 1:
             return False, f"window_frame_ratio must be between 0 and 1, got {self.window_frame_ratio}"
 
         # Validate window dimensions are positive
@@ -100,8 +100,9 @@ class WindowRequest:
             ParameterName.X2.value: self.x2,
             ParameterName.Y2.value: self.y2,
             ParameterName.Z2.value: self.z2,
-            ParameterName.WINDOW_FRAME_RATIO.value: self.window_frame_ratio,
         }
+        if self.window_frame_ratio is not None:
+            result[ParameterName.WINDOW_FRAME_RATIO.value] = self.window_frame_ratio
 
         # Add optional parameters if present
         if self.window_sill_height is not None:
@@ -142,7 +143,6 @@ class WindowRequest:
             ParameterName.X2.value,
             ParameterName.Y2.value,
             ParameterName.Z2.value,
-            ParameterName.WINDOW_FRAME_RATIO.value
         ]
         missing = [field for field in required if field not in data]
         if missing:
@@ -158,7 +158,7 @@ class WindowRequest:
             x2=float(data[ParameterName.X2.value]),
             y2=float(data[ParameterName.Y2.value]),
             z2=float(data[ParameterName.Z2.value]),
-            window_frame_ratio=float(data[ParameterName.WINDOW_FRAME_RATIO.value]),
+            window_frame_ratio=float(data[ParameterName.WINDOW_FRAME_RATIO.value]) if ParameterName.WINDOW_FRAME_RATIO.value in data else None,
             window_sill_height=float(data[ParameterName.WINDOW_SILL_HEIGHT.value]) if ParameterName.WINDOW_SILL_HEIGHT.value in data else None,
             window_height=float(data[ParameterName.WINDOW_HEIGHT.value]) if ParameterName.WINDOW_HEIGHT.value in data else None,
             reflectance=reflectance,

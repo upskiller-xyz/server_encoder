@@ -50,37 +50,13 @@ class V5EncodingService(EncodingService):
         """
         Parse a V5 encode request.
 
-        V5 only requires room geometry.  Inject neutral defaults for fields
-        that WindowRequest.from_dict() and RoomEncodingRequest.from_dict()
-        require but that V5 never uses:
-        - height_roof_over_floor, floor_height_above_terrain (room-level)
-        - window_frame_ratio (window-level; only required window field beyond coordinates)
+        height_roof_over_floor, floor_height_above_terrain, and window_frame_ratio
+        are now Optional in the shared data models so from_dict() accepts V5
+        geometry-only requests without any injection of fake defaults.
+        Encoding-scheme-specific validate_parameters() enforces those fields for
+        V1–V4 and skips them for V5.
         """
-        params = dict(data.get(ParameterName.PARAMETERS.value, {}))
-
-        # Room-level defaults
-        if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value not in params:
-            params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = 1.0
-        if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value not in params:
-            params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = 0.0
-
-        # Window-level defaults: window_frame_ratio is the only required window
-        # field (beyond x1/y1/z1/x2/y2/z2) checked by WindowRequest.from_dict()
-        windows = params.get(ParameterName.WINDOWS.value)
-        if isinstance(windows, dict):
-            patched_windows = {}
-            for window_id, window_params in windows.items():
-                wp = dict(window_params)
-                if ParameterName.WINDOW_FRAME_RATIO.value not in wp:
-                    wp[ParameterName.WINDOW_FRAME_RATIO.value] = 0.0
-                patched_windows[window_id] = wp
-            params[ParameterName.WINDOWS.value] = patched_windows
-        elif ParameterName.WINDOW_FRAME_RATIO.value not in params:
-            # Flat (single-window) structure
-            params[ParameterName.WINDOW_FRAME_RATIO.value] = 0.0
-
-        patched_data = {**data, ParameterName.PARAMETERS.value: params}
-        return super().parse_request(patched_data)
+        return super().parse_request(data)
 
     # ------------------------------------------------------------------
     # Validation (geometry-only)
