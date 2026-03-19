@@ -133,8 +133,19 @@ class V5ImageDirector:
         dummy_rgba = np.zeros((h, w, 4), dtype=np.uint8)
 
         try:
+            # Strip direction_angle and window_geometry so WindowGeometry uses the
+            # max(x-span, y-span) fallback for window_width_3d.  After rotation the
+            # direction_angle still points in the pre-rotation direction, which would
+            # cause window_width_3d to project onto the wrong axis and return ≈0.
+            coords_only = {
+                k: v for k, v in window_params.items()
+                if k not in (
+                    ParameterName.DIRECTION_ANGLE.value,
+                    ParameterName.WINDOW_GEOMETRY.value,
+                )
+            }
             x_start, y_start, x_end, y_end = self._window_encoder.get_pixel_bounds(
-                dummy_rgba, dict(window_params)
+                dummy_rgba, coords_only
             )
             image[y_start:y_end, x_start:x_end] = V5_MASK_VALUES[RegionType.WINDOW]
         except (KeyError, ValueError) as exc:
