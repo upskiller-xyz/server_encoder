@@ -8,6 +8,7 @@ is applied to the image for a given encoding scheme:
   V3       : NoObstructionStrategy    – obstruction data is omitted entirely
   V4       : BoundingBoxObstructionStrategy – obstruction vector multiplied element-wise
                                              into the floor-plan bounding box region
+  V6       : V6BoundingBoxObstructionStrategy – like V4 but for single-channel float32 images
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
@@ -143,12 +144,68 @@ class BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         return image
 
 
+class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
+    """
+    V6 obstruction strategy.
+
+    Identical bounding-box derivation as V4, but the image is a single-channel
+    float32 mask instead of a 4-channel uint8 image.  The 4-channel obstruction
+    vector is collapsed to a per-row scalar factor (mean of normalised channels)
+    and multiplied element-wise into the bounding-box region of the float32 image.
+    """
+
+    def __init__(self) -> None:
+        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        self._encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V2)
+
+    def apply(
+        self,
+        image: np.ndarray,
+        room_mask: Optional[np.ndarray],
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+    ) -> np.ndarray:
+        if room_mask is None or not np.any(room_mask):
+            return image
+
+        rows = np.any(room_mask, axis=1)
+        cols = np.any(room_mask, axis=0)
+        if not rows.any() or not cols.any():
+            return image
+
+        row_indices = np.where(rows)[0]
+        col_indices = np.where(cols)[0]
+        min_y = int(row_indices[0])
+        max_y = int(row_indices[-1]) + 1
+        min_x = int(col_indices[0])
+        max_x = int(col_indices[-1]) + 1
+
+        bbox_height = max_y - min_y
+        if bbox_height <= 0:
+            return image
+
+        # Compute 4-channel obstruction vector and collapse to a per-row scalar
+        obs_vector = self._encoder.compute_obstruction_vector(
+            parameters, model_type, bbox_height
+        )  # (bbox_height, 4) float64, values in [0, 255]
+        obs_factor = (obs_vector.mean(axis=1) / 255.0).astype(np.float32)  # (bbox_height,)
+
+        # Broadcast: (bbox_height, 1, 1) over (bbox_height, W, 1)
+        obs_factor_3d = obs_factor[:, np.newaxis, np.newaxis]
+
+        region = image[min_y:max_y, min_x:max_x, :]
+        image[min_y:max_y, min_x:max_x, :] = np.clip(region * obs_factor_3d, 0.0, 1.0)
+
+        return image
+
+
 # Factory map: EncodingScheme -> strategy constructor (Strategy Pattern)
 _STRATEGY_MAP = {
     EncodingScheme.V1: lambda: ObstructionBarStrategy(EncodingScheme.V1),
     EncodingScheme.V2: lambda: ObstructionBarStrategy(EncodingScheme.V2),
     EncodingScheme.V3: lambda: NoObstructionStrategy(),
     EncodingScheme.V4: lambda: BoundingBoxObstructionStrategy(),
+    EncodingScheme.V6: lambda: V6BoundingBoxObstructionStrategy(),
 }
 
 
