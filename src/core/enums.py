@@ -263,6 +263,7 @@ class EncodingScheme(str, Enum):
     V3 = "v3"  # HSV-style: no obstruction bar
     V4 = "v4"  # HSV-style: no obstruction bar, obstruction vector applied to floor plan bounding box
     V5 = "v5"  # Geometric mask: single-channel float32 (background=0, room=1, window=0.6)
+    V6 = "v6"  # Geometric mask like V5 + V4 bounding-box obstruction; scalar params returned as a vector
 
 
 # Default parameter values map (Strategy Pattern)
@@ -297,6 +298,16 @@ V5_MASK_VALUES = {
     RegionType.ROOM: 1.0,
     RegionType.WINDOW: 0.6,
 }
+
+# V6 reuses V5 mask values for the image (same geometric mask + obstruction applied to bbox).
+# The following parameters are NOT encoded into the image channels; instead they are returned
+# as a separate 1-D float32 static vector (in this order).
+V6_STATIC_PARAMS = (
+    ParameterName.WINDOW_SILL_HEIGHT,
+    ParameterName.HEIGHT_ROOF_OVER_FLOOR,
+    ParameterName.WINDOW_FRAME_RATIO,
+    ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
+)
 
 
 # Default pixel values for HSV-style encoding schemes (Strategy Pattern)

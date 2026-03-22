@@ -15,6 +15,7 @@ from src.core.enums import (
     HSV_DEFAULT_PIXEL_OVERRIDES,
     HSV_STYLE_SCHEMES,
     V5_MASK_VALUES,
+    V6_STATIC_PARAMS,
 )
 from src.core.exceptions import (
     WindowEncoderException,
@@ -44,6 +45,7 @@ __all__ = [
     "HSV_DEFAULT_PIXEL_OVERRIDES",
     "HSV_STYLE_SCHEMES",
     "V5_MASK_VALUES",
+    "V6_STATIC_PARAMS",
     "WindowEncoderException",
     "GeometryValidationError",
     "WindowNotOnPolygonError",

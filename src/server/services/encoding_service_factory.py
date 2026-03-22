@@ -2,6 +2,7 @@ from typing import Dict
 from src.core import EncodingScheme
 from src.server.services.encoding_service import EncodingService
 from src.server.services.encoding_service_v5 import V5EncodingService
+from src.server.services.encoding_service_v6 import V6EncodingService
 
 
 class EncodingServiceFactory:
@@ -14,7 +15,7 @@ class EncodingServiceFactory:
         """
         Get singleton instance of encoding service for the specified encoding scheme.
 
-        V5 uses a dedicated V5EncodingService; all other schemes use the base
+        V5 and V6 use dedicated service classes; all other schemes use the base
         EncodingService.
 
         Args:
@@ -26,6 +27,8 @@ class EncodingServiceFactory:
         if encoding_scheme not in cls._instances:
             if encoding_scheme == EncodingScheme.V5:
                 cls._instances[encoding_scheme] = V5EncodingService()
+            elif encoding_scheme == EncodingScheme.V6:
+                cls._instances[encoding_scheme] = V6EncodingService()
             else:
                 cls._instances[encoding_scheme] = EncodingService(encoding_scheme)
         return cls._instances[encoding_scheme]
