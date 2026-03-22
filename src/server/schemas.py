@@ -1,6 +1,6 @@
 """API request/response models using Pydantic for type safety and validation in Flask"""
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import io
 import numpy as np
 from flask import send_file
@@ -19,18 +19,17 @@ class EncodeRequest(BaseModel):
     parameters: Dict[str, Any] = Field(..., description="Encoding parameters")
     encoding_scheme: str = Field(default="v2", description="Encoding scheme: 'v1' (RGB), 'v2' (HSV, default), 'v3' (no obstruction bar), 'v4' (bounding box obstruction), 'v5' (geometric mask, single-channel float32)")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "model_type": "df_default",
-                "encoding_scheme": "v2",
-                "parameters": {
-                    "window_orientation": 3.14159,
-                    "facade_reflectance": 1.0,
-                    "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]]
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "model_type": "df_default",
+            "encoding_scheme": "v2",
+            "parameters": {
+                "window_orientation": 3.14159,
+                "facade_reflectance": 1.0,
+                "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]]
             }
         }
+    })
 
 
 class CalculateDirectionRequest(BaseModel):
@@ -48,20 +47,19 @@ class CalculateDirectionRequest(BaseModel):
         description="Windows with coordinates"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
-                "windows": {
-                    "window1": {
-                        "x1": -0.6,
-                        "y1": 0.0,
-                        "x2": 0.6,
-                        "y2": 0.0
-                    }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
+            "windows": {
+                "window1": {
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "x2": 0.6,
+                    "y2": 0.0
                 }
             }
         }
+    })
 
 
 class ReferencePointRequest(BaseModel):
@@ -79,22 +77,21 @@ class ReferencePointRequest(BaseModel):
         description="Windows with 3D coordinates"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
-                "windows": {
-                    "window1": {
-                        "x1": -0.6,
-                        "y1": 0.0,
-                        "z1": 1.0,
-                        "x2": 0.6,
-                        "y2": 0.4,
-                        "z2": 2.5
-                    }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
+            "windows": {
+                "window1": {
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.4,
+                    "z2": 2.5
                 }
             }
         }
+    })
 
 
 class DirectionAngleResponse(BaseModel):
@@ -108,15 +105,14 @@ class DirectionAngleResponse(BaseModel):
         description="Direction angle in radians for each window"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "direction_angle": {
-                    "window1": 3.14159,
-                    "window2": 1.5708
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "direction_angle": {
+                "window1": 3.14159,
+                "window2": 1.5708
             }
         }
+    })
 
 
 class ReferencePoint(BaseModel):
@@ -137,15 +133,14 @@ class ReferencePointResponse(BaseModel):
         description="Reference point coordinates for each window"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "reference_point": {
-                    "window1": {"x": 0.0, "y": 0.0, "z": 1.75},
-                    "window2": {"x": 2.0, "y": 1.0, "z": 1.5}
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "reference_point": {
+                "window1": {"x": 0.0, "y": 0.0, "z": 1.75},
+                "window2": {"x": 2.0, "y": 1.0, "z": 1.5}
             }
         }
+    })
 
 
 class ExternalReferencePointResponse(BaseModel):
@@ -160,15 +155,14 @@ class ExternalReferencePointResponse(BaseModel):
         description="External reference point coordinates for each window"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "external_reference_point": {
-                    "window1": {"x": 0.3, "y": 0.4, "z": 1.75},
-                    "window2": {"x": 2.3, "y": 1.4, "z": 1.5}
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "external_reference_point": {
+                "window1": {"x": 0.3, "y": 0.4, "z": 1.75},
+                "window2": {"x": 2.3, "y": 1.4, "z": 1.5}
             }
         }
+    })
 
 
 class ErrorResponse(BaseModel):
@@ -180,13 +174,12 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     error_type: Optional[str] = Field(default=None, description="Error type/class name")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "error": "Invalid encoding_scheme 'invalid'. Valid schemes: hsv, rgb",
-                "error_type": "BadRequest"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "error": "Invalid encoding_scheme 'invalid'. Valid schemes: hsv, rgb",
+            "error_type": "BadRequest"
         }
+    })
 
 
 class EncoderResponse:

@@ -13,6 +13,7 @@ V6 combines:
 from typing import Any, Dict, Optional, Tuple
 import logging
 
+import cv2
 import numpy as np
 
 from src.core import ModelType, ParameterName, RegionType
@@ -25,8 +26,6 @@ from src.components.parameter_encoders.encoder_factory import EncoderFactory
 from src.components.calculators.parameter_calculator_registry import ParameterCalculatorRegistry
 from src.components.region_encoders.obstruction_strategies import V6BoundingBoxObstructionStrategy
 from src.models import EncodingParameters, EncodingResult
-
-import cv2
 
 logger = logging.getLogger(__name__)
 

@@ -162,7 +162,7 @@ class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         self,
         image: np.ndarray,
         room_mask: Optional[np.ndarray],
-        parameters: dict,
+        parameters: Dict[str, Any],
         model_type: ModelType,
     ) -> np.ndarray:
         if room_mask is None or not np.any(room_mask):
