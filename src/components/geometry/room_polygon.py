@@ -68,12 +68,29 @@ class RoomPolygon:
         rotated_vertices = list(rotated_poly.exterior.coords)[:-1]  # Remove duplicate last point
         return RoomPolygon(rotated_vertices)
 
-    def get_edges(self):
+    def get_edges(self) -> List[ShapelyLine]:
         polygon_coords = self.get_coords()
 
         return [ShapelyLine([
             polygon_coords[i],
             polygon_coords[(i + 1) % len(polygon_coords)]]) for i in range(len(polygon_coords))]
+
+    def boundary_contains(self, line: ShapelyLine, tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE) -> bool:
+        """
+        Check if a line lies on the polygon boundary as a whole.
+
+        Unlike checking individual segments, this correctly handles lines
+        that span across colinear segments sharing a vertex.
+
+        Args:
+            line: Shapely LineString to check
+            tolerance: Distance tolerance in meters
+
+        Returns:
+            True if the line is contained within the buffered polygon boundary
+        """
+        polygon = ShapelyPolygon(self.get_coords())
+        return polygon.boundary.buffer(tolerance).contains(line)
 
     def get_coords(self):
         return [(v.x, v.y) for v in self._vertices]
@@ -105,15 +122,14 @@ class RoomPolygon:
         """
 
 
-        edges = [self._build_edge(i) for i in range(len(self._vertices))]
-        edges = [(i, edge) for i, edge in enumerate(edges) if edge.buffer(tolerance).contains(window_line)]
-
-        if len(edges) < 1:
+        if not self.boundary_contains(window_line, tolerance):
             raise ValueError(
             f"Window at ({window_line.coords[0][0]:.2f}, {window_line.coords[0][1]:.2f}) to ({window_line.coords[1][0]:.2f}, {window_line.coords[1][1]:.2f}) "
             f"does not lie on any polygon edge")
 
-        ind, edge = edges[0]
+        all_edges = [self._build_edge(i) for i in range(len(self._vertices))]
+        overlapping = [(i, edge) for i, edge in enumerate(all_edges) if edge.buffer(tolerance).intersects(window_line)]
+        ind, edge = overlapping[0]
         v1 = self._vertices[ind]
         v2 = self._vertices[(ind + 1) % len(self._vertices)]
         edge_angle = math.atan2(v2.y - v1.y, v2.x - v1.x) * 180 / math.pi

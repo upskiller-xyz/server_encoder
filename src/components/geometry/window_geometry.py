@@ -327,10 +327,19 @@ class WindowGeometry:
 
     def get_room_edge(self, room_polygon, tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE) -> list:
         w_edges = self.get_candidate_edges()
-        # Find which polygon edge contains one of the window edges
+
+        boundary_matched = [
+            (j, w_edge) for j, w_edge in enumerate(w_edges)
+            if room_polygon.boundary_contains(w_edge, tolerance)
+        ]
 
         poly_edges = room_polygon.get_edges()
-        res = [(edge, i, j) for i, edge in enumerate(poly_edges) for j, w_edge in enumerate(w_edges) if edge.buffer(tolerance).contains(w_edge)]
+        res = [
+            (edge, i, j)
+            for j, w_edge in boundary_matched
+            for i, edge in enumerate(poly_edges)
+            if edge.buffer(tolerance).intersects(w_edge)
+        ]
         return res
 
     def _project_to_polygon_edge(
