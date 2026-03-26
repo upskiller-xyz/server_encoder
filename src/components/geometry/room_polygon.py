@@ -128,7 +128,11 @@ class RoomPolygon:
             f"does not lie on any polygon edge")
 
         all_edges = [self._build_edge(i) for i in range(len(self._vertices))]
-        overlapping = [(i, edge) for i, edge in enumerate(all_edges) if edge.buffer(tolerance).intersects(window_line)]
+        overlapping = [
+            (i, edge) for i, edge in enumerate(all_edges)
+            if edge.distance(window_line) <= tolerance
+            and edge.intersection(window_line).length > 0
+        ]
         ind, edge = overlapping[0]
         v1 = self._vertices[ind]
         v2 = self._vertices[(ind + 1) % len(self._vertices)]

@@ -338,7 +338,8 @@ class WindowGeometry:
             (edge, i, j)
             for j, w_edge in boundary_matched
             for i, edge in enumerate(poly_edges)
-            if edge.buffer(tolerance).intersects(w_edge)
+            if edge.distance(w_edge) <= tolerance
+            and edge.intersection(w_edge).length > 0
         ]
         return res
 
