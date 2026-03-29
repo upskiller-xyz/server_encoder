@@ -1,5 +1,4 @@
 from typing import List, Tuple, Union
-import math
 from src.components.geometry.window_geometry import WindowGeometry
 from src.components.geometry.room_polygon import RoomPolygon
 from src.core import ParameterName
@@ -39,28 +38,19 @@ class WindowBorderValidator:
         """
 
 
-        poly_edges = room_polygon.get_edges()
-
         w_edges = window_geometry.get_candidate_edges()
 
-        # Check if either edge1 or edge2 lies on a polygon edge
-        window_on_edge = False
-
-        for poly_edge in poly_edges:
-            for w_edge in w_edges:
-                # Check edge1
-                if poly_edge.buffer(GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE).contains(w_edge):
-                    window_on_edge = True
-                    break
-            if window_on_edge == True:
-                break
+        window_on_edge = any(
+            room_polygon.boundary_contains(w_edge, GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE)
+            for w_edge in w_edges
+        )
 
         if not window_on_edge:
             raise WindowNotOnPolygonError(
             window_bbox=(window_geometry.x1, window_geometry.y1, window_geometry.x2, window_geometry.y2),
             direction_angle=window_geometry.direction_angle,
             tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
-            polygon_edges=poly_edges,
+            polygon_edges=room_polygon.get_edges(),
             window_edges=w_edges
         )
 

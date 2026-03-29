@@ -2,6 +2,7 @@
 Unit tests for WindowBorderValidator - validates window is positioned on room polygon border.
 """
 
+import math
 import pytest
 from src.components.geometry import WindowBorderValidator, WindowGeometry, RoomPolygon
 
@@ -239,6 +240,101 @@ class TestWindowBorderValidator:
 
         assert is_valid is False
         assert "Error parsing geometry data" in error_msg
+
+    def test_window_spanning_colinear_segments_vertical(self):
+        """Test window that spans across a vertex between two colinear vertical segments.
+
+        This reproduces the production bug where a polygon has a vertex that splits
+        a straight wall into two colinear segments. The window edge overlaps both
+        segments but is not fully contained within either one individually.
+
+        Polygon shape (colinear split on the right wall at y=-1):
+            (0, 0) -> (0, -1) -> (0, -2) -> (-3, -2) -> (-3, 0)
+        The edge (0,0)->(0,-1) and (0,-1)->(0,-2) are colinear.
+        A window from y=-0.5 to y=-1.5 spans across the shared vertex at (0,-1).
+        """
+        room_polygon = RoomPolygon.from_dict([
+            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
+        ])
+
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.5, z1=1.0,
+            x2=0, y2=-1.5, z2=2.0,
+            direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+
+        assert is_valid is True
+        assert error_msg == ""
+
+    def test_window_spanning_colinear_segments_horizontal(self):
+        """Test window spanning colinear horizontal segments at a shared vertex."""
+        room_polygon = RoomPolygon.from_dict([
+            [0, 0], [0, -3], [-1, -3], [-2, -3], [-2, 0]
+        ])
+
+        window_geom = WindowGeometry(
+            x1=-0.5, y1=-3, z1=1.0,
+            x2=-1.5, y2=-3, z2=2.0,
+            direction_angle=math.pi / 2
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+
+        assert is_valid is True
+        assert error_msg == ""
+
+    def test_window_spanning_multiple_colinear_segments(self):
+        """Test window spanning three colinear segments (two intermediate vertices)."""
+        room_polygon = RoomPolygon.from_dict([
+            [0, 0], [0, -1], [0, -2], [0, -3], [-3, -3], [-3, 0]
+        ])
+
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.5, z1=1.0,
+            x2=0, y2=-2.5, z2=2.0,
+            direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+
+        assert is_valid is True
+        assert error_msg == ""
+
+    def test_window_within_single_segment_still_valid(self):
+        """Verify that windows fully within one segment still pass after the fix."""
+        room_polygon = RoomPolygon.from_dict([
+            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
+        ])
+
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.2, z1=1.0,
+            x2=0, y2=-0.8, z2=2.0,
+            direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+
+        assert is_valid is True
+        assert error_msg == ""
+
+    def test_window_outside_colinear_wall_still_rejected(self):
+        """Ensure windows not on the boundary are still rejected with colinear segments."""
+        from src.core.exceptions import WindowNotOnPolygonError
+
+        room_polygon = RoomPolygon.from_dict([
+            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
+        ])
+
+        window_geom = WindowGeometry(
+            x1=1, y1=-0.5, z1=1.0,
+            x2=1, y2=-1.5, z2=2.0,
+            direction_angle=0
+        )
+
+        with pytest.raises(WindowNotOnPolygonError):
+            WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
 
     def test_error_handling_missing_window_coordinates(self):
         """Test error handling when window coordinates are missing."""
