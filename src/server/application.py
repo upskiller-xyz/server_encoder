@@ -10,7 +10,7 @@ from src.core import ParameterName, EncodingScheme, ResponseKey
 from src.core.model_type_manager import ModelTypeManager
 from src.server.enums import HTTPStatus, Endpoint, ServiceName
 from src.server.services import EncodingServiceFactory
-from src.server.services.encoding_service_v5 import V5EncodingService
+from src.server.services.geometry_service import GeometryService
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
 from src.server.key_manager import KeyManager
@@ -44,7 +44,8 @@ class ServerApplication:
         self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
         self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
         self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
-        self._encoding_service_v5 = V5EncodingService()
+        self._encoding_service_v5 = EncodingServiceFactory.get_instance(EncodingScheme.V5)
+        self._geometry_service = GeometryService()
         self._setup_dependencies()
         self._setup_routes()
 
@@ -233,8 +234,7 @@ class ServerApplication:
         # Extract parameters from request (handle wrapper structure)
         parameters = data.get(ResponseKey.PARAMETERS.value, data)
 
-        # Calculate direction angles (use V2 service; encoding scheme is irrelevant here)
-        direction_angles_rad = self._encoding_service_v2.calculate_direction_angle(parameters)
+        direction_angles_rad = self._geometry_service.calculate_direction_angle(parameters)
 
         # Log success
         logger.info(
@@ -266,8 +266,7 @@ class ServerApplication:
         Returns:
             tuple: (response_dict, status_code) with reference_point for each window
         """
-        # Calculate reference points (use V2 service; encoding scheme is irrelevant here)
-        reference_points = self._encoding_service_v2.calculate_reference_point(data)
+        reference_points = self._geometry_service.calculate_reference_point(data)
 
         # Log success
         logger.info(
@@ -308,8 +307,7 @@ class ServerApplication:
         Returns:
             tuple: (response_dict, status_code) with external_reference_point for each window
         """
-        # Calculate external reference points (use V2 service; encoding scheme is irrelevant here)
-        external_reference_points = self._encoding_service_v2.calculate_external_reference_point(data)
+        external_reference_points = self._geometry_service.calculate_external_reference_point(data)
 
         # Log success
         logger.info(

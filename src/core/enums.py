@@ -152,6 +152,9 @@ class ParameterName(Enum):
 
     RIGHT_WALL = '_room_facade_right_edge'
 
+    # V8 height vector: [height_roof_over_floor, floor_height_above_terrain]
+    HEIGHT_VECTOR = "height_vector"
+
 
 # Required window coordinate parameters (frozen set for constant validation)
 REQUIRED_WINDOW_COORDINATES = frozenset([
@@ -264,11 +267,17 @@ class EncodingScheme(str, Enum):
     V4 = "v4"  # HSV-style: no obstruction bar, obstruction vector applied to floor plan bounding box
     V5 = "v5"  # Geometric mask: single-channel float32 (background=0, room=1, window=0.6)
     V6 = "v6"  # Geometric mask like V5 + V4 bounding-box obstruction; scalar params returned as a vector
+    V7 = "v7"  # Like V4 but height_roof_over_floor and floor_height_above_terrain use fixed defaults
+    V8 = "v8"  # Like V7 but height values supplied as height_vector [height_roof_over_floor, floor_height_above_terrain]
 
 
 # Default parameter values map (Strategy Pattern)
 # These are the actual parameter values to use when not provided by the user
 DEFAULT_PARAMETER_VALUES = {
+    # Height defaults used by V7/V8 (injected when not supplied by the caller)
+    ParameterName.HEIGHT_ROOF_OVER_FLOOR: 15.0,       # minimum valid value after clipping
+    ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN: 0.0,    # ground floor
+
     # Background defaults
     ParameterName.FACADE_REFLECTANCE: 1.0,
     ParameterName.TERRAIN_REFLECTANCE: 1.0,
@@ -289,8 +298,8 @@ DEFAULT_PARAMETER_VALUES = {
 
 
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
-# V2, V3, V4 all use HSV-style encoding (V3/V4 differ only in obstruction handling)
-HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4})
+# V2, V3, V4, V7, V8 all use HSV-style encoding (differ only in obstruction handling and required params)
+HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8})
 
 # V5 geometric mask values: fixed intensity per region, single float32 channel
 V5_MASK_VALUES = {
@@ -415,12 +424,14 @@ REGION_CHANNEL_MAPPING_V2 = {
 }
 
 # Encoding scheme mapping selector (Strategy Pattern)
-# V3 and V4 reuse V2's channel mappings; their difference is in obstruction handling
+# V3, V4, V7, V8 reuse V2's channel mappings; their difference is in obstruction handling and required params
 ENCODING_SCHEME_MAPPINGS = {
     EncodingScheme.V1: REGION_CHANNEL_MAPPING_V1,
     EncodingScheme.V2: REGION_CHANNEL_MAPPING_V2,
     EncodingScheme.V3: REGION_CHANNEL_MAPPING_V2,  # Same channels as V2; no obstruction bar
     EncodingScheme.V4: REGION_CHANNEL_MAPPING_V2,  # Same channels as V2; bounding box obstruction
+    EncodingScheme.V7: REGION_CHANNEL_MAPPING_V2,  # Same channels as V4; height params use fixed defaults
+    EncodingScheme.V8: REGION_CHANNEL_MAPPING_V2,  # Same as V7; height values supplied as height_vector
 }
 
 
