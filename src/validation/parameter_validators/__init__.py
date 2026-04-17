@@ -11,6 +11,7 @@ from src.validation.parameter_validators.window_border_validator import WindowBo
 from src.validation.parameter_validators.window_height_validator import WindowHeightValidator
 from src.validation.parameter_validators.required_parameters_validator import RequiredParametersValidator
 from src.validation.parameter_validators.parameter_range_validator import ParameterRangeValidator
+from src.validation.parameter_validators.encoding_parameter_validator import EncodingParameterValidator
 
 __all__ = [
     "ReflectanceValidator",
@@ -25,4 +26,5 @@ __all__ = [
     "WindowHeightValidator",
     "RequiredParametersValidator",
     "ParameterRangeValidator",
+    "EncodingParameterValidator",
 ]

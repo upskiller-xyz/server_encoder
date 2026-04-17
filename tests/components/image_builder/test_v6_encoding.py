@@ -17,7 +17,8 @@ from src.components.region_encoders.obstruction_strategies import (
     ObstructionStrategyFactory,
     V6BoundingBoxObstructionStrategy,
 )
-from src.server.services.encoding_service_v6 import V6EncodingService
+from src.server.services.encoding_service_v5 import V5EncodingService
+from src.core.enums import EncodingScheme
 
 
 # ---------------------------------------------------------------------------
@@ -299,13 +300,13 @@ class TestV6EncodingService:
     """Test the V6EncodingService entry point."""
 
     def test_encode_v6_returns_float32_single_channel(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         image, mask, vec = service.encode_room_image_arrays_v6(dict(_PARAMS), _MODEL)
         assert image.dtype == np.float32
         assert image.shape[2] == 1
 
     def test_encode_v6_returns_static_vector(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         image, mask, vec = service.encode_room_image_arrays_v6(dict(_PARAMS), _MODEL)
         assert vec.dtype == np.float32
         assert vec.ndim == 1
@@ -313,40 +314,40 @@ class TestV6EncodingService:
 
     def test_encode_room_image_arrays_returns_2_tuple(self):
         """Base-class interface: encode_room_image_arrays must return (image, mask)."""
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         result = service.encode_room_image_arrays(dict(_PARAMS), _MODEL)
         assert len(result) == 2
         image, mask = result
         assert image.dtype == np.float32
 
     def test_encode_validates_missing_room_polygon(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         params = {k: v for k, v in _PARAMS.items() if k != "room_polygon"}
         with pytest.raises(ValueError, match="room_polygon"):
             service.encode_room_image_arrays_v6(params, _MODEL)
 
     def test_encode_validates_missing_window_geometry(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         window_keys = {"x1", "y1", "z1", "x2", "y2", "z2"}
         params = {k: v for k, v in _PARAMS.items() if k not in window_keys}
         with pytest.raises(ValueError, match="window geometry"):
             service.encode_room_image_arrays_v6(params, _MODEL)
 
     def test_encode_validates_missing_horizon(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         params = {k: v for k, v in _PARAMS.items() if k != "horizon"}
         with pytest.raises(ValueError, match="horizon"):
             service.encode_room_image_arrays_v6(params, _MODEL)
 
     def test_encode_validates_missing_zenith(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         params = {k: v for k, v in _PARAMS.items() if k != "zenith"}
         with pytest.raises(ValueError, match="zenith"):
             service.encode_room_image_arrays_v6(params, _MODEL)
 
     def test_encode_does_not_require_reflectances(self):
         """V6 should succeed without reflectance parameters."""
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         reflectance_keys = {
             "facade_reflectance", "terrain_reflectance",
             "ceiling_reflectance", "floor_reflectance", "wall_reflectance",
@@ -357,7 +358,7 @@ class TestV6EncodingService:
         assert image is not None
 
     def test_encode_png_raises_not_implemented(self):
-        service = V6EncodingService()
+        service = V5EncodingService(EncodingScheme.V6)
         with pytest.raises(NotImplementedError):
             service.encode_room_image(dict(_PARAMS), _MODEL)
 

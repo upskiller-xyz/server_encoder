@@ -4,11 +4,11 @@ Obstruction encoding strategies (Strategy Pattern).
 Each strategy defines how obstruction data (horizon, zenith, context/balcony reflectance)
 is applied to the image for a given encoding scheme:
 
-  V1 / V2 : ObstructionBarStrategy   – small bar on the right edge of the image
-  V3       : NoObstructionStrategy    – obstruction data is omitted entirely
-  V4       : BoundingBoxObstructionStrategy – obstruction vector multiplied element-wise
-                                             into the floor-plan bounding box region
-  V6       : V6BoundingBoxObstructionStrategy – like V4 but for single-channel float32 images
+  V1 / V2      : ObstructionBarStrategy          – small bar on the right edge of the image
+  V3           : NoObstructionStrategy            – obstruction data is omitted entirely
+  V4 / V7 / V8 : BoundingBoxObstructionStrategy  – obstruction vector multiplied element-wise
+                                                   into the floor-plan bounding box region
+  V6           : V6BoundingBoxObstructionStrategy – like V4 but for single-channel float32 images
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
@@ -206,6 +206,8 @@ _STRATEGY_MAP = {
     EncodingScheme.V3: lambda: NoObstructionStrategy(),
     EncodingScheme.V4: lambda: BoundingBoxObstructionStrategy(),
     EncodingScheme.V6: lambda: V6BoundingBoxObstructionStrategy(),
+    EncodingScheme.V7: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
+    EncodingScheme.V8: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
 }
 
 
