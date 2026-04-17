@@ -41,14 +41,27 @@ class ServerApplication:
         CORS(self._app)
         self._controller: ServerController | None = None
         self._geometry_service = GeometryService()
+        
+        # Initialize encoding services
+        self._encoding_service_v1 = EncodingServiceFactory.get_instance(EncodingScheme.V1)
+        self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
+        self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
+        self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
+        self._encoding_service_v5 = EncodingServiceFactory.get_instance(EncodingScheme.V5)
+        
         self._setup_dependencies()
         self._setup_routes()
 
     def _setup_dependencies(self) -> None:
         """Setup all dependencies using dependency injection"""
-        # Encoding services (V1, V2, V3, V4, V5)
-
-        services = {}
+        # Create services dictionary for controller
+        services = {
+            EncodingScheme.V1.value: self._encoding_service_v1,
+            EncodingScheme.V2.value: self._encoding_service_v2,
+            EncodingScheme.V3.value: self._encoding_service_v3,
+            EncodingScheme.V4.value: self._encoding_service_v4,
+            EncodingScheme.V5.value: self._encoding_service_v5,
+        }
 
         # Controller
         self._controller = ServerController(services=services)
