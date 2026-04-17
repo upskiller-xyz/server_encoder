@@ -122,6 +122,12 @@ class EncodingService:
             f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
 
+        self._validator.ensure_direction_angle(parameters)
+        is_valid, error_msg = self._validator.validate(parameters, model_type)
+        if not is_valid:
+            logger.error(f"Parameter validation failed: {error_msg}")
+            raise ValueError(error_msg)
+
         result = self._director.construct_multi_window_images(model_type, parameters)
 
         for window_id in result.window_ids():

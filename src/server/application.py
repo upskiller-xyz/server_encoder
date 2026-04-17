@@ -40,11 +40,6 @@ class ServerApplication:
         self._app: Flask = Flask(app_name, template_folder=template_folder)
         CORS(self._app)
         self._controller: ServerController | None = None
-        self._encoding_service_v1 = EncodingServiceFactory.get_instance(EncodingScheme.V1)
-        self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
-        self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
-        self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
-        self._encoding_service_v5 = EncodingServiceFactory.get_instance(EncodingScheme.V5)
         self._geometry_service = GeometryService()
         self._setup_dependencies()
         self._setup_routes()
@@ -53,15 +48,7 @@ class ServerApplication:
         """Setup all dependencies using dependency injection"""
         # Encoding services (V1, V2, V3, V4, V5)
 
-        # Services dict (default to V2)
-        services = {
-            ServiceName.ENCODING_SERVICE.value: self._encoding_service_v2,
-            ServiceName.ENCODING_SERVICE_V1.value: self._encoding_service_v1,
-            ServiceName.ENCODING_SERVICE_V2.value: self._encoding_service_v2,
-            ServiceName.ENCODING_SERVICE_V3.value: self._encoding_service_v3,
-            ServiceName.ENCODING_SERVICE_V4.value: self._encoding_service_v4,
-            ServiceName.ENCODING_SERVICE_V5.value: self._encoding_service_v5,
-        }
+        services = {}
 
         # Controller
         self._controller = ServerController(services=services)
@@ -140,15 +127,7 @@ class ServerApplication:
                 f"Valid schemes: {', '.join(valid_schemes)}"
             )
 
-        # Select encoding service based on encoding scheme (Strategy Pattern)
-        encoding_service_map = {
-            EncodingScheme.V1: self._encoding_service_v1,
-            EncodingScheme.V2: self._encoding_service_v2,
-            EncodingScheme.V3: self._encoding_service_v3,
-            EncodingScheme.V4: self._encoding_service_v4,
-            EncodingScheme.V5: self._encoding_service_v5,
-        }
-        encoding_service = encoding_service_map.get(encoding_scheme, self._encoding_service_v2)
+        encoding_service = EncodingServiceFactory.get_instance(encoding_scheme)
 
         # Handle versioned model types (e.g., "df_default_2.0.1" -> "df_default")
         if ResponseKey.MODEL_TYPE.value in data:

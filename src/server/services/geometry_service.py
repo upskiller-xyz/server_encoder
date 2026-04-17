@@ -4,6 +4,7 @@ Geometry service.
 SRP: owns geometric queries — direction angle, reference point, and external
 reference point. These are coordinate calculations, not encoding operations.
 """
+import math
 from typing import Any, Dict
 import logging
 
@@ -49,7 +50,7 @@ class GeometryService:
                 results[window_id] = angle
                 logger.info(
                     "Calculated direction_angle for '%s': %.4f rad (%.2f°)",
-                    window_id, angle, angle * 180 / 3.14159,
+                    window_id, angle, angle * 180 / math.pi,
                 )
             except Exception as exc:
                 raise ValueError(f"Failed to calculate direction_angle for window '{window_id}': {exc}") from exc
