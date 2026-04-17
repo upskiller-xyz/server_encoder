@@ -208,6 +208,8 @@ _STRATEGY_MAP = {
     EncodingScheme.V6: lambda: V6BoundingBoxObstructionStrategy(),
     EncodingScheme.V7: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
     EncodingScheme.V8: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
+    EncodingScheme.V9: lambda: BoundingBoxObstructionStrategy(),  # Same as V7; alpha dropped in service
+    EncodingScheme.V10: lambda: BoundingBoxObstructionStrategy(),  # Same as V8; alpha dropped in service
 }
 
 

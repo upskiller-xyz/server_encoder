@@ -78,6 +78,11 @@ class EncodingService:
         image_array, mask_array = self._director.construct_from_flat_parameters(model_type, parameters)
         image_array = image_array.astype(np.uint8)
 
+        if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+            # Alpha channel encodes reflectances that are always at their defaults — drop it.
+            # The binary room mask is already returned separately by the director.
+            image_array = image_array[:, :, :3]
+
         logger.info(f"Room image arrays encoded successfully - shape: {image_array.shape}")
         if mask_array is not None:
             logger.info(f"Room mask array encoded successfully - shape: {mask_array.shape}")
@@ -131,7 +136,10 @@ class EncodingService:
         result = self._director.construct_multi_window_images(model_type, parameters)
 
         for window_id in result.window_ids():
-            result.images[window_id] = result.images[window_id].astype(np.uint8)
+            img = result.images[window_id].astype(np.uint8)
+            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+                img = img[:, :, :3]
+            result.images[window_id] = img
 
         logger.info(f"Multi-window image arrays encoded successfully - count: {len(result.images)}")
         return result
