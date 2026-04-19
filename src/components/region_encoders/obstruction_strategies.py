@@ -69,7 +69,7 @@ class ObstructionBarStrategy(ObstructionEncodingStrategy):
 
 class NoObstructionStrategy(ObstructionEncodingStrategy):
     """
-    No-op strategy for V3 encoding: obstruction data is not encoded anywhere.
+    No-op strategy for V3 and V5 encoding: obstruction data is not encoded anywhere.
     The obstruction bar is removed and the bounding box is left unmodified.
     """
 
@@ -205,9 +205,12 @@ _STRATEGY_MAP = {
     EncodingScheme.V2: lambda: ObstructionBarStrategy(EncodingScheme.V2),
     EncodingScheme.V3: lambda: NoObstructionStrategy(),
     EncodingScheme.V4: lambda: BoundingBoxObstructionStrategy(),
+    EncodingScheme.V5: lambda: NoObstructionStrategy(),
     EncodingScheme.V6: lambda: V6BoundingBoxObstructionStrategy(),
     EncodingScheme.V7: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
     EncodingScheme.V8: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
+    EncodingScheme.V9: lambda: BoundingBoxObstructionStrategy(),  # Same as V7; alpha dropped in service
+    EncodingScheme.V10: lambda: BoundingBoxObstructionStrategy(),  # Same as V8; alpha dropped in service
 }
 
 

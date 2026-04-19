@@ -269,6 +269,8 @@ class EncodingScheme(str, Enum):
     V6 = "v6"  # Geometric mask like V5 + V4 bounding-box obstruction; scalar params returned as a vector
     V7 = "v7"  # Like V4 but height_roof_over_floor and floor_height_above_terrain use fixed defaults
     V8 = "v8"  # Like V7 but height values supplied as height_vector [height_roof_over_floor, floor_height_above_terrain]
+    V9 = "v9"  # Like V7 but 3-channel (alpha dropped; alpha-encoded params are always default)
+    V10 = "v10"  # Like V8 but 3-channel (alpha dropped; alpha-encoded params are always default)
 
 
 # Default parameter values map (Strategy Pattern)
@@ -298,8 +300,8 @@ DEFAULT_PARAMETER_VALUES = {
 
 
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
-# V2, V3, V4, V7, V8 all use HSV-style encoding (differ only in obstruction handling and required params)
-HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8})
+# V2, V3, V4, V7, V8, V9, and V10 all use HSV-style encoding (differ only in obstruction handling and required params)
+HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10})
 
 # V5 geometric mask values: fixed intensity per region, single float32 channel
 V5_MASK_VALUES = {
@@ -432,6 +434,8 @@ ENCODING_SCHEME_MAPPINGS = {
     EncodingScheme.V4: REGION_CHANNEL_MAPPING_V2,  # Same channels as V2; bounding box obstruction
     EncodingScheme.V7: REGION_CHANNEL_MAPPING_V2,  # Same channels as V4; height params use fixed defaults
     EncodingScheme.V8: REGION_CHANNEL_MAPPING_V2,  # Same as V7; height values supplied as height_vector
+    EncodingScheme.V9: REGION_CHANNEL_MAPPING_V2,  # Same as V7; alpha channel dropped in output
+    EncodingScheme.V10: REGION_CHANNEL_MAPPING_V2,  # Same as V8; alpha channel dropped in output
 }
 
 
