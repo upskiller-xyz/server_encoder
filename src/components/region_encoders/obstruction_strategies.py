@@ -69,7 +69,7 @@ class ObstructionBarStrategy(ObstructionEncodingStrategy):
 
 class NoObstructionStrategy(ObstructionEncodingStrategy):
     """
-    No-op strategy for V3 encoding: obstruction data is not encoded anywhere.
+    No-op strategy for V3 and V5 encoding: obstruction data is not encoded anywhere.
     The obstruction bar is removed and the bounding box is left unmodified.
     """
 

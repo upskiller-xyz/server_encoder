@@ -95,7 +95,10 @@ class EncodingService:
         model_type: ModelType
     ) -> Tuple[bytes, Optional[bytes]]:
         image_array, mask_array = self.encode_room_image_arrays(parameters, model_type)
-        image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
+        if image_array.shape[2] == 3:
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+        else:
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
         success, buffer = cv2.imencode(FileFormat.PNG.value, image_array)
         if not success:
             raise RuntimeError("Failed to encode image to PNG")
@@ -165,7 +168,11 @@ class EncodingService:
         result = EncodedBytesResult()
         for window_id in array_result.window_ids():
             image_array = array_result.get_image(window_id).astype(np.uint8)  # type: ignore
-            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
+            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+                image_array = image_array[:, :, :3]
+                image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+            else:
+                image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2BGRA)
 
             success, buffer = cv2.imencode(FileFormat.PNG.value, image_array)
             if not success:

@@ -283,8 +283,8 @@ class EncodingParameterValidator:
         """
         Apply scheme-specific transformations before validation.
 
-        V8: unpack height_vector → height_roof_over_floor, floor_height_above_terrain
-        V7 / V8: inject defaults for missing height parameters
+        V8 / V10: unpack height_vector → height_roof_over_floor, floor_height_above_terrain
+        V7 / V8 / V9 / V10: inject defaults for missing height parameters
 
         Raises:
             ValueError: If height_vector has wrong shape
