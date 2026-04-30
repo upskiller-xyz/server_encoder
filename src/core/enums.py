@@ -303,7 +303,7 @@ DEFAULT_PARAMETER_VALUES = {
 
 
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
-# V2, V3, V4, V7, V8, V9, and V10 all use HSV-style encoding (differ only in obstruction handling and required params)
+# V2, V3, V4, V7, V8, V9, V10, and V11 all use HSV-style encoding (differ only in obstruction handling and required params)
 HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11})
 
 # V5 geometric mask values: fixed intensity per region, single float32 channel

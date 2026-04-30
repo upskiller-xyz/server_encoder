@@ -331,12 +331,12 @@ class V11ObstructionBarEncoder(ObstructionBarEncoder):
     """
 
     def _update_parameters(self, params):
-        zenith = params.get('zenith', 0.0)
-        horizon = params.get('horizon', 0.0)
+        zenith = params.get(ParameterName.ZENITH.value, 0.0)
+        horizon = params.get(ParameterName.HORIZON.value, 0.0)
         top = np.subtract(90.0, zenith)          # scalar or array
         gap = np.maximum(0.0, np.subtract(top, horizon))
         midpoint = np.add(top, horizon) / 2.0
         updated = dict(params)
-        updated['obstruction_gap'] = gap
-        updated['obstruction_midpoint'] = midpoint
+        updated[ParameterName.OBSTRUCTION_GAP.value] = gap
+        updated[ParameterName.OBSTRUCTION_MIDPOINT.value] = midpoint
         return updated
