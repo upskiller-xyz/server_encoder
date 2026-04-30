@@ -289,7 +289,7 @@ class EncodingParameterValidator:
         Raises:
             ValueError: If height_vector has wrong shape
         """
-        if self._encoding_scheme in (EncodingScheme.V8, EncodingScheme.V10):
+        if self._encoding_scheme in (EncodingScheme.V8, EncodingScheme.V10, EncodingScheme.V11):
             key = ParameterName.HEIGHT_VECTOR.value
             if key in parameters:
                 vec = parameters[key]
@@ -301,7 +301,7 @@ class EncodingParameterValidator:
                 parameters[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = float(vec[0])
                 parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = float(vec[1])
 
-        if self._encoding_scheme in (EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10):
+        if self._encoding_scheme in (EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
             for param in (ParameterName.HEIGHT_ROOF_OVER_FLOOR, ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN):
                 if param.value not in parameters:
                     parameters[param.value] = DEFAULT_PARAMETER_VALUES[param]
