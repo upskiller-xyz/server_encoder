@@ -237,6 +237,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         Returns:
             (height, 4) float64 array of encoded obstruction values
         """
+        parameters = self._update_parameters(parameters)
         channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
         channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
         vector = np.zeros((height, 4), dtype=np.float64)
