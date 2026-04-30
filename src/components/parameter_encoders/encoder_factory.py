@@ -49,7 +49,10 @@ class EncoderFactory:
         # Green channel: context_reflectance (0.1-0.6 → 0-1)
         ParameterName.CONTEXT_REFLECTANCE.value: (EncoderType.REFLECTANCE.value, 0.1, 0.6, 0.0, 1.0),
         # Blue channel: zenith (0-70° → 0.2-0.8)
-        ParameterName.ZENITH.value: (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8)
+        ParameterName.ZENITH.value: (EncoderType.ANGLE.value, 0.0, 70.0, 0.2, 0.8),
+        # V11 obstruction bar channels
+        ParameterName.OBSTRUCTION_GAP.value: (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
+        ParameterName.OBSTRUCTION_MIDPOINT.value: (EncoderType.ANGLE.value, 0.0, 90.0, 0.0, 1.0),
     }
 
     @classmethod

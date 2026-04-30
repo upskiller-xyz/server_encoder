@@ -5,7 +5,7 @@ from src.components.region_encoders.background_region_encoder import BackgroundR
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
 from src.components.region_encoders.room_region_encoder import RoomRegionEncoder
 from src.components.region_encoders.window_region_encoder import WindowRegionEncoder
-from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder, V11ObstructionBarEncoder
 
 # V3/V4 share V2's channel mappings for non-obstruction regions
 _V2_EQUIVALENT_SCHEMES = frozenset({EncodingScheme.V3, EncodingScheme.V4})
@@ -38,11 +38,14 @@ class RegionEncoderFactory:
         cache_key = (region_type, effective_scheme)
 
         if cache_key not in cls._instances:
+            obstruction_encoder = (
+                V11ObstructionBarEncoder if effective_scheme == EncodingScheme.V11 else ObstructionBarEncoder
+            )
             encoder_map = {
                 RegionType.BACKGROUND: BackgroundRegionEncoder,
                 RegionType.ROOM: RoomRegionEncoder,
                 RegionType.WINDOW: WindowRegionEncoder,
-                RegionType.OBSTRUCTION_BAR: ObstructionBarEncoder,
+                RegionType.OBSTRUCTION_BAR: obstruction_encoder,
             }
 
             encoder_class = encoder_map.get(region_type)

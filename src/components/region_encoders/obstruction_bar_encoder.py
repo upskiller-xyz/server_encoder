@@ -313,3 +313,30 @@ class ObstructionBarEncoder(BaseRegionEncoder):
             strategy = self._downsample_values
 
         return strategy(values, expected_length)
+
+
+class V11ObstructionBarEncoder(ObstructionBarEncoder):
+    """
+    V11 obstruction bar encoder.
+
+    Accepts the same zenith/horizon inputs as V8/V10 but encodes the
+    visible-sky gap and its angular midpoint instead:
+
+        top      = 90 - zenith  (upper edge of visible sky, measured from horizontal)
+        gap      = top - horizon  (angular width of visible sky band, clamped to ≥ 0)
+        midpoint = (top + horizon) / 2  (center angle of visible sky band)
+
+    Both gap and midpoint are in degrees [0, 90] and encoded with the
+    OBSTRUCTION_GAP / OBSTRUCTION_MIDPOINT encoders (0–90° → 0–1).
+    """
+
+    def _update_parameters(self, params):
+        zenith = params.get(ParameterName.ZENITH.value, 0.0)
+        horizon = params.get(ParameterName.HORIZON.value, 0.0)
+        top = np.subtract(90.0, zenith)          # scalar or array
+        gap = np.maximum(0.0, np.subtract(top, horizon))
+        midpoint = np.add(top, horizon) / 2.0
+        updated = dict(params)
+        updated[ParameterName.OBSTRUCTION_GAP.value] = gap
+        updated[ParameterName.OBSTRUCTION_MIDPOINT.value] = midpoint
+        return updated

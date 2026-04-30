@@ -131,6 +131,8 @@ class ParameterName(Enum):
     HORIZON = "horizon"
     CONTEXT_REFLECTANCE = "context_reflectance"
     ZENITH = "zenith"
+    OBSTRUCTION_GAP = "obstruction_gap"        # V11: angular width of visible sky band
+    OBSTRUCTION_MIDPOINT = "obstruction_midpoint"  # V11: center angle of visible sky band
 
     # Structure keys
     WINDOWS = "windows"
@@ -271,6 +273,7 @@ class EncodingScheme(str, Enum):
     V8 = "v8"  # Like V7 but height values supplied as height_vector [height_roof_over_floor, floor_height_above_terrain]
     V9 = "v9"  # Like V7 but 3-channel (alpha dropped; alpha-encoded params are always default)
     V10 = "v10"  # Like V8 but 3-channel (alpha dropped; alpha-encoded params are always default)
+    V11 = "v11"  # Like V10 but obstruction bar encodes gap and midpoint instead of zenith and horizon
 
 
 # Default parameter values map (Strategy Pattern)
@@ -300,8 +303,8 @@ DEFAULT_PARAMETER_VALUES = {
 
 
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
-# V2, V3, V4, V7, V8, V9, and V10 all use HSV-style encoding (differ only in obstruction handling and required params)
-HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10})
+# V2, V3, V4, V7, V8, V9, V10, and V11 all use HSV-style encoding (differ only in obstruction handling and required params)
+HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11})
 
 # V5 geometric mask values: fixed intensity per region, single float32 channel
 V5_MASK_VALUES = {
@@ -425,6 +428,18 @@ REGION_CHANNEL_MAPPING_V2 = {
     },
 }
 
+# V11 channel mapping: same as V2 for all regions except obstruction bar,
+# which encodes gap and midpoint of the visible sky band instead of zenith and horizon.
+REGION_CHANNEL_MAPPING_V11 = {
+    **REGION_CHANNEL_MAPPING_V2,
+    RegionType.OBSTRUCTION_BAR: {
+        ChannelType.ALPHA: ParameterName.BALCONY_REFLECTANCE,
+        ChannelType.BLUE: ParameterName.OBSTRUCTION_MIDPOINT,  # center angle of visible sky band
+        ChannelType.GREEN: ParameterName.CONTEXT_REFLECTANCE,
+        ChannelType.RED: ParameterName.OBSTRUCTION_GAP,        # angular width of visible sky band
+    },
+}
+
 # Encoding scheme mapping selector (Strategy Pattern)
 # V3, V4, V7, V8 reuse V2's channel mappings; their difference is in obstruction handling and required params
 ENCODING_SCHEME_MAPPINGS = {
@@ -436,6 +451,7 @@ ENCODING_SCHEME_MAPPINGS = {
     EncodingScheme.V8: REGION_CHANNEL_MAPPING_V2,  # Same as V7; height values supplied as height_vector
     EncodingScheme.V9: REGION_CHANNEL_MAPPING_V2,  # Same as V7; alpha channel dropped in output
     EncodingScheme.V10: REGION_CHANNEL_MAPPING_V2,  # Same as V8; alpha channel dropped in output
+    EncodingScheme.V11: REGION_CHANNEL_MAPPING_V11,  # Same as V10; obstruction bar uses gap/midpoint
 }
 
 

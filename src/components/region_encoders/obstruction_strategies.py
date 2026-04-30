@@ -4,11 +4,12 @@ Obstruction encoding strategies (Strategy Pattern).
 Each strategy defines how obstruction data (horizon, zenith, context/balcony reflectance)
 is applied to the image for a given encoding scheme:
 
-  V1 / V2      : ObstructionBarStrategy          – small bar on the right edge of the image
-  V3           : NoObstructionStrategy            – obstruction data is omitted entirely
-  V4 / V7 / V8 : BoundingBoxObstructionStrategy  – obstruction vector multiplied element-wise
-                                                   into the floor-plan bounding box region
-  V6           : V6BoundingBoxObstructionStrategy – like V4 but for single-channel float32 images
+  V1 / V2           : ObstructionBarStrategy             – small bar on the right edge of the image
+  V3                : NoObstructionStrategy               – obstruction data is omitted entirely
+  V4 / V7 / V8      : BoundingBoxObstructionStrategy     – obstruction vector multiplied element-wise
+                                                            into the floor-plan bounding box region
+  V6                : V6BoundingBoxObstructionStrategy   – like V4 but for single-channel float32 images
+  V11               : V11BoundingBoxObstructionStrategy  – like V10 but uses gap/midpoint encoder
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
@@ -199,6 +200,20 @@ class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         return image
 
 
+class V11BoundingBoxObstructionStrategy(BoundingBoxObstructionStrategy):
+    """
+    V11 obstruction strategy.
+
+    Same bounding-box multiplication as V4/V7/V8/V9/V10, but uses
+    V11ObstructionBarEncoder so the obstruction vector is computed from
+    the visible-sky gap and midpoint rather than raw zenith/horizon values.
+    """
+
+    def __init__(self) -> None:
+        from src.components.region_encoders.obstruction_bar_encoder import V11ObstructionBarEncoder
+        self._encoder = V11ObstructionBarEncoder(encoding_scheme=EncodingScheme.V11)
+
+
 # Factory map: EncodingScheme -> strategy constructor (Strategy Pattern)
 _STRATEGY_MAP = {
     EncodingScheme.V1: lambda: ObstructionBarStrategy(EncodingScheme.V1),
@@ -211,6 +226,7 @@ _STRATEGY_MAP = {
     EncodingScheme.V8: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
     EncodingScheme.V9: lambda: BoundingBoxObstructionStrategy(),  # Same as V7; alpha dropped in service
     EncodingScheme.V10: lambda: BoundingBoxObstructionStrategy(),  # Same as V8; alpha dropped in service
+    EncodingScheme.V11: lambda: V11BoundingBoxObstructionStrategy(),  # Like V10; gap/midpoint encoder
 }
 
 

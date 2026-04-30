@@ -78,7 +78,7 @@ class EncodingService:
         image_array, mask_array = self._director.construct_from_flat_parameters(model_type, parameters)
         image_array = image_array.astype(np.uint8)
 
-        if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+        if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
             # Alpha channel encodes reflectances that are always at their defaults — drop it.
             # The binary room mask is already returned separately by the director.
             image_array = image_array[:, :, :3]
@@ -140,7 +140,7 @@ class EncodingService:
 
         for window_id in result.window_ids():
             img = result.images[window_id].astype(np.uint8)
-            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
                 img = img[:, :, :3]
             result.images[window_id] = img
 
@@ -168,7 +168,7 @@ class EncodingService:
         result = EncodedBytesResult()
         for window_id in array_result.window_ids():
             image_array = array_result.get_image(window_id).astype(np.uint8)  # type: ignore
-            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10):
+            if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
                 image_array = image_array[:, :, :3]
                 image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
             else:
