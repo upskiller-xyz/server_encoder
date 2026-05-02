@@ -71,8 +71,12 @@ class RoomImageDirector:
             window_params = all_parameters.window.parameters
             if window_params:
                 window_geometry = ParameterNormalizer.normalize_window_geometry(window_params)
-                derived = ParameterCalculatorRegistry.calculate_derived_parameters(window_params)
-                raw = derived.get(ParameterName.WINDOW_HEIGHT.value)
+                # window_height may already be in window_params (mutated by window encoding in V12),
+                # or needs to be derived fresh (V13, where window encoding is skipped).
+                raw = window_params.get(ParameterName.WINDOW_HEIGHT.value)
+                if raw is None:
+                    derived = ParameterCalculatorRegistry.calculate_derived_parameters(window_params)
+                    raw = derived.get(ParameterName.WINDOW_HEIGHT.value)
                 if raw is not None:
                     window_height = float(raw)
 
