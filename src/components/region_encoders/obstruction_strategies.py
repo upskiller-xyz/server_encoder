@@ -284,7 +284,14 @@ class WindowProjectionObstructionStrategy(ObstructionEncodingStrategy):
         obs_vector = self._encoder.compute_obstruction_vector(parameters, model_type, height=1)
         obs_fill = obs_vector[0].astype(np.uint8)  # shape (4,)
 
-        image[y_start:y_end, rect_x_start:rect_x_end, :] = obs_fill
+        # Clip to room mask so the rectangle never bleeds into background pixels
+        if room_mask is not None:
+            mask_slice = room_mask[y_start:y_end, rect_x_start:rect_x_end]
+            image[y_start:y_end, rect_x_start:rect_x_end, :] = np.where(
+                mask_slice[:, :, np.newaxis] > 0, obs_fill, image[y_start:y_end, rect_x_start:rect_x_end, :]
+            )
+        else:
+            image[y_start:y_end, rect_x_start:rect_x_end, :] = obs_fill
 
         return image
 
