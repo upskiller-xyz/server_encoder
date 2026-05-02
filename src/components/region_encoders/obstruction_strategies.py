@@ -10,17 +10,22 @@ is applied to the image for a given encoding scheme:
                                                             into the floor-plan bounding box region
   V6                : V6BoundingBoxObstructionStrategy   – like V4 but for single-channel float32 images
   V11               : V11BoundingBoxObstructionStrategy  – like V10 but uses gap/midpoint encoder
+  V12 / V13         : WindowProjectionObstructionStrategy – rectangle protruding into the room from the
+                                                            window, filled uniformly with obstruction values;
+                                                            width = window_height, height = window_width_3d
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import numpy as np
 
+from src.components.geometry import WindowGeometry
 from src.core.enums import (
     EncodingScheme,
     ModelType,
     RegionType,
 )
+from src.core.graphics_constants import GRAPHICS_CONSTANTS
 
 
 class ObstructionEncodingStrategy(ABC):
@@ -33,6 +38,8 @@ class ObstructionEncodingStrategy(ABC):
         room_mask: Optional[np.ndarray],
         parameters: Dict[str, Any],
         model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
     ) -> np.ndarray:
         """
         Apply obstruction encoding to the image.
@@ -42,6 +49,8 @@ class ObstructionEncodingStrategy(ABC):
             room_mask: Binary room mask (1 = room area) used by bounding-box strategy
             parameters: Obstruction bar parameters (horizon, zenith, …)
             model_type: Model type for HSV pixel-override lookup
+            window_geometry: Typed window geometry; required by WindowProjectionObstructionStrategy
+            window_height: Window height in metres; required by WindowProjectionObstructionStrategy
 
         Returns:
             Modified image array
@@ -64,6 +73,8 @@ class ObstructionBarStrategy(ObstructionEncodingStrategy):
         room_mask: Optional[np.ndarray],
         parameters: Dict[str, Any],
         model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
     ) -> np.ndarray:
         return self._encoder.encode_region(image, parameters, model_type)
 
@@ -80,6 +91,8 @@ class NoObstructionStrategy(ObstructionEncodingStrategy):
         room_mask: Optional[np.ndarray],
         parameters: Dict[str, Any],
         model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
     ) -> np.ndarray:
         return image
 
@@ -108,6 +121,8 @@ class BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         room_mask: Optional[np.ndarray],
         parameters: Dict[str, Any],
         model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
     ) -> np.ndarray:
         if room_mask is None or not np.any(room_mask):
             return image
@@ -165,6 +180,8 @@ class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         room_mask: Optional[np.ndarray],
         parameters: Dict[str, Any],
         model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
     ) -> np.ndarray:
         if room_mask is None or not np.any(room_mask):
             return image
@@ -214,6 +231,71 @@ class V11BoundingBoxObstructionStrategy(BoundingBoxObstructionStrategy):
         self._encoder = V11ObstructionBarEncoder(encoding_scheme=EncodingScheme.V11)
 
 
+class WindowProjectionObstructionStrategy(ObstructionEncodingStrategy):
+    """
+    V12 / V13 obstruction strategy.
+
+    Renders a rectangle that protrudes leftward from the window stripe into the room,
+    filled uniformly with the obstruction channel values (V8 mapping: R=zenith,
+    G=context_reflectance, B=horizon, A=balcony_reflectance).
+
+    Rectangle dimensions (image coordinates):
+    - Vertical extent  : same as the window stripe — determined by window_width_3d
+    - Horizontal extent: window_height metres converted to pixels (protrudes left)
+
+    A single-row obstruction vector is computed so the fill is uniform across the
+    rectangle; the rectangle area itself encodes window_height spatially.
+    No separate obstruction bar is rendered.
+    """
+
+    def __init__(self) -> None:
+        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        self._encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V8)
+
+    def apply(
+        self,
+        image: np.ndarray,
+        room_mask: Optional[np.ndarray],
+        parameters: Dict[str, Any],
+        model_type: ModelType,
+        window_geometry: Optional[WindowGeometry] = None,
+        window_height: Optional[float] = None,
+    ) -> np.ndarray:
+        if window_geometry is None or window_height is None or window_height <= 0:
+            return image
+
+        _height, width = image.shape[:2]
+        border = GRAPHICS_CONSTANTS.BORDER_PX
+
+        # Vertical extent matches the window stripe (based on window_width_3d)
+        x_stripe_start, y_start, _x_stripe_end, y_end = window_geometry.get_pixel_bounds(
+            image_size=width
+        )
+
+        # Rectangle extends leftward from the window stripe's left edge
+        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(window_height, width)
+        rect_x_end = x_stripe_start
+        rect_x_start = max(border, rect_x_end - window_height_px)
+
+        if rect_x_start >= rect_x_end or y_start >= y_end:
+            return image
+
+        # Single-row obstruction vector → uniform fill across the rectangle
+        obs_vector = self._encoder.compute_obstruction_vector(parameters, model_type, height=1)
+        obs_fill = obs_vector[0].astype(np.uint8)  # shape (4,)
+
+        # Clip to room mask so the rectangle never bleeds into background pixels
+        if room_mask is not None:
+            mask_slice = room_mask[y_start:y_end, rect_x_start:rect_x_end]
+            image[y_start:y_end, rect_x_start:rect_x_end, :] = np.where(
+                mask_slice[:, :, np.newaxis] > 0, obs_fill, image[y_start:y_end, rect_x_start:rect_x_end, :]
+            )
+        else:
+            image[y_start:y_end, rect_x_start:rect_x_end, :] = obs_fill
+
+        return image
+
+
 # Factory map: EncodingScheme -> strategy constructor (Strategy Pattern)
 _STRATEGY_MAP = {
     EncodingScheme.V1: lambda: ObstructionBarStrategy(EncodingScheme.V1),
@@ -227,6 +309,8 @@ _STRATEGY_MAP = {
     EncodingScheme.V9: lambda: BoundingBoxObstructionStrategy(),  # Same as V7; alpha dropped in service
     EncodingScheme.V10: lambda: BoundingBoxObstructionStrategy(),  # Same as V8; alpha dropped in service
     EncodingScheme.V11: lambda: V11BoundingBoxObstructionStrategy(),  # Like V10; gap/midpoint encoder
+    EncodingScheme.V12: lambda: WindowProjectionObstructionStrategy(),
+    EncodingScheme.V13: lambda: WindowProjectionObstructionStrategy(),
 }
 
 

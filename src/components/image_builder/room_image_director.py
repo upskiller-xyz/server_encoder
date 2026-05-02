@@ -4,9 +4,12 @@ from src.models import EncodingParameters, EncodingResult
 from src.components.image_builder.room_image_builder import RoomImageBuilder
 from src.components.image_builder.parameter_normalizer import ParameterNormalizer
 from src.components.image_builder.geometry_rotator import GeometryRotator
+from src.components.calculators.parameter_calculator_registry import ParameterCalculatorRegistry
 from src.components.geometry import WindowGeometry
 from src.components.region_encoders.obstruction_strategies import ObstructionStrategyFactory, ObstructionEncodingStrategy
 import numpy as np
+
+_SCHEMES_WITHOUT_WINDOW_STRIPE = frozenset({EncodingScheme.V13})
 
 
 class RoomImageDirector:
@@ -20,6 +23,7 @@ class RoomImageDirector:
 
     def __init__(self, builder: RoomImageBuilder, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         self._builder = builder
+        self._encoding_scheme = encoding_scheme
         self._obstruction_strategy: ObstructionEncodingStrategy = ObstructionStrategyFactory.create(encoding_scheme)
 
     def construct_full_image(
@@ -45,12 +49,11 @@ class RoomImageDirector:
         # Rotate geometry if window is not on south facade
         all_parameters = self._rotate_geometry_if_needed(all_parameters)
 
-        # Encode background, room, and window regions
-        region_order = [
-            RegionType.BACKGROUND,
-            RegionType.ROOM,
-            RegionType.WINDOW,
-        ]
+        # Encode background, room, and (for most schemes) window regions
+        region_order = [RegionType.BACKGROUND, RegionType.ROOM]
+        if self._encoding_scheme not in _SCHEMES_WITHOUT_WINDOW_STRIPE:
+            region_order.append(RegionType.WINDOW)
+
         params = [all_parameters.get_region(region).parameters for region in region_order]
         [self._builder.encode_region(region, p)
          for region, p in zip(region_order, params)
@@ -60,8 +63,29 @@ class RoomImageDirector:
         image = self._builder.build()
         room_mask = self._builder.get_room_mask()
         obstruction_params = all_parameters.get_region(RegionType.OBSTRUCTION_BAR).parameters
+
+        # V12/V13: pass typed window geometry and calculated window_height to the strategy
+        window_geometry: Optional[WindowGeometry] = None
+        window_height: Optional[float] = None
+        if self._encoding_scheme in (EncodingScheme.V12, EncodingScheme.V13):
+            window_params = all_parameters.window.parameters
+            if window_params:
+                window_geometry = ParameterNormalizer.normalize_window_geometry(window_params)
+                # window_height may already be in window_params (mutated by window encoding in V12),
+                # or needs to be derived fresh (V13, where window encoding is skipped).
+                raw = window_params.get(ParameterName.WINDOW_HEIGHT.value)
+                if raw is None:
+                    derived = ParameterCalculatorRegistry.calculate_derived_parameters(window_params)
+                    raw = derived.get(ParameterName.WINDOW_HEIGHT.value)
+                if raw is not None:
+                    window_height = float(raw)
+
         if obstruction_params:
-            image = self._obstruction_strategy.apply(image, room_mask, obstruction_params, model_type)
+            image = self._obstruction_strategy.apply(
+                image, room_mask, obstruction_params, model_type,
+                window_geometry=window_geometry,
+                window_height=window_height,
+            )
 
         return image, room_mask
 

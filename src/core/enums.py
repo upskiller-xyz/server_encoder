@@ -274,6 +274,8 @@ class EncodingScheme(str, Enum):
     V9 = "v9"  # Like V7 but 3-channel (alpha dropped; alpha-encoded params are always default)
     V10 = "v10"  # Like V8 but 3-channel (alpha dropped; alpha-encoded params are always default)
     V11 = "v11"  # Like V10 but obstruction bar encodes gap and midpoint instead of zenith and horizon
+    V12 = "v12"  # HSV-style: window projection rectangle filled with obstruction values; static params vector; window stripe kept
+    V13 = "v13"  # Like V12 but window stripe (wall thickness) removed
 
 
 # Default parameter values map (Strategy Pattern)
@@ -304,7 +306,7 @@ DEFAULT_PARAMETER_VALUES = {
 
 # Encoding schemes that use HSV-style channel mapping and default pixel overrides
 # V2, V3, V4, V7, V8, V9, V10, and V11 all use HSV-style encoding (differ only in obstruction handling and required params)
-HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11})
+HSV_STYLE_SCHEMES = frozenset({EncodingScheme.V2, EncodingScheme.V3, EncodingScheme.V4, EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11, EncodingScheme.V12, EncodingScheme.V13})
 
 # V5 geometric mask values: fixed intensity per region, single float32 channel
 V5_MASK_VALUES = {
@@ -321,6 +323,18 @@ V6_STATIC_PARAMS = (
     ParameterName.HEIGHT_ROOF_OVER_FLOOR,
     ParameterName.WINDOW_FRAME_RATIO,
     ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
+)
+
+# V12/V13 static params: room and window material properties not spatially encoded in the image.
+# Window height is encoded spatially as the projection rectangle width, so it is excluded here.
+V12_STATIC_PARAMS = (
+    ParameterName.WALL_REFLECTANCE,
+    ParameterName.FLOOR_REFLECTANCE,
+    ParameterName.CEILING_REFLECTANCE,
+    ParameterName.HEIGHT_ROOF_OVER_FLOOR,
+    ParameterName.WINDOW_SILL_HEIGHT,
+    ParameterName.WINDOW_FRAME_RATIO,
+    ParameterName.WINDOW_FRAME_REFLECTANCE,
 )
 
 
@@ -452,6 +466,8 @@ ENCODING_SCHEME_MAPPINGS = {
     EncodingScheme.V9: REGION_CHANNEL_MAPPING_V2,  # Same as V7; alpha channel dropped in output
     EncodingScheme.V10: REGION_CHANNEL_MAPPING_V2,  # Same as V8; alpha channel dropped in output
     EncodingScheme.V11: REGION_CHANNEL_MAPPING_V11,  # Same as V10; obstruction bar uses gap/midpoint
+    EncodingScheme.V12: REGION_CHANNEL_MAPPING_V2,   # Window projection rectangle; static params vector
+    EncodingScheme.V13: REGION_CHANNEL_MAPPING_V2,   # Like V12; window stripe removed
 }
 
 

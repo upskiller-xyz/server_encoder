@@ -48,6 +48,8 @@ class ServerApplication:
         self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
         self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
         self._encoding_service_v5 = EncodingServiceFactory.get_instance(EncodingScheme.V5)
+        self._encoding_service_v12 = EncodingServiceFactory.get_instance(EncodingScheme.V12)
+        self._encoding_service_v13 = EncodingServiceFactory.get_instance(EncodingScheme.V13)
         
         self._setup_dependencies()
         self._setup_routes()
@@ -61,6 +63,8 @@ class ServerApplication:
             EncodingScheme.V3.value: self._encoding_service_v3,
             EncodingScheme.V4.value: self._encoding_service_v4,
             EncodingScheme.V5.value: self._encoding_service_v5,
+            EncodingScheme.V12.value: self._encoding_service_v12,
+            EncodingScheme.V13.value: self._encoding_service_v13,
         }
 
         # Controller
