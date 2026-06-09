@@ -43,9 +43,17 @@ class V5EncodingService(EncodingService):
     def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V5) -> None:
         # Bypass EncodingService.__init__: RGBA builder/director not needed here
         self._encoding_scheme = encoding_scheme
-        self._director = V6ImageDirector() if encoding_scheme == EncodingScheme.V6 else V5ImageDirector()
         self._encoder_factory = EncoderFactory()
         self._validator = EncodingParameterValidator(encoding_scheme, self._encoder_factory)
+
+    def _create_director(self):
+        """Create a fresh, request-local V5/V6 director.
+
+        The director holds mutable per-request build state, so it must not be
+        shared across concurrent requests via the singleton service (see
+        EncodingService._create_director).
+        """
+        return V6ImageDirector() if self._encoding_scheme == EncodingScheme.V6 else V5ImageDirector()
 
     # ------------------------------------------------------------------
     # Validation
@@ -122,7 +130,8 @@ class V5EncodingService(EncodingService):
 
         logger.info("Encoding V%s mask - model_type: %s", self._encoding_scheme.value, model_type.value)
 
-        result = self._director.construct_from_flat_parameters(model_type, parameters)
+        director = self._create_director()
+        result = director.construct_from_flat_parameters(model_type, parameters)
         image_array = result[0]
         mask_array = result[1]
 
@@ -146,7 +155,8 @@ class V5EncodingService(EncodingService):
             self._encoding_scheme.value, model_type.value,
             len(parameters[ParameterName.WINDOWS.value]),
         )
-        result = self._director.construct_multi_window_images(model_type, parameters)
+        director = self._create_director()
+        result = director.construct_multi_window_images(model_type, parameters)
         logger.info("Multi-window V%s masks encoded - count: %d", self._encoding_scheme.value, len(result.images))
         return result
 
@@ -177,7 +187,8 @@ class V5EncodingService(EncodingService):
 
         logger.info("Encoding V6 image - model_type: %s, param_count: %d", model_type.value, len(parameters))
 
-        image_array, mask_array, static_vector = self._director.construct_from_flat_parameters(
+        director = self._create_director()
+        image_array, mask_array, static_vector = director.construct_from_flat_parameters(
             model_type, parameters
         )
 
@@ -208,7 +219,8 @@ class V5EncodingService(EncodingService):
             "Encoding multi-window V6 - model_type: %s, window_count: %d",
             model_type.value, len(parameters[ParameterName.WINDOWS.value]),
         )
-        result = self._director.construct_multi_window_images(model_type, parameters)
+        director = self._create_director()
+        result = director.construct_multi_window_images(model_type, parameters)
         logger.info("Multi-window V6 encoded - count: %d", len(result.images))
         return result  # type: ignore[return-value]
 

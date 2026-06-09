@@ -65,7 +65,8 @@ class V12EncodingService(EncodingService):
         if not is_valid:
             raise ValueError(error_msg)
 
-        image, mask = self._director.construct_from_flat_parameters(model_type, parameters)
+        director = self._create_director()
+        image, mask = director.construct_from_flat_parameters(model_type, parameters)
         static_vector = self._build_static_vector(parameters)
         return image, mask, static_vector
 
