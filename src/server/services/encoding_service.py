@@ -24,10 +24,22 @@ class EncodingService:
 
     def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
         self._encoding_scheme = encoding_scheme
-        self._builder = RoomImageBuilder(encoding_scheme=encoding_scheme)
-        self._director = RoomImageDirector(self._builder, encoding_scheme=encoding_scheme)
         self._encoder_factory = EncoderFactory()
         self._validator = EncodingParameterValidator(encoding_scheme, self._encoder_factory)
+
+    def _create_director(self) -> RoomImageDirector:
+        """Create a fresh, request-local image director.
+
+        The director and its RoomImageBuilder hold mutable per-request state
+        (the image being built and the room mask). Because the encoding
+        services are reused as shared singletons, that state must never live on
+        the service: concurrent encode calls would otherwise interleave on the
+        same buffers and corrupt each other's image/mask (e.g. an empty
+        (128, 128, 4) room mask leaking out mid-build). A fresh director per
+        encode call keeps every request fully isolated.
+        """
+        builder = RoomImageBuilder(encoding_scheme=self._encoding_scheme)
+        return RoomImageDirector(builder, encoding_scheme=self._encoding_scheme)
 
     def parse_request(self, data: Dict[str, Any]) -> RoomEncodingRequest:
         try:
@@ -75,7 +87,8 @@ class EncodingService:
 
         logger.info(f"Encoding room image arrays - model_type: {model_type.value}, param_count: {len(parameters)}")
 
-        image_array, mask_array = self._director.construct_from_flat_parameters(model_type, parameters)
+        director = self._create_director()
+        image_array, mask_array = director.construct_from_flat_parameters(model_type, parameters)
         image_array = image_array.astype(np.uint8)
 
         if self._encoding_scheme in (EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
@@ -136,7 +149,8 @@ class EncodingService:
             logger.error(f"Parameter validation failed: {error_msg}")
             raise ValueError(error_msg)
 
-        result = self._director.construct_multi_window_images(model_type, parameters)
+        director = self._create_director()
+        result = director.construct_multi_window_images(model_type, parameters)
 
         for window_id in result.window_ids():
             img = result.images[window_id].astype(np.uint8)
@@ -163,7 +177,8 @@ class EncodingService:
             f"window_count: {len(parameters[ParameterName.WINDOWS.value])}"
         )
 
-        array_result = self._director.construct_multi_window_images(model_type, parameters)
+        director = self._create_director()
+        array_result = director.construct_multi_window_images(model_type, parameters)
 
         result = EncodedBytesResult()
         for window_id in array_result.window_ids():
