@@ -19,8 +19,7 @@ RUN apt-get update && apt-get install -y \
 # that scanners still flag even after an upgrade)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && { \
-        find / -type d -name "_bundled" -path "*ensurepip*" -exec rm -rf {} + 2>/dev/null || true; \
-        find / -type f -name "*.whl" -delete 2>/dev/null || true; \
+        find /usr/local/lib -type d -name "_bundled" -path "*ensurepip*" -exec rm -rf {} + 2>/dev/null; \
         rm -rf /root/.cache/pip; \
     }
 
