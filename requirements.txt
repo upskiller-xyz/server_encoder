@@ -14,7 +14,7 @@ pydantic>=2.0.0,<3.0.0
 requests>=2.32.0,<3.0.0
 
 # Utilities & Logging
-setuptools>=78.1.1
+setuptools>=81.0.0,<84.0.0
 
 # Image Processing
 numpy>=1.24.0,<2.0.0
