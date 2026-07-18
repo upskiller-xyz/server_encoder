@@ -14,6 +14,16 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade build tooling & purge old bundled/cached wheels the base image ships
+# (fixes pip / setuptools / wheel CVEs; ensurepip stashes vulnerable .whl files
+# that scanners still flag even after an upgrade)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && { \
+        find / -type d -name "_bundled" -path "*ensurepip*" -exec rm -rf {} + 2>/dev/null || true; \
+        find / -type f -name "*.whl" -delete 2>/dev/null || true; \
+        rm -rf /root/.cache/pip; \
+    }
+
 # Copy requirements first for better layer caching
 COPY requirements.txt ./
 
