@@ -11,18 +11,24 @@ on which region it belongs to:
 
 No obstruction bar, no parameter encoding.
 """
-from typing import Dict, Any, Optional, Tuple
 import logging
+from typing import Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from src.core import ModelType, ParameterName, RegionType, V5_MASK_VALUES
+from src.components.geometry import RoomPolygon, WindowGeometry
+from src.components.image_builder.geometry_rotator import GeometryRotator
+from src.components.image_builder.parameter_normalizer import ParameterNormalizer
+from src.core import (
+    V5_MASK_VALUES,
+    ClientInputError,
+    ModelType,
+    ParameterName,
+    RegionType,
+)
 from src.core.enums import PARAMETER_REGIONS
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
-from src.components.geometry import RoomPolygon, WindowGeometry
-from src.components.image_builder.parameter_normalizer import ParameterNormalizer
-from src.components.image_builder.geometry_rotator import GeometryRotator
 from src.models import EncodingParameters, EncodingResult
 
 logger = logging.getLogger(__name__)
@@ -230,7 +236,7 @@ class V5ImageDirector:
 
         windows_config = parameters[windows_key]
         if not isinstance(windows_config, dict):
-            raise ValueError("'windows' parameter must be a dictionary")
+            raise ClientInputError("'windows' parameter must be a dictionary")
 
         shared_params = {k: v for k, v in parameters.items() if k != windows_key}
         for window_id, window_params in windows_config.items():

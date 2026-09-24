@@ -13,15 +13,17 @@ returned as a separate 1-D float32 static vector (V12_STATIC_PARAMS order).
   V12: background + room + window stripe + projection rectangle + static_vector
   V13: background + room + projection rectangle + static_vector  (no window stripe)
 """
-from typing import Any, Dict, Optional, Tuple
 import logging
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
-from src.core import ModelType, ParameterName, EncodingScheme
-from src.core.enums import V12_STATIC_PARAMS
-from src.components.calculators.parameter_calculator_registry import ParameterCalculatorRegistry
+from src.components.calculators.parameter_calculator_registry import (
+    ParameterCalculatorRegistry,
+)
 from src.components.parameter_encoders import EncoderFactory
+from src.core import ClientInputError, EncodingScheme, ModelType, ParameterName
+from src.core.enums import V12_STATIC_PARAMS
 from src.server.services.encoding_service import EncodingService
 
 logger = logging.getLogger(__name__)
@@ -63,7 +65,7 @@ class V12EncodingService(EncodingService):
         self._validator.ensure_direction_angle(parameters)
         is_valid, error_msg = self._validator.validate(parameters, model_type)
         if not is_valid:
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         director = self._create_director()
         image, mask = director.construct_from_flat_parameters(model_type, parameters)

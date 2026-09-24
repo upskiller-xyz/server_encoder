@@ -5,19 +5,23 @@ SRP: owns all parameter-level validation, clipping, and scheme-specific
 preprocessing for encoding requests. EncodingService delegates to this class
 and performs no parameter logic itself.
 """
-from typing import Any, Dict, Tuple
 import logging
+from typing import Any, Dict, Tuple
 
 import numpy as np
 
-from src.core.enums import DEFAULT_PARAMETER_VALUES, EncodingScheme, ParameterName
-from src.components.parameter_encoders import EncoderFactory
-from src.components.geometry import WindowGeometry, RoomPolygon
 from src.components.calculators import ParameterCalculatorRegistry
+from src.components.geometry import RoomPolygon, WindowGeometry
+from src.components.parameter_encoders import EncoderFactory
+from src.core import ClientInputError, ModelType
+from src.core.enums import DEFAULT_PARAMETER_VALUES, EncodingScheme, ParameterName
+from src.validation.parameter_validators.window_border_validator import (
+    WindowBorderValidator,
+)
+from src.validation.parameter_validators.window_height_validator import (
+    WindowHeightValidator,
+)
 from src.validation.utils import ValidationUtils
-from src.validation.parameter_validators.window_border_validator import WindowBorderValidator
-from src.validation.parameter_validators.window_height_validator import WindowHeightValidator
-from src.core import ModelType
 
 logger = logging.getLogger(__name__)
 
@@ -248,18 +252,18 @@ class EncodingParameterValidator:
             try:
                 value = float(value)
             except (TypeError, ValueError) as exc:
-                raise ValueError(f"Parameter '{param_name}' has invalid value: {parameters[param_name]}. Error: {exc}")
+                raise ClientInputError(f"Parameter '{param_name}' has invalid value: {parameters[param_name]}. Error: {exc}")
 
             original, clipped = value, False
 
             if param_name == ParameterName.HEIGHT_ROOF_OVER_FLOOR.value:
                 if value <= 0.0:
-                    raise ValueError(f"Parameter '{param_name}' value {value} not supported. Must be greater than 0.")
+                    raise ClientInputError(f"Parameter '{param_name}' value {value} not supported. Must be greater than 0.")
                 if value < min_val:
                     value, clipped = min_val, True
             elif value < min_val:
                 if reject_below_min:
-                    raise ValueError(
+                    raise ClientInputError(
                         f"Parameter '{param_name}' value {value} not supported. "
                         f"Valid range is [{min_val}, {max_val}]."
                     )
@@ -294,7 +298,7 @@ class EncodingParameterValidator:
             if key in parameters:
                 vec = parameters[key]
                 if not hasattr(vec, "__len__") or len(vec) != 2:
-                    raise ValueError(
+                    raise ClientInputError(
                         f"'{key}' must be a two-element sequence "
                         f"[height_roof_over_floor, floor_height_above_terrain], got: {vec!r}"
                     )

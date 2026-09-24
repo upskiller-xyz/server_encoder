@@ -1,7 +1,8 @@
-from typing import Dict, Any
+from typing import Any, Dict
+
 from src.components.calculators.i_parameter_calculator import IParameterCalculator
-from src.core import ParameterName
 from src.components.geometry import WindowGeometry
+from src.core import ClientInputError, ParameterName
 
 
 class WindowHeightCalculator(IParameterCalculator):
@@ -74,7 +75,7 @@ class WindowHeightCalculator(IParameterCalculator):
             return window_height
 
         except (KeyError, TypeError, ValueError) as e:
-            raise ValueError(
+            raise ClientInputError(
                 f"Cannot calculate window_height. "
                 f"Required: z1, z2. "
                 f"Error: {type(e).__name__}: {str(e)}"

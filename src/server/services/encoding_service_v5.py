@@ -9,19 +9,24 @@ static-parameter vector alongside the image.
   V6: geometry + obstruction input; returns (image, mask, static_vector) via
       encode_room_image_arrays_v6() / encode_multi_window_images_arrays_v6()
 """
-from typing import Any, Dict, Optional, Tuple
 import logging
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
-from src.core import ModelType, ParameterName, EncodingScheme
 from src.components.image_builder.v5_image_director import V5ImageDirector
-from src.components.image_builder.v6_image_director import V6ImageDirector, V6EncodingResult
+from src.components.image_builder.v6_image_director import (
+    V6EncodingResult,
+    V6ImageDirector,
+)
 from src.components.parameter_encoders import EncoderFactory
+from src.core import ClientInputError, EncodingScheme, ModelType, ParameterName
 from src.models import EncodingResult, RoomEncodingRequest
-from src.validation import ValidationUtils
-from src.validation.parameter_validators.encoding_parameter_validator import EncodingParameterValidator
 from src.server.services.encoding_service import EncodingService
+from src.validation import ValidationUtils
+from src.validation.parameter_validators.encoding_parameter_validator import (
+    EncodingParameterValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +131,7 @@ class V5EncodingService(EncodingService):
         is_valid, error_msg = self.validate_parameters(parameters, model_type)
         if not is_valid:
             logger.error("V5/V6 parameter validation failed: %s", error_msg)
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         logger.info("Encoding V%s mask - model_type: %s", self._encoding_scheme.value, model_type.value)
 
@@ -183,7 +188,7 @@ class V5EncodingService(EncodingService):
         is_valid, error_msg = self.validate_parameters(parameters, model_type)
         if not is_valid:
             logger.error("V6 parameter validation failed: %s", error_msg)
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         logger.info("Encoding V6 image - model_type: %s, param_count: %d", model_type.value, len(parameters))
 
