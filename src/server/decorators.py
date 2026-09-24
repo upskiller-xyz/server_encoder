@@ -2,7 +2,7 @@
 from functools import wraps
 from typing import Callable, Any, Dict, Type, Optional
 from flask import request, jsonify
-from werkzeug.exceptions import BadRequest, UnsupportedMediaType
+from werkzeug.exceptions import BadRequest, HTTPException, UnsupportedMediaType
 from pydantic import BaseModel, ValidationError
 import traceback
 import logging
@@ -93,6 +93,9 @@ def endpoint_error_handler(
                 # Log validation error
                 logger.error(f"{endpoint.value} error: {str(e)}")
                 return jsonify({ResponseKey.ERROR.value: str(e)}), HTTPStatus.BAD_REQUEST.value
+            except HTTPException:
+                # Other Werkzeug HTTP errors (e.g. 413 body too large) keep their status.
+                raise
             except Exception as e:
                 # Full detail stays in the log; the caller gets no internals.
                 error_trace = traceback.format_exc()

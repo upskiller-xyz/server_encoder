@@ -2,6 +2,7 @@
 import pytest
 from flask import Flask, request
 
+from src.server.application import ServerApplication
 from src.server.http_policy import CORS_ORIGINS_ENV, FLASK_DEBUG_ENV, MAX_CONTENT_LENGTH_ENV, HttpPolicy
 
 ORIGIN = "https://app.example.com"
@@ -50,3 +51,11 @@ def test_debug_is_opt_in(monkeypatch, value, expected):
     else:
         monkeypatch.setenv(FLASK_DEBUG_ENV, value)
     assert HttpPolicy.debug_enabled() is expected
+
+
+def test_endpoint_rejects_oversized_body_with_413(monkeypatch):
+    """Endpoint error handling must not turn the size limit into a 500."""
+    monkeypatch.setenv(MAX_CONTENT_LENGTH_ENV, "64")
+    client = ServerApplication().app.test_client()
+    response = client.post("/encode", data=b"x" * 65, content_type="application/json")
+    assert response.status_code == 413
