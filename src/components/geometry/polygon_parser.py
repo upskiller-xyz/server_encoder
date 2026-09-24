@@ -1,7 +1,7 @@
-from typing import List, Tuple, Any
 from abc import ABC, abstractmethod
+from typing import Any, List, Tuple
 
-from src.core import ParameterName
+from src.core import ClientInputError, ParameterName
 
 
 class IPolygonDataParser(ABC):
@@ -69,13 +69,13 @@ class DictPolygonParser(IPolygonDataParser):
         vertices = []
         for i, point in enumerate(data):
             if not isinstance(point, dict):
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} is not a dict. "
                     f"Got type: {type(point).__name__}, value: {point}"
                 )
 
             if ParameterName.X.value not in point or ParameterName.Y.value not in point:
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} missing 'x' or 'y' key. "
                     f"Got: {point}. Expected format: {{'x': value, 'y': value}}"
                 )
@@ -85,7 +85,7 @@ class DictPolygonParser(IPolygonDataParser):
                 y = float(point[ParameterName.Y.value])
                 vertices.append((x, y))
             except (TypeError, ValueError) as e:
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
                     f"Error: {type(e).__name__}: {str(e)}. "
                     f"Point: {point}"
@@ -121,13 +121,13 @@ class ListPolygonParser(IPolygonDataParser):
         vertices = []
         for i, point in enumerate(data):
             if not isinstance(point, (list, tuple)):
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} is not a list or tuple. "
                     f"Got type: {type(point).__name__}, value: {point}"
                 )
 
             if len(point) < 2:
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} must have at least 2 elements. "
                     f"Got: {point}. Expected format: [x, y]"
                 )
@@ -137,7 +137,7 @@ class ListPolygonParser(IPolygonDataParser):
                 y = float(point[1])
                 vertices.append((x, y))
             except (TypeError, ValueError, IndexError) as e:
-                raise ValueError(
+                raise ClientInputError(
                     f"Parameter 'room_polygon' point at index {i} has invalid coordinate values. "
                     f"Error: {type(e).__name__}: {str(e)}. "
                     f"Point: {point}"
@@ -179,7 +179,7 @@ class PolygonParserFactory:
                 return parser
 
         # No parser found - provide helpful error
-        raise ValueError(
+        raise ClientInputError(
             f"Parameter 'room_polygon' has unsupported format. "
             f"Got type: {type(data).__name__}, value: {data}. "
             f"Expected formats: [{ParameterName.X.value: val, ParameterName.Y.value: val}, ...] or [[x, y], ...]"

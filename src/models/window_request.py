@@ -5,8 +5,9 @@ Represents a single window with all its parameters.
 Provides validation and conversion to internal formats.
 """
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, Tuple, Union, List
-from src.core import ParameterName
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from src.core import ClientInputError, ParameterName
 from src.models.reflectance_parameters import ReflectanceParameters
 
 
@@ -146,7 +147,7 @@ class WindowRequest:
         ]
         missing = [field for field in required if field not in data]
         if missing:
-            raise ValueError(f"Missing required window fields: {', '.join(missing)}")
+            raise ClientInputError(f"Missing required window fields: {', '.join(missing)}")
 
         # Parse reflectance parameters
         reflectance = ReflectanceParameters.from_dict(data)

@@ -1,13 +1,27 @@
-from typing import Dict, Any, Optional, Tuple
-from src.core import ModelType, RegionType, ParameterName, PARAMETER_REGIONS, EncodingScheme
-from src.models import EncodingParameters, EncodingResult
-from src.components.image_builder.room_image_builder import RoomImageBuilder
-from src.components.image_builder.parameter_normalizer import ParameterNormalizer
-from src.components.image_builder.geometry_rotator import GeometryRotator
-from src.components.calculators.parameter_calculator_registry import ParameterCalculatorRegistry
-from src.components.geometry import WindowGeometry
-from src.components.region_encoders.obstruction_strategies import ObstructionStrategyFactory, ObstructionEncodingStrategy
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
+
+from src.components.calculators.parameter_calculator_registry import (
+    ParameterCalculatorRegistry,
+)
+from src.components.geometry import WindowGeometry
+from src.components.image_builder.geometry_rotator import GeometryRotator
+from src.components.image_builder.parameter_normalizer import ParameterNormalizer
+from src.components.image_builder.room_image_builder import RoomImageBuilder
+from src.components.region_encoders.obstruction_strategies import (
+    ObstructionEncodingStrategy,
+    ObstructionStrategyFactory,
+)
+from src.core import (
+    PARAMETER_REGIONS,
+    ClientInputError,
+    EncodingScheme,
+    ModelType,
+    ParameterName,
+    RegionType,
+)
+from src.models import EncodingParameters, EncodingResult
 
 _SCHEMES_WITHOUT_WINDOW_STRIPE = frozenset({EncodingScheme.V13})
 
@@ -202,7 +216,7 @@ class RoomImageDirector:
 
         windows_config = parameters[windows_key]
         if not isinstance(windows_config, dict):
-            raise ValueError("'windows' parameter must be a dictionary")
+            raise ClientInputError("'windows' parameter must be a dictionary")
 
         # Extract shared parameters (everything except windows)
         shared_params = {k: v for k, v in parameters.items() if k != windows_key}

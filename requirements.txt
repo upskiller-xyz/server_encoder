@@ -23,4 +23,4 @@ shapely>=2.0.0,<3.0.0
 
 
 # Production Server (optional for Docker deployment)
-gunicorn>=21.0.0,<23.0.0
+gunicorn>=23.0.0,<24.0.0

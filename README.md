@@ -298,7 +298,7 @@ export PORT=8081
 python -m src.main
 ```
 
-Server runs on `http://localhost:8081` with debug mode enabled.
+Server runs on `http://localhost:8081` with debug mode off by default (set `FLASK_DEBUG=true` to opt in).
 
 #### Docker
 
