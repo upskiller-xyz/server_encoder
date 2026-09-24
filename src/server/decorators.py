@@ -12,6 +12,8 @@ from src.server.enums import Endpoint, HTTPStatus
 
 logger = logging.getLogger(__name__)
 
+INTERNAL_ERROR_TYPE = "InternalError"
+
 
 def endpoint_error_handler(
     endpoint: Endpoint,
@@ -92,7 +94,7 @@ def endpoint_error_handler(
                 logger.error(f"{endpoint.value} error: {str(e)}")
                 return jsonify({ResponseKey.ERROR.value: str(e)}), HTTPStatus.BAD_REQUEST.value
             except Exception as e:
-                # Log unexpected error with traceback
+                # Full detail stays in the log; the caller gets no internals.
                 error_trace = traceback.format_exc()
                 logger.error(
                     f"{endpoint.value} failed: {str(e)}\n"
@@ -100,8 +102,8 @@ def endpoint_error_handler(
                     f"Traceback:\n{error_trace}"
                 )
                 return jsonify({
-                    ResponseKey.ERROR.value: f"{endpoint.value} failed: {str(e)}",
-                    ResponseKey.ERROR_TYPE.value: type(e).__name__
+                    ResponseKey.ERROR.value: f"{endpoint.value} failed: internal error",
+                    ResponseKey.ERROR_TYPE.value: INTERNAL_ERROR_TYPE
                 }), HTTPStatus.INTERNAL_SERVER_ERROR.value
         
         return wrapper

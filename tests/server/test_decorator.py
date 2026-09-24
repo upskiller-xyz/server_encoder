@@ -127,7 +127,7 @@ class TestEndpointErrorHandler:
         @app.route('/test', methods=['POST'])
         @endpoint_error_handler(Endpoint.ENCODE)
         def test_endpoint(data):
-            raise RuntimeError("Unexpected error")
+            raise RuntimeError("Unexpected error at /srv/app/secret.py")
 
         with app.test_client() as client:
             response = client.post(
@@ -139,8 +139,9 @@ class TestEndpointErrorHandler:
             assert response.status_code == 500
             result = json.loads(response.data)
             assert ResponseKey.ERROR.value in result
-            assert "Unexpected error" in result[ResponseKey.ERROR.value]
-            assert ResponseKey.ERROR_TYPE.value in result
+            # Internals (message, paths, exception class) never reach the caller
+            assert "secret.py" not in result[ResponseKey.ERROR.value]
+            assert result[ResponseKey.ERROR_TYPE.value] == "InternalError"
 
     def test_decorator_preserves_bad_request(self, app):
         """Test that decorator re-raises BadRequest exceptions"""

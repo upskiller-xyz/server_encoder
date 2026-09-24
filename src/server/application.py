@@ -1,7 +1,6 @@
 """Server application implementation"""
 from typing import Dict, Any
 from flask import Flask, Response, request, jsonify, render_template
-from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 import logging
 import os
@@ -13,6 +12,7 @@ from src.server.services import EncodingServiceFactory
 from src.server.services.geometry_service import GeometryService
 from src.server.controllers.base_controller import ServerController
 from src.server.decorators import endpoint_error_handler
+from src.server.http_policy import MEBIBYTE, HttpPolicy
 from src.server.key_manager import KeyManager
 from src.server.schemas import (
     EncodeRequest,
@@ -38,7 +38,7 @@ class ServerApplication:
         """
         template_folder = os.path.join(os.path.dirname(__file__), "templates")
         self._app: Flask = Flask(app_name, template_folder=template_folder)
-        CORS(self._app)
+        HttpPolicy.from_environment(default_max_bytes=64 * MEBIBYTE).apply(self._app)
         self._controller: ServerController | None = None
         self._geometry_service = GeometryService()
         
