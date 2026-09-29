@@ -19,7 +19,7 @@ class WindowHeightValidator:
     ) -> Tuple[bool, str]:
         """
         Validate that window z-coordinates are within floor-roof bounds.
-        Windows within WINDOW_HEIGHT_CORRECTION_TOLERANCE (15cm) are clamped
+        Windows within WINDOW_HEIGHT_CORRECTION_TOLERANCE (40cm) are clamped
         to floor/roof. Windows beyond that tolerance raise an error.
 
         Args:
