@@ -1,6 +1,6 @@
 """
 Unit tests for WindowHeightValidator - validates window z-coordinates are between floor and roof.
-Windows within 15cm tolerance are clamped, beyond that an error is raised.
+Windows within 40cm tolerance are clamped, beyond that an error is raised.
 """
 
 import pytest
@@ -85,7 +85,7 @@ class TestWindowHeightValidator:
         assert is_valid is True
         assert error_msg == ""
 
-    # --- Clamping: within 15cm tolerance ---
+    # --- Clamping: within 40cm tolerance ---
 
     def test_window_bottom_clamped_to_floor(self):
         """Test BIM window frame extending 10cm below floor is clamped."""
@@ -106,8 +106,8 @@ class TestWindowHeightValidator:
         assert window_geom.z2 == 3.0
 
     def test_window_clamped_at_exact_tolerance_boundary(self):
-        """Test window at exactly 15cm deviation is still clamped."""
-        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.15, x2=1.0, y2=0.0, z2=2.0)
+        """Test window at exactly 40cm deviation is still clamped."""
+        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.40, x2=1.0, y2=0.0, z2=2.0)
         is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
             window_geom, floor_height=0.0, roof_height=3.0
         )
@@ -141,7 +141,16 @@ class TestWindowHeightValidator:
         assert is_valid is True
         assert window_geom.z1 == 0.0
 
-    # --- Errors: beyond 15cm tolerance ---
+    def test_window_below_floor_within_new_tolerance_is_clamped(self):
+        """Test window 30cm below floor (the real-world case that used to fail at 15cm) is clamped."""
+        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=3.80, x2=1.0, y2=0.0, z2=5.0)
+        is_valid, error_msg = WindowHeightValidator.validate_window_height_bounds(
+            window_geom, floor_height=4.10, roof_height=7.0
+        )
+        assert is_valid is True
+        assert window_geom.z1 == 4.10
+
+    # --- Errors: beyond 40cm tolerance ---
 
     def test_window_below_floor_beyond_tolerance(self):
         """Test window 50cm below floor raises error."""
@@ -171,8 +180,8 @@ class TestWindowHeightValidator:
         assert "below floor" in str(exc_info.value)
 
     def test_window_just_beyond_tolerance(self):
-        """Test window at 16cm deviation (just over 15cm) raises error."""
-        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.16, x2=1.0, y2=0.0, z2=2.0)
+        """Test window at 41cm deviation (just over 40cm) raises error."""
+        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=-0.41, x2=1.0, y2=0.0, z2=2.0)
         with pytest.raises(WindowHeightValidationError):
             WindowHeightValidator.validate_window_height_bounds(
                 window_geom, floor_height=0.0, roof_height=3.0
@@ -198,7 +207,7 @@ class TestWindowHeightValidator:
 
     def test_realistic_scenario_window_too_high(self):
         """Test realistic scenario where window extends far above roof."""
-        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.0, x2=2.0, y2=0.0, z2=3.5)
+        window_geom = WindowGeometry(x1=0.0, y1=0.0, z1=2.0, x2=2.0, y2=0.0, z2=3.8)
         with pytest.raises(WindowHeightValidationError) as exc_info:
             WindowHeightValidator.validate_window_height_bounds(
                 window_geom, floor_height=0.3, roof_height=3.3
