@@ -13,6 +13,16 @@ class WindowEncoderException(Exception):
     pass
 
 
+class ClientInputError(ValueError):
+    """A validation failure caused by the caller's payload.
+
+    Only these messages are safe to echo to the client; a plain ValueError may
+    carry internal details (coordinates, array shapes, library internals) and
+    must be answered with a generic error instead.
+    """
+    pass
+
+
 class GeometryValidationError(WindowEncoderException):
     """Base exception for geometry validation errors"""
     pass

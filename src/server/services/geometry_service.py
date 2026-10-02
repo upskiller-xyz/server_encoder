@@ -4,14 +4,15 @@ Geometry service.
 SRP: owns geometric queries — direction angle, reference point, and external
 reference point. These are coordinate calculations, not encoding operations.
 """
+import logging
 import math
 from typing import Any, Dict
-import logging
 
+from src.components.geometry import RoomPolygon, WindowGeometry
+from src.core import ClientInputError
 from src.core.enums import ParameterName
-from src.components.geometry import WindowGeometry, RoomPolygon
 from src.models import ReferencePointResult
-from src.validation import ValidatorManager, RequestType
+from src.validation import RequestType, ValidatorManager
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +53,13 @@ class GeometryService:
                     "Calculated direction_angle for '%s': %.4f rad (%.2f°)",
                     window_id, angle, angle * 180 / math.pi,
                 )
+            except ClientInputError:
+                raise
             except Exception as exc:
-                raise ValueError(f"Failed to calculate direction_angle for window '{window_id}': {exc}") from exc
+                logger.exception("direction_angle calculation failed for window '%s'", window_id)
+                raise ClientInputError(
+                    f"Failed to calculate direction_angle for window '{window_id}'"
+                ) from exc
 
         return results
 
@@ -83,8 +89,13 @@ class GeometryService:
                     "Calculated reference_point for '%s': (%.4f, %.4f, %.4f)",
                     window_id, ref_point.x, ref_point.y, ref_point.z,
                 )
+            except ClientInputError:
+                raise
             except Exception as exc:
-                raise ValueError(f"Failed to calculate reference_point for window '{window_id}': {exc}") from exc
+                logger.exception("reference_point calculation failed for window '%s'", window_id)
+                raise ClientInputError(
+                    f"Failed to calculate reference_point for window '{window_id}'"
+                ) from exc
 
         return results
 
@@ -114,9 +125,12 @@ class GeometryService:
                     "Calculated external_reference_point for '%s': (%.4f, %.4f, %.4f)",
                     window_id, ext_point.x, ext_point.y, ext_point.z,
                 )
+            except ClientInputError:
+                raise
             except Exception as exc:
-                raise ValueError(
-                    f"Failed to calculate external_reference_point for window '{window_id}': {exc}"
+                logger.exception("external_reference_point calculation failed for window '%s'", window_id)
+                raise ClientInputError(
+                    f"Failed to calculate external_reference_point for window '{window_id}'"
                 ) from exc
 
         return results
@@ -125,11 +139,14 @@ class GeometryService:
     def _validate(request_type: RequestType, parameters: Dict[str, Any]) -> None:
         result = ValidatorManager.validate(request_type, parameters)
         if not result.is_valid:
-            raise ValueError("; ".join(str(e) for e in result.errors))
+            raise ClientInputError("; ".join(str(e) for e in result.errors))
 
     @staticmethod
     def _parse_room_polygon(parameters: Dict[str, Any]) -> RoomPolygon:
         try:
             return RoomPolygon.from_dict(parameters[ParameterName.ROOM_POLYGON.value])
+        except ClientInputError:
+            raise
         except Exception as exc:
-            raise ValueError(f"Invalid room_polygon: {exc}") from exc
+            logger.exception("Invalid room_polygon")
+            raise ClientInputError("Invalid room_polygon") from exc

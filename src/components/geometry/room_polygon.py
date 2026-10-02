@@ -1,15 +1,19 @@
-from typing import List, Tuple
 import math
+from typing import List, Tuple
+
 import numpy as np
-from shapely.geometry import Polygon as ShapelyPolygon, Point as ShapelyPoint, LineString as ShapelyLine, box as ShapelyBox
 from shapely.affinity import rotate as shapely_rotate
-from src.components.geometry.point_2d import Point2D
+from shapely.geometry import LineString as ShapelyLine
+from shapely.geometry import Point as ShapelyPoint
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.geometry import box as ShapelyBox
+
 from src.components.geometry.geometry_adapter import GeometryAdapter
-from src.core import ImageDimensions
-from src.core import GRAPHICS_CONSTANTS
-from src.core.enums import ParameterName
-from src.components.geometry.window_geometry import WindowGeometry
 from src.components.geometry.geometry_ops import GeometryOps
+from src.components.geometry.point_2d import Point2D
+from src.components.geometry.window_geometry import WindowGeometry
+from src.core import GRAPHICS_CONSTANTS, ClientInputError, ImageDimensions
+from src.core.enums import ParameterName
 
 
 class RoomPolygon:
@@ -31,7 +35,7 @@ class RoomPolygon:
             vertices: List of (x, y) coordinates in meters
         """
         if len(vertices) < 3:
-            raise ValueError("Polygon must have at least 3 vertices")
+            raise ClientInputError("Polygon must have at least 3 vertices")
 
         self._vertices = [Point2D(x, y) for x, y in vertices]
 
@@ -123,7 +127,7 @@ class RoomPolygon:
 
 
         if not self.boundary_contains(window_line, tolerance):
-            raise ValueError(
+            raise ClientInputError(
             f"Window at ({window_line.coords[0][0]:.2f}, {window_line.coords[0][1]:.2f}) to ({window_line.coords[1][0]:.2f}, {window_line.coords[1][1]:.2f}) "
             f"does not lie on any polygon edge")
 
@@ -172,7 +176,7 @@ class RoomPolygon:
         """
 
         if window_x1 is None or window_y1 is None or window_x2 is None or window_y2 is None:
-            raise ValueError("Window coordinates required for room positioning")
+            raise ClientInputError("Window coordinates required for room positioning")
 
         rotated_polygon = self.get_coords()
 
@@ -272,7 +276,7 @@ class RoomPolygon:
             ValueError: If data format is invalid
         """
         if not data:
-            raise ValueError("Polygon data cannot be empty")
+            raise ClientInputError("Polygon data cannot be empty")
         if isinstance(data, cls):
             return data
 
@@ -286,7 +290,7 @@ class RoomPolygon:
             # List of lists/tuples format: [[0, 0], ...] or [(0, 0), ...]
             vertices = [(point[0], point[1]) for point in data]
         else:
-            raise ValueError(
+            raise ClientInputError(
                 f"Invalid polygon data format. Expected list of dicts or list of lists/tuples, "
                 f"but got list of {type(first_element).__name__}"
             )

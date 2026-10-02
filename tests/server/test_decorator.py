@@ -1,14 +1,15 @@
 """Tests for endpoint error handler decorator"""
-import pytest
 from unittest.mock import Mock, patch
-from flask import Flask, json
-from werkzeug.exceptions import BadRequest
-from pydantic import ValidationError
 
+import pytest
+from flask import Flask, json
+from pydantic import ValidationError
+from werkzeug.exceptions import BadRequest
+
+from src.core import ClientInputError, ResponseKey
 from src.server.decorators import endpoint_error_handler
 from src.server.enums import Endpoint
 from src.server.schemas import EncodeRequest
-from src.core import ResponseKey
 
 
 @pytest.fixture
@@ -103,12 +104,12 @@ class TestEndpointErrorHandler:
             assert ResponseKey.ERROR.value in result
             assert "Validation error" in result[ResponseKey.ERROR.value]
 
-    def test_decorator_handles_value_error(self, app):
-        """Test that decorator catches and handles ValueError"""
+    def test_decorator_handles_client_input_error(self, app):
+        """ClientInputError echoes its client-facing message as 400"""
         @app.route('/test', methods=['POST'])
         @endpoint_error_handler(Endpoint.ENCODE)
         def test_endpoint(data):
-            raise ValueError("Test validation error")
+            raise ClientInputError("Missing required field: model_type")
 
         with app.test_client() as client:
             response = client.post(
@@ -116,18 +117,37 @@ class TestEndpointErrorHandler:
                 json={"test": "value"},
                 content_type='application/json'
             )
-            
+
             assert response.status_code == 400
             result = json.loads(response.data)
             assert ResponseKey.ERROR.value in result
-            assert "Test validation error" in result[ResponseKey.ERROR.value]
+            assert "Missing required field: model_type" in result[ResponseKey.ERROR.value]
+
+    def test_decorator_sanitizes_plain_value_error(self, app):
+        """A plain ValueError may carry internals and must never be echoed"""
+        @app.route('/test', methods=['POST'])
+        @endpoint_error_handler(Endpoint.ENCODE)
+        def test_endpoint(data):
+            raise ValueError("Coordinate (3.14, 2.71) rejected by internal state /srv/secret.npy")
+
+        with app.test_client() as client:
+            response = client.post(
+                '/test',
+                json={"test": "value"},
+                content_type='application/json'
+            )
+
+            assert response.status_code == 500
+            result = json.loads(response.data)
+            assert "secret.npy" not in result[ResponseKey.ERROR.value]
+            assert result[ResponseKey.ERROR_TYPE.value] == "InternalError"
 
     def test_decorator_handles_generic_exception(self, app):
         """Test that decorator catches and handles generic exceptions"""
         @app.route('/test', methods=['POST'])
         @endpoint_error_handler(Endpoint.ENCODE)
         def test_endpoint(data):
-            raise RuntimeError("Unexpected error")
+            raise RuntimeError("Unexpected error at /srv/app/secret.py")
 
         with app.test_client() as client:
             response = client.post(
@@ -139,8 +159,9 @@ class TestEndpointErrorHandler:
             assert response.status_code == 500
             result = json.loads(response.data)
             assert ResponseKey.ERROR.value in result
-            assert "Unexpected error" in result[ResponseKey.ERROR.value]
-            assert ResponseKey.ERROR_TYPE.value in result
+            # Internals (message, paths, exception class) never reach the caller
+            assert "secret.py" not in result[ResponseKey.ERROR.value]
+            assert result[ResponseKey.ERROR_TYPE.value] == "InternalError"
 
     def test_decorator_preserves_bad_request(self, app):
         """Test that decorator re-raises BadRequest exceptions"""
@@ -213,7 +234,7 @@ class TestEndpointErrorHandler:
         @app.route('/test', methods=['POST'])
         @endpoint_error_handler(Endpoint.CALCULATE_DIRECTION)
         def test_endpoint(data):
-            raise ValueError("Test error")
+            raise ClientInputError("Test error")
 
         with app.test_client() as client:
             response = client.post(
@@ -221,7 +242,7 @@ class TestEndpointErrorHandler:
                 json={"test": "value"},
                 content_type='application/json'
             )
-            
+
             assert response.status_code == 400
             # The error message should indicate it's from CALCULATE_DIRECTION
             result = json.loads(response.data)

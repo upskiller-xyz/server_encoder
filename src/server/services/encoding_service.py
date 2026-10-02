@@ -1,14 +1,17 @@
-from typing import Dict, Any, Tuple, Optional, Union
-import numpy as np
-import cv2
 import logging
+from typing import Any, Dict, Optional, Tuple, Union
 
-from src.core.enums import FileFormat
-from src.models import EncodingResult, EncodedBytesResult, RoomEncodingRequest
-from src.core import ModelType, ParameterName, EncodingScheme
+import cv2
+import numpy as np
+
 from src.components.image_builder import RoomImageBuilder, RoomImageDirector
 from src.components.parameter_encoders import EncoderFactory
-from src.validation.parameter_validators.encoding_parameter_validator import EncodingParameterValidator
+from src.core import ClientInputError, EncodingScheme, ModelType, ParameterName
+from src.core.enums import FileFormat
+from src.models import EncodedBytesResult, EncodingResult, RoomEncodingRequest
+from src.validation.parameter_validators.encoding_parameter_validator import (
+    EncodingParameterValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +49,14 @@ class EncodingService:
             request = RoomEncodingRequest.from_dict(data)
             logger.info(f"Parsed request: model_type={request.model_type.value}, windows={len(request.windows)}")
             return request
+        except ClientInputError:
+            # Caller's payload failed validation — the message is client-facing.
+            raise
         except Exception as e:
+            # Anything else is a parse bug, not bad input: log the detail,
+            # give the caller a fixed message.
             logger.error(f"Failed to parse request: {str(e)}")
-            raise ValueError(f"Invalid request format: {str(e)}")
+            raise ClientInputError("Invalid request format")
 
     def validate_request(self, request: RoomEncodingRequest) -> Tuple[bool, str]:
         is_valid, error_msg = request.validate()
@@ -66,7 +74,7 @@ class EncodingService:
     ) -> Union[Tuple[np.ndarray, Optional[np.ndarray]], Tuple[bytes, Optional[bytes]]]:
         is_valid, error_msg = self.validate_request(request)
         if not is_valid:
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         parameters = request.to_flat_dict()
         if return_format == FileFormat.ARRAYS:
@@ -83,7 +91,7 @@ class EncodingService:
         is_valid, error_msg = self._validator.validate(parameters, model_type)
         if not is_valid:
             logger.error(f"Parameter validation failed: {error_msg}")
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         logger.info(f"Encoding room image arrays - model_type: {model_type.value}, param_count: {len(parameters)}")
 
@@ -147,7 +155,7 @@ class EncodingService:
         is_valid, error_msg = self._validator.validate(parameters, model_type)
         if not is_valid:
             logger.error(f"Parameter validation failed: {error_msg}")
-            raise ValueError(error_msg)
+            raise ClientInputError(error_msg)
 
         director = self._create_director()
         result = director.construct_multi_window_images(model_type, parameters)

@@ -10,21 +10,25 @@ V6 combines:
   NOT encoded into the image; instead they are normalised and returned as a separate
   1-D float32 array whose order is defined by V6_STATIC_PARAMS.
 """
-from typing import Any, Dict, Optional, Tuple
 import logging
+from typing import Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from src.core import ModelType, ParameterName, RegionType
+from src.components.calculators.parameter_calculator_registry import (
+    ParameterCalculatorRegistry,
+)
+from src.components.geometry import RoomPolygon, WindowGeometry
+from src.components.image_builder.geometry_rotator import GeometryRotator
+from src.components.image_builder.parameter_normalizer import ParameterNormalizer
+from src.components.parameter_encoders.encoder_factory import EncoderFactory
+from src.components.region_encoders.obstruction_strategies import (
+    V6BoundingBoxObstructionStrategy,
+)
+from src.core import ClientInputError, ModelType, ParameterName, RegionType
 from src.core.enums import PARAMETER_REGIONS, V5_MASK_VALUES, V6_STATIC_PARAMS
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
-from src.components.geometry import RoomPolygon, WindowGeometry
-from src.components.image_builder.parameter_normalizer import ParameterNormalizer
-from src.components.image_builder.geometry_rotator import GeometryRotator
-from src.components.parameter_encoders.encoder_factory import EncoderFactory
-from src.components.calculators.parameter_calculator_registry import ParameterCalculatorRegistry
-from src.components.region_encoders.obstruction_strategies import V6BoundingBoxObstructionStrategy
 from src.models import EncodingParameters, EncodingResult
 
 logger = logging.getLogger(__name__)
@@ -292,7 +296,7 @@ class V6ImageDirector:
 
         windows_config = parameters[windows_key]
         if not isinstance(windows_config, dict):
-            raise ValueError("'windows' parameter must be a dictionary")
+            raise ClientInputError("'windows' parameter must be a dictionary")
 
         shared_params = {k: v for k, v in parameters.items() if k != windows_key}
         for window_id, window_params in windows_config.items():
