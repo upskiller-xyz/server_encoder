@@ -1,12 +1,14 @@
 """Validator manager to orchestrate validation based on request type (Strategy Pattern)"""
 from typing import Any, Dict, Type
+
+from src.core import ClientInputError
 from src.validation.base import BaseValidator, ValidationResult
 from src.validation.enums import RequestType
 from src.validation.request_validators import (
-    EncodeRequestValidator,
     CalculateDirectionRequestValidator,
-    ReferencePointRequestValidator,
+    EncodeRequestValidator,
     ExternalReferencePointRequestValidator,
+    ReferencePointRequestValidator,
 )
 
 
@@ -44,7 +46,7 @@ class ValidatorManager:
         validator_class = cls._VALIDATORS.get(request_type)
 
         if validator_class is None:
-            raise ValueError(
+            raise ClientInputError(
                 f"No validator found for request type: {request_type.value}. "
                 f"Supported types: {', '.join(rt.value for rt in RequestType)}"
             )
@@ -70,7 +72,7 @@ class ValidatorManager:
         validator_class = cls._VALIDATORS.get(request_type)
 
         if validator_class is None:
-            raise ValueError(
+            raise ClientInputError(
                 f"No validator found for request type: {request_type.value}. "
                 f"Supported types: {', '.join(rt.value for rt in RequestType)}"
             )

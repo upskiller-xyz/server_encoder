@@ -1,7 +1,15 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import numpy as np
-from src.core import RegionType, ModelType, ParameterName, EncodingScheme
+
 from src.components.region_encoders import RegionEncoderFactory
+from src.core import (
+    ClientInputError,
+    EncodingScheme,
+    ModelType,
+    ParameterName,
+    RegionType,
+)
 from src.core.graphics_constants import GRAPHICS_CONSTANTS
 from src.models.encoding_parameters import EncodingParameters
 
@@ -40,7 +48,7 @@ class RoomImageBuilder:
     def set_model_type(self, model_type: ModelType) -> 'RoomImageBuilder':
         """Set the model type for encoding"""
         if not isinstance(model_type, ModelType):
-            raise ValueError(f"Invalid model type: {model_type}")
+            raise ClientInputError(f"Invalid model type: {model_type}")
         self._model_type = model_type
         return self
 

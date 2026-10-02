@@ -1,5 +1,6 @@
 
-FROM python:3.10-slim
+# Base image pinned by digest (reproducible, tamper-evident); Dependabot bumps it.
+FROM python:3.10-slim@sha256:31dd4d9529d02d7436659061cb7564cd4733fc90e5e152709a942d53382ec8d0
 
 # Set working directory
 WORKDIR /app
@@ -41,6 +42,10 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
+# Unprivileged runtime user (no shell, no home); the service never writes to disk.
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
+
 COPY src/ ./src/
 
 # Set environment variables
@@ -52,8 +57,11 @@ ENV PORT=8082 \
     OMP_NUM_THREADS=1
 
 # Make files read-only for security
-RUN chmod -R 444 ./src/ && \
+# Read-only for everyone; directories keep +x so the app user can traverse them.
+RUN chmod -R a-w,a+rX ./src/ && \
     chmod 444 ./requirements.txt
+
+USER app
 
 # Run with gunicorn
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 900 --access-logfile - --error-logfile - src.main:app

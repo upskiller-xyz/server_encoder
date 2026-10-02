@@ -5,12 +5,14 @@ Represents a complete room encoding request with all parameters.
 Provides validation and conversion to internal formats.
 """
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
-from src.core import ModelType, ParameterName
+
+from src.core import ClientInputError, ModelType, ParameterName
 from src.core.enums import REQUIRED_WINDOW_COORDINATES
-from src.models.window_request import WindowRequest
 from src.models.reflectance_parameters import ReflectanceParameters
+from src.models.window_request import WindowRequest
 
 
 def _parse_float_or_list(value: Any) -> Optional[Union[float, List[float]]]:
@@ -170,12 +172,12 @@ class RoomEncodingRequest:
         # Parse model type
         model_type_str = data.get(ParameterName.MODEL_TYPE.value)
         if not model_type_str:
-            raise ValueError(f"Missing required field: {ParameterName.MODEL_TYPE.value}")
+            raise ClientInputError(f"Missing required field: {ParameterName.MODEL_TYPE.value}")
 
         try:
             model_type = ModelType(model_type_str)
         except ValueError:
-            raise ValueError(f"Invalid model_type: {model_type_str}")
+            raise ClientInputError(f"Invalid model_type: {model_type_str}")
 
         # Get parameters section
         params = data.get(ParameterName.PARAMETERS.value, {})
@@ -194,11 +196,11 @@ class RoomEncodingRequest:
         elif ParameterName.WINDOWS.value in params:
             windows_data = params[ParameterName.WINDOWS.value]
             if not isinstance(windows_data, dict):
-                raise ValueError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
+                raise ClientInputError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
             for window_id, window_data in windows_data.items():
                 windows[window_id] = WindowRequest.from_dict(window_data)
         else:
-            raise ValueError(f"No windows found in request. Need either flat window coordinates or '{ParameterName.WINDOWS.value}' dictionary")
+            raise ClientInputError(f"No windows found in request. Need either flat window coordinates or '{ParameterName.WINDOWS.value}' dictionary")
 
         # Parse reflectance parameters
         reflectance = ReflectanceParameters.from_dict(params)
