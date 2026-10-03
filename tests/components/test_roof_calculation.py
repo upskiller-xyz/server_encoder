@@ -102,7 +102,7 @@ class TestRoofHeightCalculation:
 
         floor_height = 17.1m, height_roof_over_floor = 2.7m
         Roof = 19.8m
-        Window z2 = 20.0m (above roof)
+        Window z2 = 20.3m (50cm above roof, beyond the 40cm tolerance)
         Should fail validation
         """
         parameters = {
@@ -112,7 +112,7 @@ class TestRoofHeightCalculation:
             "windows": {
                 "test_window": {
                     "x1": 0, "y1": 0.2, "z1": 18.0,
-                    "x2": 0, "y2": 1.8, "z2": 20.0,  # Above roof
+                    "x2": 0, "y2": 1.8, "z2": 20.3,  # Above roof, beyond tolerance
                     "window_frame_ratio": 0.2,
                     "horizon": 0,
                     "zenith": 0,
