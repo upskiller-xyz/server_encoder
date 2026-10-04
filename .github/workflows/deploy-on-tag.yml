@@ -4,25 +4,24 @@ name: Deploy to the VM on a tag
 # that tag, with no manual step on the box.
 #
 # The deploy itself lives in server_lux
-# (.github/workflows/deploy-scaleway.yml). It receives this dispatch, resolves
-# ENCODER_REF from the payload and runs
+# (.github/workflows/deploy-scaleway.yml). This triggers it with
+# inputs {service: encoder, service_ref: <tag>}; it then pins ENCODER_REF and runs
 # `deploy-scaleway.sh --service encoder-service --build` over SSH, leaving every
 # other service's container and checkout untouched. Keeping the deploy there
 # means the SSH key and the deploy logic live in one repo instead of being
 # copied into all four and rotated in four places.
 #
-# Requires the SERVER_LUX_DISPATCH_TOKEN secret: a token with **Contents:
-# write** on upskiller-xyz/server_lux, which is what POST /dispatches needs.
-# The default GITHUB_TOKEN cannot dispatch to another repository. Contents:
-# write also permits pushing to server_lux — GitHub has no narrower scope for
-# repository dispatch — so use a token dedicated to this workflow and rotate it
-# on the same schedule as the deploy key.
+# Requires the SERVER_LUX_DISPATCH_TOKEN secret: a token with **Actions: write**
+# on upskiller-xyz/server_lux — that is all the workflow-dispatch endpoint
+# needs. Deliberately not repository_dispatch, which sits under Contents: write
+# and would additionally let this token push code to server_lux. The default
+# GITHUB_TOKEN cannot dispatch to another repository either way.
 
 on:
   push:
     tags: ["v*"]
 
-# Nothing here uses GITHUB_TOKEN; the dispatch authenticates with its own PAT.
+# Nothing here uses GITHUB_TOKEN; the dispatch authenticates with its own token.
 permissions: {}
 
 concurrency:
@@ -48,16 +47,17 @@ jobs:
             echo "::error::SERVER_LUX_DISPATCH_TOKEN is not set — $TAG was published but nothing was deployed."
             exit 1
           fi
-          # jq builds the body so the tag cannot break the JSON, whatever it
-          # contains. server_lux validates the ref again on receipt.
+          # "ref" selects which branch of server_lux runs the workflow; the tag
+          # being deployed travels as the service_ref INPUT. The two are
+          # unrelated, which is why the input is not called "ref".
           payload="$(jq -nc --arg s "$SERVICE" --arg r "$TAG" \
-            '{event_type:"service-tag",client_payload:{service:$s,ref:$r}}')"
+            '{ref:"master",inputs:{service:$s,service_ref:$r}}')"
           # -f: a 4xx/5xx fails the step. A successful dispatch returns 204 with
           # an empty body, so there is nothing to read back.
           curl -fsS -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/upskiller-xyz/server_lux/dispatches \
+            https://api.github.com/repos/upskiller-xyz/server_lux/actions/workflows/deploy-scaleway.yml/dispatches \
             -d "$payload"
-          echo "Dispatched service-tag for $SERVICE @ $TAG."
+          echo "Triggered deploy-scaleway.yml for $SERVICE @ $TAG."
