@@ -25,10 +25,14 @@ on:
 permissions: {}
 
 concurrency:
-  # Two tags pushed close together would otherwise race to deploy the same
-  # service; the later one should win rather than whichever SSH finishes last.
+  # Trims a trigger that a newer tag has already superseded, which is all this
+  # can do: the run ends when the dispatch is ACCEPTED, not when the deploy
+  # finishes, and GitHub does not guarantee the execution order of runs in a
+  # concurrency group. Release order is therefore enforced where it can be —
+  # inside the deploy on the VM, which rejects a release older than the one it
+  # already has (see server_lux deploy-scaleway.sh).
   group: deploy-on-tag
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   dispatch:
@@ -39,6 +43,11 @@ jobs:
           TOKEN: ${{ secrets.SERVER_LUX_DISPATCH_TOKEN }}
           SERVICE: encoder
           TAG: ${{ github.ref_name }}
+          # Monotonic per repo and always increasing, so the deploy can compare
+          # two releases of this service and refuse the older one. The tag name
+          # cannot serve: it is not reliably ordered (v1.10.0 vs v1.9.0) and a
+          # tag can be force-moved.
+          ORDER: ${{ github.run_id }}
         run: |
           set -euo pipefail
           # Fail loudly instead of skipping: a tag that silently deploys
@@ -50,8 +59,8 @@ jobs:
           # "ref" selects which branch of server_lux runs the workflow; the tag
           # being deployed travels as the service_ref INPUT. The two are
           # unrelated, which is why the input is not called "ref".
-          payload="$(jq -nc --arg s "$SERVICE" --arg r "$TAG" \
-            '{ref:"master",inputs:{service:$s,service_ref:$r}}')"
+          payload="$(jq -nc --arg s "$SERVICE" --arg r "$TAG" --arg o "$ORDER" \
+            '{ref:"master",inputs:{service:$s,service_ref:$r,release_order:$o}}')"
           # -f: a 4xx/5xx fails the step. A successful dispatch returns 204 with
           # an empty body, so there is nothing to read back.
           curl -fsS -X POST \
