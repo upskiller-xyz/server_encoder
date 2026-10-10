@@ -1,6 +1,6 @@
 
 # Base image pinned by digest (reproducible, tamper-evident); Dependabot bumps it.
-FROM python:3.10-slim@sha256:31dd4d9529d02d7436659061cb7564cd4733fc90e5e152709a942d53382ec8d0
+FROM python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
 
 # Set working directory
 WORKDIR /app
