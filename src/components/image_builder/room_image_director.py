@@ -35,15 +35,19 @@ class RoomImageDirector:
     from the builder's encoding scheme (V1/V2 → bar, V3 → none, V4 → bounding box).
     """
 
-    def __init__(self, builder: RoomImageBuilder, encoding_scheme: EncodingScheme = EncodingScheme.V2):
+    def __init__(
+        self,
+        builder: RoomImageBuilder,
+        encoding_scheme: EncodingScheme = EncodingScheme.V2,
+    ):
         self._builder = builder
         self._encoding_scheme = encoding_scheme
-        self._obstruction_strategy: ObstructionEncodingStrategy = ObstructionStrategyFactory.create(encoding_scheme)
+        self._obstruction_strategy: ObstructionEncodingStrategy = (
+            ObstructionStrategyFactory.create(encoding_scheme)
+        )
 
     def construct_full_image(
-        self,
-        model_type: ModelType,
-        all_parameters: EncodingParameters
+        self, model_type: ModelType, all_parameters: EncodingParameters
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Construct a complete encoded image with all regions
@@ -68,15 +72,21 @@ class RoomImageDirector:
         if self._encoding_scheme not in _SCHEMES_WITHOUT_WINDOW_STRIPE:
             region_order.append(RegionType.WINDOW)
 
-        params = [all_parameters.get_region(region).parameters for region in region_order]
-        [self._builder.encode_region(region, p)
-         for region, p in zip(region_order, params)
-         if p]
+        params = [
+            all_parameters.get_region(region).parameters for region in region_order
+        ]
+        [
+            self._builder.encode_region(region, p)
+            for region, p in zip(region_order, params)
+            if p
+        ]
 
         # Apply obstruction encoding via the selected strategy (V1/V2: bar, V3: none, V4: bounding box)
         image = self._builder.build()
         room_mask = self._builder.get_room_mask()
-        obstruction_params = all_parameters.get_region(RegionType.OBSTRUCTION_BAR).parameters
+        obstruction_params = all_parameters.get_region(
+            RegionType.OBSTRUCTION_BAR
+        ).parameters
 
         # V12/V13: pass typed window geometry and calculated window_height to the strategy
         window_geometry: Optional[WindowGeometry] = None
@@ -84,26 +94,35 @@ class RoomImageDirector:
         if self._encoding_scheme in (EncodingScheme.V12, EncodingScheme.V13):
             window_params = all_parameters.window.parameters
             if window_params:
-                window_geometry = ParameterNormalizer.normalize_window_geometry(window_params)
+                window_geometry = ParameterNormalizer.normalize_window_geometry(
+                    window_params
+                )
                 # window_height may already be in window_params (mutated by window encoding in V12),
                 # or needs to be derived fresh (V13, where window encoding is skipped).
                 raw = window_params.get(ParameterName.WINDOW_HEIGHT.value)
                 if raw is None:
-                    derived = ParameterCalculatorRegistry.calculate_derived_parameters(window_params)
+                    derived = ParameterCalculatorRegistry.calculate_derived_parameters(
+                        window_params
+                    )
                     raw = derived.get(ParameterName.WINDOW_HEIGHT.value)
                 if raw is not None:
                     window_height = float(raw)
 
         if obstruction_params:
             image = self._obstruction_strategy.apply(
-                image, room_mask, obstruction_params, model_type,
+                image,
+                room_mask,
+                obstruction_params,
+                model_type,
                 window_geometry=window_geometry,
                 window_height=window_height,
             )
 
         return image, room_mask
 
-    def _rotate_geometry_if_needed(self, all_parameters: EncodingParameters) -> EncodingParameters:
+    def _rotate_geometry_if_needed(
+        self, all_parameters: EncodingParameters
+    ) -> EncodingParameters:
         """
         Rotate room polygon and window coordinates if window is not on south facade
 
@@ -119,22 +138,34 @@ class RoomImageDirector:
         if not all_parameters.window.parameters:
             return all_parameters
 
-        window_geom = ParameterNormalizer.normalize_window_geometry(all_parameters.window.parameters)
+        window_geom = ParameterNormalizer.normalize_window_geometry(
+            all_parameters.window.parameters
+        )
         if window_geom is None:
             return all_parameters
 
         # Get room polygon
-        room_polygon = ParameterNormalizer.normalize_room_polygon(all_parameters.room.parameters) if all_parameters.room.parameters else None
+        room_polygon = (
+            ParameterNormalizer.normalize_room_polygon(all_parameters.room.parameters)
+            if all_parameters.room.parameters
+            else None
+        )
 
         # Calculate direction_angle from room polygon if available and not already set
         if window_geom.direction_angle is None and room_polygon is not None:
             try:
-                calculated_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                calculated_angle = window_geom.calculate_direction_from_polygon(
+                    room_polygon
+                )
                 # Create new WindowGeometry with updated direction_angle
                 window_geom = WindowGeometry(
-                    x1=window_geom.x1, y1=window_geom.y1, z1=window_geom.z1,
-                    x2=window_geom.x2, y2=window_geom.y2, z2=window_geom.z2,
-                    direction_angle=calculated_angle
+                    x1=window_geom.x1,
+                    y1=window_geom.y1,
+                    z1=window_geom.z1,
+                    x2=window_geom.x2,
+                    y2=window_geom.y2,
+                    z2=window_geom.z2,
+                    direction_angle=calculated_angle,
                 )
             except ValueError:
                 pass
@@ -154,12 +185,12 @@ class RoomImageDirector:
         # (training pipeline or server_lux encoding handler).
 
         # Rotate geometry using GeometryRotator
-        return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)
+        return GeometryRotator.rotate_if_needed(
+            all_parameters, window_geom, room_polygon
+        )
 
     def construct_from_flat_parameters(
-        self,
-        model_type: ModelType,
-        parameters: Dict[str, Any]
+        self, model_type: ModelType, parameters: Dict[str, Any]
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Construct image from flat parameter dictionary
@@ -188,9 +219,7 @@ class RoomImageDirector:
         return self.construct_full_image(model_type, grouped)
 
     def construct_multi_window_images(
-        self,
-        model_type: ModelType,
-        parameters: Dict[str, Any]
+        self, model_type: ModelType, parameters: Dict[str, Any]
     ) -> EncodingResult:
         """
         Construct multiple images for multiple windows in the same room
@@ -224,8 +253,7 @@ class RoomImageDirector:
         # Build images and masks
         for window_id, window_params in windows_config.items():
             image, mask = self.construct_from_flat_parameters(
-                model_type,
-                {**shared_params, **window_params}
+                model_type, {**shared_params, **window_params}
             )
             result.add_window(window_id, image, mask)
 
@@ -269,7 +297,9 @@ class RoomImageDirector:
                 window_params[ParameterName.Y2.value] = window_geom.y2
                 window_params[ParameterName.Z2.value] = window_geom.z2
                 if window_geom.direction_angle is not None:
-                    window_params[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
+                    window_params[ParameterName.DIRECTION_ANGLE.value] = (
+                        window_geom.direction_angle
+                    )
 
         # Normalize RoomPolygon
         room_params = encoding_params.room.parameters
@@ -280,10 +310,15 @@ class RoomImageDirector:
                 room_params[ParameterName.ROOM_POLYGON.value] = room_polygon
 
         # Copy window geometry to room
-        coord_keys = [ParameterName.X1.value, ParameterName.Y1.value,
-                      ParameterName.X2.value, ParameterName.Y2.value,
-                      ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value,
-                      ParameterName.WALL_THICKNESS.value]
+        coord_keys = [
+            ParameterName.X1.value,
+            ParameterName.Y1.value,
+            ParameterName.X2.value,
+            ParameterName.Y2.value,
+            ParameterName.WINDOW_GEOMETRY.value,
+            ParameterName.DIRECTION_ANGLE.value,
+            ParameterName.WALL_THICKNESS.value,
+        ]
 
         for k in coord_keys:
             if k in window_params:
@@ -293,6 +328,8 @@ class RoomImageDirector:
         # Copy it to window region for calculator access
         background_params = encoding_params.background.parameters
         if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params:
-            window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
+            window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = (
+                background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
+            )
 
         return encoding_params

@@ -1,5 +1,6 @@
-from typing import Dict, Any
 from dataclasses import dataclass, field
+from typing import Any, Dict
+
 from src.core import RegionType
 from src.models.region_parameters import RegionParameters
 
@@ -11,6 +12,7 @@ class EncodingParameters:
 
     Replaces Dict[str, Dict[str, Any]] with a proper type-safe class
     """
+
     background: RegionParameters = field(default_factory=RegionParameters)
     room: RegionParameters = field(default_factory=RegionParameters)
     window: RegionParameters = field(default_factory=RegionParameters)
@@ -73,20 +75,28 @@ class EncodingParameters:
         return key in self.global_params
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'EncodingParameters':
+    def from_dict(cls, data: Dict[str, Any]) -> "EncodingParameters":
         """Create from dictionary (for backwards compatibility)"""
         params = cls()
 
         # Separate region parameters from global parameters
         for key, value in data.items():
             if key == RegionType.BACKGROUND.value:
-                params.background = RegionParameters(parameters=value if isinstance(value, dict) else {})
+                params.background = RegionParameters(
+                    parameters=value if isinstance(value, dict) else {}
+                )
             elif key == RegionType.ROOM.value:
-                params.room = RegionParameters(parameters=value if isinstance(value, dict) else {})
+                params.room = RegionParameters(
+                    parameters=value if isinstance(value, dict) else {}
+                )
             elif key == RegionType.WINDOW.value:
-                params.window = RegionParameters(parameters=value if isinstance(value, dict) else {})
+                params.window = RegionParameters(
+                    parameters=value if isinstance(value, dict) else {}
+                )
             elif key == RegionType.OBSTRUCTION_BAR.value:
-                params.obstruction_bar = RegionParameters(parameters=value if isinstance(value, dict) else {})
+                params.obstruction_bar = RegionParameters(
+                    parameters=value if isinstance(value, dict) else {}
+                )
             else:
                 params.global_params[key] = value
 

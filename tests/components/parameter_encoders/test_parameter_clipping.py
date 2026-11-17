@@ -10,8 +10,9 @@ Tests clipping behavior for all parameters with clipping rules:
 
 import unittest
 from unittest.mock import Mock, patch
-from src.server.services import EncodingService
+
 from src.core import ModelType
+from src.server.services import EncodingService
 
 
 class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
@@ -31,10 +32,12 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 1.0,
-            "z2": 3.0
+            "z2": 3.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertFalse(is_valid)
         self.assertIn("floor_height_above_terrain", error_msg)
@@ -51,10 +54,12 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 1.0,
-            "z2": 3.0
+            "z2": 3.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 0.0)
@@ -69,10 +74,12 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 6.0,
-            "z2": 8.0
+            "z2": 8.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 5.5)
@@ -87,10 +94,12 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 11.0,
-            "z2": 13.0
+            "z2": 13.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 10.0)
@@ -105,10 +114,12 @@ class TestFloorHeightAboveTerrainClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 16.0,
-            "z2": 18.0
+            "z2": 18.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 10.0)
@@ -132,10 +143,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertFalse(is_valid)
         self.assertIn("height_roof_over_floor", error_msg)
@@ -151,10 +164,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertFalse(is_valid)
         self.assertIn("height_roof_over_floor", error_msg)
@@ -169,10 +184,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["height_roof_over_floor"], 15.0)
@@ -187,10 +204,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["height_roof_over_floor"], 15.0)
@@ -205,10 +224,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["height_roof_over_floor"], 30.0)
@@ -223,10 +244,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["height_roof_over_floor"], 30.0)
@@ -242,10 +265,12 @@ class TestHeightRoofOverFloorClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["height_roof_over_floor"], 30.0)
@@ -268,10 +293,12 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["horizon"], 0.0)
@@ -286,10 +313,12 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["horizon"], 0.0)
@@ -304,10 +333,12 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["horizon"], 45.0)
@@ -322,10 +353,12 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["horizon"], 90.0)
@@ -340,10 +373,12 @@ class TestObstructionAngleHorizonClipping(unittest.TestCase):
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["horizon"], 90.0)
@@ -366,10 +401,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": -10.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 0.0)
@@ -384,10 +421,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": 0.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 0.0)
@@ -402,10 +441,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": 35.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 35.0)
@@ -420,10 +461,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": 70.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 70.0)
@@ -438,10 +481,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": 85.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 70.0)
@@ -456,10 +501,12 @@ class TestObstructionAngleZenithClipping(unittest.TestCase):
             "zenith": 180.0,
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["zenith"], 70.0)
@@ -475,17 +522,19 @@ class TestMultipleParametersClipping(unittest.TestCase):
     def test_multiple_parameters_clipped_simultaneously(self):
         """Test multiple parameters can be clipped in same validation"""
         parameters = {
-            "floor_height_above_terrain": 15.0,     # Will clip to 10
-            "height_roof_over_floor": 50.0,         # Will clip to 30
+            "floor_height_above_terrain": 15.0,  # Will clip to 10
+            "height_roof_over_floor": 50.0,  # Will clip to 30
             "window_frame_ratio": 0.8,
-            "horizon": 120.0,     # Will clip to 90
-            "zenith": 85.0,       # Will clip to 70
+            "horizon": 120.0,  # Will clip to 90
+            "zenith": 85.0,  # Will clip to 70
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 16.0,
-            "z2": 18.0
+            "z2": 18.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         self.assertTrue(is_valid)
         self.assertEqual(parameters["floor_height_above_terrain"], 10.0)
@@ -496,22 +545,24 @@ class TestMultipleParametersClipping(unittest.TestCase):
     def test_some_parameters_rejected_some_clipped(self):
         """Test that rejection takes precedence over clipping"""
         parameters = {
-            "floor_height_above_terrain": -1.0,     # Will be rejected
-            "height_roof_over_floor": 50.0,         # Would clip but doesn't matter
+            "floor_height_above_terrain": -1.0,  # Will be rejected
+            "height_roof_over_floor": 50.0,  # Would clip but doesn't matter
             "window_frame_ratio": 0.8,
             "horizon": [45.0],
             "zenith": [30.0],
             "room_polygon": [[0, 0], [5, 0], [5, 5], [0, 5]],
             "z1": 2.0,
-            "z2": 4.0
+            "z2": 4.0,
         }
 
-        is_valid, error_msg = self.service.validate_parameters(parameters, ModelType.DF_DEFAULT)
+        is_valid, error_msg = self.service.validate_parameters(
+            parameters, ModelType.DF_DEFAULT
+        )
 
         # Should fail validation due to negative floor_height
         self.assertFalse(is_valid)
         self.assertIn("floor_height_above_terrain", error_msg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

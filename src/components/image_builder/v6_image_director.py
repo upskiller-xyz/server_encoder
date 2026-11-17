@@ -10,6 +10,7 @@ V6 combines:
   NOT encoded into the image; instead they are normalised and returned as a separate
   1-D float32 array whose order is defined by V6_STATIC_PARAMS.
 """
+
 import logging
 from typing import Any, Dict, Optional, Tuple
 
@@ -137,14 +138,16 @@ class V6ImageDirector:
 
         border = GRAPHICS_CONSTANTS.BORDER_PX
         mask[:border, :] = 0
-        mask[h - border:, :] = 0
+        mask[h - border :, :] = 0
         mask[:, :border] = 0
-        mask[:, w - border:] = 0
+        mask[:, w - border :] = 0
 
         image[mask.astype(bool)] = V5_MASK_VALUES[RegionType.ROOM]
         return mask
 
-    def _draw_window(self, image: np.ndarray, all_parameters: EncodingParameters) -> None:
+    def _draw_window(
+        self, image: np.ndarray, all_parameters: EncodingParameters
+    ) -> None:
         """Fill the window area with V5_MASK_VALUES[WINDOW] (0.6)."""
         window_params = all_parameters.window.parameters
         if not window_params:
@@ -209,7 +212,9 @@ class V6ImageDirector:
         for idx, param_name in enumerate(V6_STATIC_PARAMS):
             key = param_name.value
             if key not in flat:
-                logger.debug("V6 static vector: parameter '%s' not found, using 0.0", key)
+                logger.debug(
+                    "V6 static vector: parameter '%s' not found, using 0.0", key
+                )
                 continue
             try:
                 encoder = self._encoder_factory.create_encoder(key)
@@ -245,10 +250,16 @@ class V6ImageDirector:
 
         if window_geom.direction_angle is None and room_polygon is not None:
             try:
-                calculated_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                calculated_angle = window_geom.calculate_direction_from_polygon(
+                    room_polygon
+                )
                 window_geom = WindowGeometry(
-                    x1=window_geom.x1, y1=window_geom.y1, z1=window_geom.z1,
-                    x2=window_geom.x2, y2=window_geom.y2, z2=window_geom.z2,
+                    x1=window_geom.x1,
+                    y1=window_geom.y1,
+                    z1=window_geom.z1,
+                    x2=window_geom.x2,
+                    y2=window_geom.y2,
+                    z2=window_geom.z2,
                     direction_angle=calculated_angle,
                 )
             except ValueError:
@@ -260,7 +271,9 @@ class V6ImageDirector:
         if all_parameters.room.parameters:
             all_parameters.room[ParameterName.DIRECTION_ANGLE.value] = direction_angle
 
-        return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)
+        return GeometryRotator.rotate_if_needed(
+            all_parameters, window_geom, room_polygon
+        )
 
     # ------------------------------------------------------------------
     # Flat-parameter and multi-window entry points
@@ -275,7 +288,11 @@ class V6ImageDirector:
         windows_key = ParameterName.WINDOWS.value
         if windows_key in parameters and isinstance(parameters[windows_key], dict):
             result = self.construct_multi_window_images(model_type, parameters)
-            return result.get_first_image(), result.get_first_mask(), result.get_first_static_vector()
+            return (
+                result.get_first_image(),
+                result.get_first_mask(),
+                result.get_first_static_vector(),
+            )
 
         grouped = self._group_parameters(parameters)
         return self.construct_full_image(model_type, grouped)
@@ -290,7 +307,9 @@ class V6ImageDirector:
         windows_key = ParameterName.WINDOWS.value
 
         if windows_key not in parameters:
-            image, mask, static_vector = self.construct_from_flat_parameters(model_type, parameters)
+            image, mask, static_vector = self.construct_from_flat_parameters(
+                model_type, parameters
+            )
             result.add_window("window_1", image, mask, static_vector)
             return result
 
@@ -329,7 +348,9 @@ class V6ImageDirector:
                 window_params[ParameterName.Y2.value] = window_geom.y2
                 window_params[ParameterName.Z2.value] = window_geom.z2
                 if window_geom.direction_angle is not None:
-                    window_params[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
+                    window_params[ParameterName.DIRECTION_ANGLE.value] = (
+                        window_geom.direction_angle
+                    )
 
         room_params = encoding_params.room.parameters
         if room_params:
@@ -338,9 +359,12 @@ class V6ImageDirector:
                 room_params[ParameterName.ROOM_POLYGON.value] = room_polygon
 
         coord_keys = [
-            ParameterName.X1.value, ParameterName.Y1.value,
-            ParameterName.X2.value, ParameterName.Y2.value,
-            ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value,
+            ParameterName.X1.value,
+            ParameterName.Y1.value,
+            ParameterName.X2.value,
+            ParameterName.Y2.value,
+            ParameterName.WINDOW_GEOMETRY.value,
+            ParameterName.DIRECTION_ANGLE.value,
             ParameterName.WALL_THICKNESS.value,
         ]
         if room_params and window_params:
@@ -349,8 +373,11 @@ class V6ImageDirector:
                     room_params[k] = window_params[k]
 
         background_params = encoding_params.background.parameters
-        if (background_params and window_params and
-                ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params):
+        if (
+            background_params
+            and window_params
+            and ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params
+        ):
             window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = (
                 background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
             )
@@ -376,7 +403,8 @@ class V6EncodingResult(EncodingResult):
     ) -> None:
         super().add_window(window_id, image, mask)
         self.static_vectors[window_id] = (
-            static_vector if static_vector is not None
+            static_vector
+            if static_vector is not None
             else np.zeros(len(V6_STATIC_PARAMS), dtype=np.float32)
         )
 

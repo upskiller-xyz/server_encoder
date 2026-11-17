@@ -46,6 +46,9 @@ disable_error_code = ["import-untyped", "no-any-return"]
 explicit_package_bases = true
 
 [tool.ruff]
+# Notebooks under example/ are scratch material, not shipped code.
+extend-exclude = ["*.ipynb"]
+
 [tool.ruff.lint]
 select = ["I"]
 

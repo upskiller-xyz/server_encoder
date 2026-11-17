@@ -1,11 +1,13 @@
-from typing import Tuple
 from dataclasses import dataclass
+from typing import Tuple
+
 from src.core import GRAPHICS_CONSTANTS
 
 
 @dataclass
 class Point2D:
     """Represents a 2D point in meters"""
+
     x: float
     y: float
 
@@ -19,4 +21,7 @@ class Point2D:
         Returns:
             (x_pixel, y_pixel) tuple
         """
-        return (GRAPHICS_CONSTANTS.get_pixel_value(self.x), GRAPHICS_CONSTANTS.get_pixel_value(self.y))
+        return (
+            GRAPHICS_CONSTANTS.get_pixel_value(self.x),
+            GRAPHICS_CONSTANTS.get_pixel_value(self.y),
+        )

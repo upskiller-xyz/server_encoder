@@ -1,9 +1,14 @@
-from src.core import RegionType, EncodingScheme
-from src.components.region_encoders.background_region_encoder import BackgroundRegionEncoder
+from src.components.region_encoders.background_region_encoder import (
+    BackgroundRegionEncoder,
+)
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
+from src.components.region_encoders.obstruction_bar_encoder import (
+    ObstructionBarEncoder,
+    V11ObstructionBarEncoder,
+)
 from src.components.region_encoders.room_region_encoder import RoomRegionEncoder
 from src.components.region_encoders.window_region_encoder import WindowRegionEncoder
-from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder, V11ObstructionBarEncoder
+from src.core import EncodingScheme, RegionType
 
 # V3/V4 share V2's channel mappings for non-obstruction regions
 _V2_EQUIVALENT_SCHEMES = frozenset({EncodingScheme.V3, EncodingScheme.V4})
@@ -20,7 +25,11 @@ class RegionEncoderFactory:
     """
 
     @classmethod
-    def get_encoder(cls, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.V2) -> BaseRegionEncoder:
+    def get_encoder(
+        cls,
+        region_type: RegionType,
+        encoding_scheme: EncodingScheme = EncodingScheme.V2,
+    ) -> BaseRegionEncoder:
         """
         Create a fresh region encoder for a region type and encoding scheme.
 
@@ -36,11 +45,15 @@ class RegionEncoderFactory:
         """
         # V3/V4 use V2 encoders for background/room/window regions
         effective_scheme = (
-            EncodingScheme.V2 if encoding_scheme in _V2_EQUIVALENT_SCHEMES else encoding_scheme
+            EncodingScheme.V2
+            if encoding_scheme in _V2_EQUIVALENT_SCHEMES
+            else encoding_scheme
         )
 
         obstruction_encoder = (
-            V11ObstructionBarEncoder if effective_scheme == EncodingScheme.V11 else ObstructionBarEncoder
+            V11ObstructionBarEncoder
+            if effective_scheme == EncodingScheme.V11
+            else ObstructionBarEncoder
         )
         encoder_map = {
             RegionType.BACKGROUND: BackgroundRegionEncoder,

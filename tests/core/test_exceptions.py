@@ -1,14 +1,15 @@
 """Unit tests for core exceptions"""
 
 import pytest
+
 from src.core.exceptions import (
-    WindowEncoderException,
-    GeometryValidationError,
-    WindowNotOnPolygonError,
-    WindowHeightValidationError,
-    ParameterValidationError,
     EncodingError,
+    GeometryValidationError,
+    ParameterValidationError,
     RegionEncodingError,
+    WindowEncoderException,
+    WindowHeightValidationError,
+    WindowNotOnPolygonError,
 )
 
 
@@ -54,7 +55,7 @@ class TestWindowNotOnPolygonError:
         exc = WindowNotOnPolygonError(
             window_bbox=window_bbox,
             direction_angle=direction_angle,
-            tolerance=tolerance
+            tolerance=tolerance,
         )
         assert isinstance(exc, GeometryValidationError)
         assert exc.window_bbox == window_bbox
@@ -63,9 +64,7 @@ class TestWindowNotOnPolygonError:
         """Test creating error with specific coordinates"""
         window_bbox = (1.0, 2.0, 3.0, 4.0)
         exc = WindowNotOnPolygonError(
-            window_bbox=window_bbox,
-            direction_angle=0.5,
-            tolerance=0.1
+            window_bbox=window_bbox, direction_angle=0.5, tolerance=0.1
         )
         assert "1" in str(exc) and "2" in str(exc)
 
@@ -76,10 +75,7 @@ class TestWindowHeightValidationError:
     def test_window_height_validation_error_creation(self):
         """Test creating window height validation error"""
         exc = WindowHeightValidationError(
-            window_bottom=0.5,
-            window_top=2.5,
-            floor_height=1.0,
-            roof_height=3.0
+            window_bottom=0.5, window_top=2.5, floor_height=1.0, roof_height=3.0
         )
         assert isinstance(exc, GeometryValidationError)
 
@@ -90,7 +86,7 @@ class TestWindowHeightValidationError:
             window_top=2.5,
             floor_height=1.0,
             roof_height=3.0,
-            error_type="below_floor"
+            error_type="below_floor",
         )
         assert "0.50" in str(exc)
         assert "1.00" in str(exc)
@@ -106,10 +102,7 @@ class TestParameterValidationError:
 
     def test_parameter_validation_error_message(self):
         """Test error message with parameter details"""
-        exc = ParameterValidationError(
-            "frame_ratio",
-            details="must be between 0 and 1"
-        )
+        exc = ParameterValidationError("frame_ratio", details="must be between 0 and 1")
         assert "frame_ratio" in str(exc)
 
 
@@ -134,16 +127,14 @@ class TestRegionEncodingError:
     def test_region_encoding_error_creation(self):
         """Test creating region encoding error"""
         exc = RegionEncodingError(
-            region_type="WINDOW",
-            details="Failed to encode window region"
+            region_type="WINDOW", details="Failed to encode window region"
         )
         assert isinstance(exc, EncodingError)
 
     def test_region_encoding_error_with_region_info(self):
         """Test region encoding error with specific region"""
         exc = RegionEncodingError(
-            region_type="WINDOW",
-            details="Parameter validation failed"
+            region_type="WINDOW", details="Parameter validation failed"
         )
         assert "WINDOW" in str(exc)
 
@@ -166,15 +157,10 @@ class TestExceptionHierarchy:
         """Test catching WindowNotOnPolygonError as GeometryValidationError"""
         with pytest.raises(GeometryValidationError):
             raise WindowNotOnPolygonError(
-                window_bbox=(1.0, 2.0, 3.0, 4.0),
-                direction_angle=0.5,
-                tolerance=0.1
+                window_bbox=(1.0, 2.0, 3.0, 4.0), direction_angle=0.5, tolerance=0.1
             )
 
     def test_can_catch_encoding_errors_as_base(self):
         """Test catching encoding errors as EncodingError"""
         with pytest.raises(EncodingError):
-            raise RegionEncodingError(
-                region_type="WINDOW",
-                details="test"
-            )
+            raise RegionEncodingError(region_type="WINDOW", details="test")

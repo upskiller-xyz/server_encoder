@@ -46,13 +46,13 @@ class DictPolygonParser(IPolygonDataParser):
     """
     Parser for dictionary-based polygon format: [{"x": 0, "y": 0}, ...]
     """
-    
+
     def can_parse(self, data: Any) -> bool:
         """Check if data is a list of dictionaries"""
         if not isinstance(data, list) or not data:
             return False
         return isinstance(data[0], dict)
-    
+
     def parse(self, data: List[dict]) -> List[Tuple[float, float]]:
         """
         Parse dictionary format polygon data

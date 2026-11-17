@@ -1,18 +1,20 @@
 """Validator for encode requests (SRP: validates only encode request structure)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.core.enums import ParameterName, ResponseKey
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 from src.validation.parameter_validators import (
-    ModelTypeValidator,
-    EncodingSchemeValidator,
-    PolygonValidator,
-    HeightValidator,
-    ReflectanceValidator,
     AngleValidator,
+    EncodingSchemeValidator,
+    HeightValidator,
+    ModelTypeValidator,
+    PolygonValidator,
     RatioValidator,
+    ReflectanceValidator,
     WindowCoordinatesValidator,
 )
-from src.core.enums import ParameterName, ResponseKey
 
 
 class EncodeRequestValidator(BaseValidator):
@@ -26,12 +28,18 @@ class EncodeRequestValidator(BaseValidator):
 
         # Parameter validators (Strategy Pattern)
         self._validators = {
-            ParameterName.ROOM_POLYGON: PolygonValidator(ParameterName.ROOM_POLYGON.value),
+            ParameterName.ROOM_POLYGON: PolygonValidator(
+                ParameterName.ROOM_POLYGON.value
+            ),
             ParameterName.HEIGHT_ROOF_OVER_FLOOR: HeightValidator(
-                ParameterName.HEIGHT_ROOF_OVER_FLOOR.value, min_value=0.1, max_value=20.0
+                ParameterName.HEIGHT_ROOF_OVER_FLOOR.value,
+                min_value=0.1,
+                max_value=20.0,
             ),
             ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN: HeightValidator(
-                ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value, min_value=0.0, max_value=100.0
+                ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value,
+                min_value=0.0,
+                max_value=100.0,
             ),
             ParameterName.WINDOW_SILL_HEIGHT: HeightValidator(
                 ParameterName.WINDOW_SILL_HEIGHT.value, min_value=0.0, max_value=10.0
@@ -39,19 +47,45 @@ class EncodeRequestValidator(BaseValidator):
             ParameterName.WINDOW_HEIGHT: HeightValidator(
                 ParameterName.WINDOW_HEIGHT.value, min_value=0.1, max_value=10.0
             ),
-            ParameterName.HORIZON: AngleValidator(ParameterName.HORIZON.value, allow_negative=False),
-            ParameterName.ZENITH: AngleValidator(ParameterName.ZENITH.value, allow_negative=False),
-            ParameterName.WINDOW_ORIENTATION: AngleValidator(ParameterName.WINDOW_ORIENTATION.value),
-            ParameterName.DIRECTION_ANGLE: AngleValidator(ParameterName.DIRECTION_ANGLE.value),
-            ParameterName.FACADE_REFLECTANCE: ReflectanceValidator(ParameterName.FACADE_REFLECTANCE.value),
-            ParameterName.TERRAIN_REFLECTANCE: ReflectanceValidator(ParameterName.TERRAIN_REFLECTANCE.value),
-            ParameterName.CEILING_REFLECTANCE: ReflectanceValidator(ParameterName.CEILING_REFLECTANCE.value),
-            ParameterName.FLOOR_REFLECTANCE: ReflectanceValidator(ParameterName.FLOOR_REFLECTANCE.value),
-            ParameterName.WALL_REFLECTANCE: ReflectanceValidator(ParameterName.WALL_REFLECTANCE.value),
-            ParameterName.WINDOW_FRAME_REFLECTANCE: ReflectanceValidator(ParameterName.WINDOW_FRAME_REFLECTANCE.value),
-            ParameterName.BALCONY_REFLECTANCE: ReflectanceValidator(ParameterName.BALCONY_REFLECTANCE.value),
-            ParameterName.CONTEXT_REFLECTANCE: ReflectanceValidator(ParameterName.CONTEXT_REFLECTANCE.value),
-            ParameterName.WINDOW_FRAME_RATIO: RatioValidator(ParameterName.WINDOW_FRAME_RATIO.value),
+            ParameterName.HORIZON: AngleValidator(
+                ParameterName.HORIZON.value, allow_negative=False
+            ),
+            ParameterName.ZENITH: AngleValidator(
+                ParameterName.ZENITH.value, allow_negative=False
+            ),
+            ParameterName.WINDOW_ORIENTATION: AngleValidator(
+                ParameterName.WINDOW_ORIENTATION.value
+            ),
+            ParameterName.DIRECTION_ANGLE: AngleValidator(
+                ParameterName.DIRECTION_ANGLE.value
+            ),
+            ParameterName.FACADE_REFLECTANCE: ReflectanceValidator(
+                ParameterName.FACADE_REFLECTANCE.value
+            ),
+            ParameterName.TERRAIN_REFLECTANCE: ReflectanceValidator(
+                ParameterName.TERRAIN_REFLECTANCE.value
+            ),
+            ParameterName.CEILING_REFLECTANCE: ReflectanceValidator(
+                ParameterName.CEILING_REFLECTANCE.value
+            ),
+            ParameterName.FLOOR_REFLECTANCE: ReflectanceValidator(
+                ParameterName.FLOOR_REFLECTANCE.value
+            ),
+            ParameterName.WALL_REFLECTANCE: ReflectanceValidator(
+                ParameterName.WALL_REFLECTANCE.value
+            ),
+            ParameterName.WINDOW_FRAME_REFLECTANCE: ReflectanceValidator(
+                ParameterName.WINDOW_FRAME_REFLECTANCE.value
+            ),
+            ParameterName.BALCONY_REFLECTANCE: ReflectanceValidator(
+                ParameterName.BALCONY_REFLECTANCE.value
+            ),
+            ParameterName.CONTEXT_REFLECTANCE: ReflectanceValidator(
+                ParameterName.CONTEXT_REFLECTANCE.value
+            ),
+            ParameterName.WINDOW_FRAME_RATIO: RatioValidator(
+                ParameterName.WINDOW_FRAME_RATIO.value
+            ),
         }
 
         self._window_coordinates_validator = WindowCoordinatesValidator(require_3d=True)
@@ -72,7 +106,9 @@ class EncodeRequestValidator(BaseValidator):
             ParameterName.ZENITH.value,
         }
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate encode request.
 
@@ -90,7 +126,7 @@ class EncodeRequestValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"Request must be a dictionary, got {type(value).__name__}",
-                parameter_name="request"
+                parameter_name="request",
             )
             result.add_error(error)
             return result
@@ -102,13 +138,15 @@ class EncodeRequestValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.MISSING_PARAMETER,
                     message=f"Missing required field: {field}",
-                    parameter_name=field
+                    parameter_name=field,
                 )
                 result.add_error(error)
 
         # Validate model_type if present
         if ResponseKey.MODEL_TYPE.value in value:
-            model_type_result = self._model_type_validator.validate(value[ResponseKey.MODEL_TYPE.value])
+            model_type_result = self._model_type_validator.validate(
+                value[ResponseKey.MODEL_TYPE.value]
+            )
             for error in model_type_result.errors:
                 result.add_error(error)
 
@@ -128,7 +166,7 @@ class EncodeRequestValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_TYPE,
                     message=f"Parameters must be a dictionary, got {type(parameters).__name__}",
-                    parameter_name=ResponseKey.PARAMETERS.value
+                    parameter_name=ResponseKey.PARAMETERS.value,
                 )
                 result.add_error(error)
                 return result
@@ -140,7 +178,7 @@ class EncodeRequestValidator(BaseValidator):
                     error = ValidationError(
                         error_type=ValidationErrorType.MISSING_PARAMETER,
                         message=f"Missing required parameter: {param}",
-                        parameter_name=param
+                        parameter_name=param,
                     )
                     result.add_error(error)
 

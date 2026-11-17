@@ -1,7 +1,9 @@
 """Validator for angle parameters (SRP: validates only angle values)"""
-from typing import Any, Dict, Optional
+
 import math
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+from typing import Any, Dict, Optional
+
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 
 
@@ -21,7 +23,9 @@ class AngleValidator(BaseValidator):
         self._min_value = -2 * math.pi if allow_negative else 0.0
         self._max_value = 2 * math.pi
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate angle value.
 
@@ -39,7 +43,7 @@ class AngleValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{self._parameter_name} must be a number, got {type(value).__name__}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -49,7 +53,7 @@ class AngleValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_RANGE,
                 message=f"{self._parameter_name} must be between {self._min_value} and {self._max_value} radians, got {value}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
 

@@ -7,19 +7,26 @@ V6 produces:
 - A 1-D float32 static-parameter vector (sill_height, height_roof_over_floor,
   window_frame_ratio, floor_height_above_terrain) normalised to [0, 1].
 """
+
 import numpy as np
 import pytest
 
-from src.core import EncodingScheme, ModelType, RegionType
-from src.core.enums import V5_MASK_VALUES, V6_STATIC_PARAMS, ParameterName
-from src.components.image_builder.v6_image_director import V6ImageDirector, V6EncodingResult
+from src.components.image_builder.v6_image_director import (
+    V6EncodingResult,
+    V6ImageDirector,
+)
 from src.components.region_encoders.obstruction_strategies import (
     ObstructionStrategyFactory,
     V6BoundingBoxObstructionStrategy,
 )
+from src.core import EncodingScheme, ModelType, RegionType
+from src.core.enums import (
+    V5_MASK_VALUES,
+    V6_STATIC_PARAMS,
+    EncodingScheme,
+    ParameterName,
+)
 from src.server.services.encoding_service_v5 import V5EncodingService
-from src.core.enums import EncodingScheme
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -31,8 +38,12 @@ _PARAMS = {
     "window_frame_ratio": 0.3,
     "horizon": 45.0,
     "zenith": 30.0,
-    "x1": -0.6, "y1": 0.0, "z1": 1.5,
-    "x2": 0.6, "y2": 0.0, "z2": 3.0,
+    "x1": -0.6,
+    "y1": 0.0,
+    "z1": 1.5,
+    "x2": 0.6,
+    "y2": 0.0,
+    "z2": 3.0,
 }
 
 _MODEL = ModelType.DF_DEFAULT
@@ -87,7 +98,9 @@ class TestV6StaticVector:
     def test_static_vector_nonzero_for_valid_params(self):
         """All parameters in _PARAMS should produce non-zero encoded values."""
         _, _, vec = _encode()
-        assert np.any(vec > 0.0), "Expected at least some non-zero values in static vector"
+        assert np.any(vec > 0.0), (
+            "Expected at least some non-zero values in static vector"
+        )
 
     def test_height_roof_over_floor_in_vector(self):
         """height_roof_over_floor (3 m out of 30 m range) should encode to ~0.1."""
@@ -122,7 +135,9 @@ class TestV6StaticVector:
         _, _, vec_b = director.construct_from_flat_parameters(_MODEL, params_b)
 
         idx = list(V6_STATIC_PARAMS).index(ParameterName.HEIGHT_ROOF_OVER_FLOOR)
-        assert vec_a[idx] != vec_b[idx], "height_roof_over_floor change must be reflected in vector"
+        assert vec_a[idx] != vec_b[idx], (
+            "height_roof_over_floor change must be reflected in vector"
+        )
 
     def test_static_vector_unchanged_by_obstruction_params(self):
         """Changing horizon/zenith must NOT change the static vector."""
@@ -163,8 +178,13 @@ class TestV6VsV5Image:
     def test_v6_room_pixels_differ_from_v5(self):
         """Obstruction must change at least some room pixels compared to pure V5."""
         from src.components.image_builder.v5_image_director import V5ImageDirector
-        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
-        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
+
+        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
+        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
 
         assert not np.array_equal(v5_image, v6_image), (
             "V6 image should differ from V5 due to obstruction bounding-box scaling"
@@ -173,8 +193,13 @@ class TestV6VsV5Image:
     def test_v6_room_pixels_le_v5_room_pixels(self):
         """Obstruction can only scale down, so v6 pixels ≤ v5 pixels everywhere."""
         from src.components.image_builder.v5_image_director import V5ImageDirector
-        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
-        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
+
+        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
+        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
 
         assert np.all(v6_image <= v5_image + 1e-6), (
             "V6 pixels must not exceed corresponding V5 pixels (obstruction only dims)"
@@ -185,8 +210,12 @@ class TestV6VsV5Image:
         from src.components.image_builder.v5_image_director import V5ImageDirector
         from src.core.enums import ImageDimensions
 
-        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
-        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
+        v5_image, _ = V5ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
+        v6_image, _, _ = V6ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
 
         dims = ImageDimensions(128)
         x_start, y_start, x_end, y_end = dims.get_obstruction_bar_position()
@@ -228,7 +257,9 @@ class TestV6ObstructionEffect:
         small_obs = dict(_PARAMS, horizon=5.0, zenith=5.0)
         director = V6ImageDirector()
         v6_img, _, _ = director.construct_from_flat_parameters(_MODEL, small_obs)
-        v5_img, _ = V5ImageDirector().construct_from_flat_parameters(_MODEL, dict(_PARAMS))
+        v5_img, _ = V5ImageDirector().construct_from_flat_parameters(
+            _MODEL, dict(_PARAMS)
+        )
 
         # Positions that are 1.0 in V5 (pure room pixels) must be < 1.0 in V6
         room_positions = v5_img[:, :, 0] == 1.0
@@ -260,7 +291,9 @@ class TestV6BoundingBoxObstructionStrategy:
         image = np.ones((128, 128, 1), dtype=np.float32) * 0.8
         original = image.copy()
         room_mask = np.zeros((128, 128), dtype=np.uint8)
-        result = strategy.apply(image, room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL)
+        result = strategy.apply(
+            image, room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL
+        )
         np.testing.assert_array_equal(result, original)
 
     def test_apply_scales_pixels_in_bbox(self):
@@ -269,7 +302,9 @@ class TestV6BoundingBoxObstructionStrategy:
         image = np.ones((128, 128, 1), dtype=np.float32) * 0.9
         room_mask = np.zeros((128, 128), dtype=np.uint8)
         room_mask[30:80, 20:70] = 1
-        result = strategy.apply(image.copy(), room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL)
+        result = strategy.apply(
+            image.copy(), room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL
+        )
         assert np.all(result[30:80, 20:70, :] <= 0.9 + 1e-6), (
             "Pixels inside bbox must not exceed original value"
         )
@@ -280,7 +315,9 @@ class TestV6BoundingBoxObstructionStrategy:
         image = np.ones((128, 128, 1), dtype=np.float32) * 0.5
         room_mask = np.zeros((128, 128), dtype=np.uint8)
         room_mask[5:20, 5:30] = 1
-        result = strategy.apply(image.copy(), room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL)
+        result = strategy.apply(
+            image.copy(), room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL
+        )
         np.testing.assert_allclose(result[50:, 50:, :], 0.5, rtol=1e-5)
 
     def test_output_values_stay_in_0_1(self):
@@ -288,7 +325,9 @@ class TestV6BoundingBoxObstructionStrategy:
         strategy = V6BoundingBoxObstructionStrategy()
         image = np.ones((128, 128, 1), dtype=np.float32)
         room_mask = np.ones((128, 128), dtype=np.uint8)
-        result = strategy.apply(image, room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL)
+        result = strategy.apply(
+            image, room_mask, {"horizon": 45.0, "zenith": 30.0}, _MODEL
+        )
         assert result.min() >= 0.0
         assert result.max() <= 1.0
 
@@ -349,8 +388,11 @@ class TestV6EncodingService:
         """V6 should succeed without reflectance parameters."""
         service = V5EncodingService(EncodingScheme.V6)
         reflectance_keys = {
-            "facade_reflectance", "terrain_reflectance",
-            "ceiling_reflectance", "floor_reflectance", "wall_reflectance",
+            "facade_reflectance",
+            "terrain_reflectance",
+            "ceiling_reflectance",
+            "floor_reflectance",
+            "wall_reflectance",
             "window_frame_reflectance",
         }
         params = {k: v for k, v in _PARAMS.items() if k not in reflectance_keys}

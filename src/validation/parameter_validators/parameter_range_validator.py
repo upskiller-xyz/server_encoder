@@ -1,7 +1,10 @@
 """Validator for parameter ranges (SRP: validates only parameter value ranges)"""
+
 from typing import Any, Dict, Optional
+
 import numpy as np
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 
 
@@ -19,7 +22,9 @@ class ParameterRangeValidator(BaseValidator):
         self._encoder_factory = encoder_factory
         self._clipping_config = clipping_config
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate parameter ranges.
 
@@ -37,7 +42,7 @@ class ParameterRangeValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"Parameters must be a dictionary, got {type(value).__name__}",
-                parameter_name="parameters"
+                parameter_name="parameters",
             )
             result.add_error(error)
             return result
@@ -68,7 +73,7 @@ class ParameterRangeValidator(BaseValidator):
                     error = ValidationError(
                         error_type=ValidationErrorType.INVALID_TYPE,
                         message=f"Parameter '{param_name}' has invalid value type: {type(param_value).__name__}. Expected numeric value, got: {param_value}. Error: {str(e)}",
-                        parameter_name=param_name
+                        parameter_name=param_name,
                     )
                     result.add_error(error)
                     continue
@@ -77,7 +82,7 @@ class ParameterRangeValidator(BaseValidator):
                     error = ValidationError(
                         error_type=ValidationErrorType.INVALID_RANGE,
                         message=f"Parameter '{param_name}' value {param_value} outside valid range [{min_val}, {max_val}]",
-                        parameter_name=param_name
+                        parameter_name=param_name,
                     )
                     result.add_error(error)
 
@@ -89,7 +94,7 @@ class ParameterRangeValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_VALUE,
                     message=f"Error validating parameter '{param_name}': {str(e)}",
-                    parameter_name=param_name
+                    parameter_name=param_name,
                 )
                 result.add_error(error)
 
@@ -98,7 +103,7 @@ class ParameterRangeValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_VALUE,
                     message=f"Unexpected error validating parameter '{param_name}' with value {param_value}: {type(e).__name__}: {str(e)}",
-                    parameter_name=param_name
+                    parameter_name=param_name,
                 )
                 result.add_error(error)
 

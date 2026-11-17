@@ -44,7 +44,9 @@ class RoomPolygon:
         """Get polygon vertices"""
         return self._vertices
 
-    def rotate(self, angle_degrees: float, center: Point2D | None = None) -> 'RoomPolygon':
+    def rotate(
+        self, angle_degrees: float, center: Point2D | None = None
+    ) -> "RoomPolygon":
         """
         Rotate polygon around a center point using Shapely
 
@@ -63,23 +65,30 @@ class RoomPolygon:
         shapely_poly = ShapelyPolygon(self.get_coords())
 
         rotated_poly = shapely_rotate(
-            shapely_poly,
-            angle_degrees,
-            origin=(center.x, center.y)
+            shapely_poly, angle_degrees, origin=(center.x, center.y)
         )
 
         # Extract rotated vertices
-        rotated_vertices = list(rotated_poly.exterior.coords)[:-1]  # Remove duplicate last point
+        rotated_vertices = list(rotated_poly.exterior.coords)[
+            :-1
+        ]  # Remove duplicate last point
         return RoomPolygon(rotated_vertices)
 
     def get_edges(self) -> List[ShapelyLine]:
         polygon_coords = self.get_coords()
 
-        return [ShapelyLine([
-            polygon_coords[i],
-            polygon_coords[(i + 1) % len(polygon_coords)]]) for i in range(len(polygon_coords))]
+        return [
+            ShapelyLine(
+                [polygon_coords[i], polygon_coords[(i + 1) % len(polygon_coords)]]
+            )
+            for i in range(len(polygon_coords))
+        ]
 
-    def boundary_contains(self, line: ShapelyLine, tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE) -> bool:
+    def boundary_contains(
+        self,
+        line: ShapelyLine,
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
+    ) -> bool:
         """
         Check if a line lies on the polygon boundary as a whole.
 
@@ -108,7 +117,7 @@ class RoomPolygon:
     def _window_edge_and_rotation(
         self,
         window_line: ShapelyLine,
-        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
     ) -> Tuple[ShapelyLine, int, float]:
         """
         Find which polygon edge contains the window and calculate rotation needed.
@@ -125,15 +134,16 @@ class RoomPolygon:
             - needs_flip: Whether to flip direction so room extends in -y direction
         """
 
-
         if not self.boundary_contains(window_line, tolerance):
             raise ClientInputError(
-            f"Window at ({window_line.coords[0][0]:.2f}, {window_line.coords[0][1]:.2f}) to ({window_line.coords[1][0]:.2f}, {window_line.coords[1][1]:.2f}) "
-            f"does not lie on any polygon edge")
+                f"Window at ({window_line.coords[0][0]:.2f}, {window_line.coords[0][1]:.2f}) to ({window_line.coords[1][0]:.2f}, {window_line.coords[1][1]:.2f}) "
+                f"does not lie on any polygon edge"
+            )
 
         all_edges = [self._build_edge(i) for i in range(len(self._vertices))]
         overlapping = [
-            (i, edge) for i, edge in enumerate(all_edges)
+            (i, edge)
+            for i, edge in enumerate(all_edges)
             if edge.distance(window_line) <= tolerance
             and edge.intersection(window_line).length > 0
         ]
@@ -151,7 +161,7 @@ class RoomPolygon:
         window_x2: float | None,
         window_y2: float | None,
         image_size: int = 128,
-        direction_angle: float | None = None
+        direction_angle: float | None = None,
     ) -> np.ndarray:
         """
         Convert polygon to pixel coordinates for drawing on image
@@ -175,7 +185,12 @@ class RoomPolygon:
             Numpy array of shape (N, 1, 2) for cv2.fillPoly
         """
 
-        if window_x1 is None or window_y1 is None or window_x2 is None or window_y2 is None:
+        if (
+            window_x1 is None
+            or window_y1 is None
+            or window_x2 is None
+            or window_y2 is None
+        ):
             raise ClientInputError("Window coordinates required for room positioning")
 
         rotated_polygon = self.get_coords()
@@ -184,12 +199,18 @@ class RoomPolygon:
         # returns rotated edges for diagonal walls (matches merger's logic)
         if direction_angle is not None:
             window = WindowGeometry(
-                window_x1, window_y1, 0,
-                window_x2, window_y2, 0,
-                direction_angle=direction_angle
+                window_x1,
+                window_y1,
+                0,
+                window_x2,
+                window_y2,
+                0,
+                direction_angle=direction_angle,
             )
         else:
-            window = WindowGeometry.from_corners(window_x1, window_y1, 0, window_x2, window_y2, 0)
+            window = WindowGeometry.from_corners(
+                window_x1, window_y1, 0, window_x2, window_y2, 0
+            )
         w_edges = window.get_candidate_edges()
 
         # Create polygon from rotated coordinates to check which edge is on it
@@ -199,53 +220,66 @@ class RoomPolygon:
         # Check which edge is on the polygon boundary
         edge_on_boundary = None
 
-        res = [w_edge for w_edge in w_edges if rotated_room_poly.boundary.buffer(tolerance).contains(w_edge)]
+        res = [
+            w_edge
+            for w_edge in w_edges
+            if rotated_room_poly.boundary.buffer(tolerance).contains(w_edge)
+        ]
 
-        window_center_rotated = Point2D((window_x1 + window_x2) * 0.5, (window_y1 + window_y2) * 0.5)
+        window_center_rotated = Point2D(
+            (window_x1 + window_x2) * 0.5, (window_y1 + window_y2) * 0.5
+        )
         if len(res) > 0:
-            
             edge_on_boundary = res[0]
             edge_coords = list(edge_on_boundary.coords)
             window_center_rotated = Point2D(
                 np.round((edge_coords[0][0] + edge_coords[1][0]) * 0.5, 2),
-                np.round((edge_coords[0][1] + edge_coords[1][1]) * 0.5, 2)
+                np.round((edge_coords[0][1] + edge_coords[1][1]) * 0.5, 2),
             )
         else:
             # Fallback: project window center onto polygon boundary (matches merger's fallback)
-            center = ShapelyPoint((window_x1 + window_x2) * 0.5, (window_y1 + window_y2) * 0.5)
+            center = ShapelyPoint(
+                (window_x1 + window_x2) * 0.5, (window_y1 + window_y2) * 0.5
+            )
             poly_boundary = ShapelyLine(list(rotated_polygon) + [rotated_polygon[0]])
             projected = poly_boundary.interpolate(poly_boundary.project(center))
             window_center_rotated = Point2D(projected.x, projected.y)
-        
 
         rotated_polygon = RoomPolygon(rotated_polygon)
 
-
-        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size)
+        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(
+            GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size
+        )
         if direction_angle is not None:
             wall_thickness_px = window.wall_thickness_px
 
-
         # Window's left edge position on image
-        window_left_edge_x = image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_thickness_px
+        window_left_edge_x = (
+            image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_thickness_px
+        )
 
         # Room should align 1 pixel to the left of window for perfect adjacency (C-frame)
         room_facade_x = window_left_edge_x - GRAPHICS_CONSTANTS.ROOM_FACADE_OFFSET_PX
         window_y_pixels = image_size // 2
 
-
         # First pass: calculate room extent to check for obstruction bar overlap
         dims = ImageDimensions(image_size)
         obs_bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
 
-        offsets = [GeometryOps.offset_coords(vertex, window_center_rotated) for vertex in rotated_polygon.vertices]
+        offsets = [
+            GeometryOps.offset_coords(vertex, window_center_rotated)
+            for vertex in rotated_polygon.vertices
+        ]
 
-        offsets = [[GRAPHICS_CONSTANTS.get_pixel_value(i, image_size) for i in dd] for dd in offsets]
+        offsets = [
+            [GRAPHICS_CONSTANTS.get_pixel_value(i, image_size) for i in dd]
+            for dd in offsets
+        ]
 
         # Flip y-axis: image coordinates have y increasing downward, geometric coordinates have y increasing upward
-        pixel_coords = [[room_facade_x + dx,
-                         window_y_pixels - dy] for [dx, dy] in offsets]
-        
+        pixel_coords = [
+            [room_facade_x + dx, window_y_pixels - dy] for [dx, dy] in offsets
+        ]
 
         # Clip room to avoid overlap with obstruction bar
         right_boundary = obs_bar_x_start - GRAPHICS_CONSTANTS.OBSTRUCTION_BAR_GAP_PX
@@ -258,10 +292,12 @@ class RoomPolygon:
 
         # clipped = room_poly
         # Use GeometryAdapter to handle different geometry types (Adapter Pattern)
-        return GeometryAdapter.extract_coordinates(clipped, fallback_coords=pixel_coords)
+        return GeometryAdapter.extract_coordinates(
+            clipped, fallback_coords=pixel_coords
+        )
 
     @classmethod
-    def from_dict(cls, data: List) -> 'RoomPolygon':
+    def from_dict(cls, data: List) -> "RoomPolygon":
         """
         Create polygon from list of coordinate dictionaries or lists
 
@@ -285,7 +321,10 @@ class RoomPolygon:
 
         if isinstance(first_element, dict):
             # List of dictionaries format: [{"x": 0, "y": 0}, ...]
-            vertices = [(point[ParameterName.X.value], point[ParameterName.Y.value]) for point in data]
+            vertices = [
+                (point[ParameterName.X.value], point[ParameterName.Y.value])
+                for point in data
+            ]
         elif isinstance(first_element, (list, tuple)):
             # List of lists/tuples format: [[0, 0], ...] or [(0, 0), ...]
             vertices = [(point[0], point[1]) for point in data]

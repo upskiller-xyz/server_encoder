@@ -14,6 +14,7 @@ is applied to the image for a given encoding scheme:
                                                             window, filled uniformly with obstruction values;
                                                             width = window_height, height = window_width_3d
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
@@ -64,7 +65,10 @@ class ObstructionBarStrategy(ObstructionEncodingStrategy):
     """
 
     def __init__(self, encoding_scheme: EncodingScheme) -> None:
-        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        from src.components.region_encoders.obstruction_bar_encoder import (
+            ObstructionBarEncoder,
+        )
+
         self._encoder = ObstructionBarEncoder(encoding_scheme=encoding_scheme)
 
     def apply(
@@ -111,7 +115,10 @@ class BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
     """
 
     def __init__(self) -> None:
-        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        from src.components.region_encoders.obstruction_bar_encoder import (
+            ObstructionBarEncoder,
+        )
+
         # Use V2 channel mapping for the obstruction vector computation
         self._encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V2)
 
@@ -171,7 +178,10 @@ class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
     """
 
     def __init__(self) -> None:
-        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        from src.components.region_encoders.obstruction_bar_encoder import (
+            ObstructionBarEncoder,
+        )
+
         self._encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V2)
 
     def apply(
@@ -206,7 +216,9 @@ class V6BoundingBoxObstructionStrategy(ObstructionEncodingStrategy):
         obs_vector = self._encoder.compute_obstruction_vector(
             parameters, model_type, bbox_height
         )  # (bbox_height, 4) float64, values in [0, 255]
-        obs_factor = (obs_vector.mean(axis=1) / 255.0).astype(np.float32)  # (bbox_height,)
+        obs_factor = (obs_vector.mean(axis=1) / 255.0).astype(
+            np.float32
+        )  # (bbox_height,)
 
         # Broadcast: (bbox_height, 1, 1) over (bbox_height, W, 1)
         obs_factor_3d = obs_factor[:, np.newaxis, np.newaxis]
@@ -227,7 +239,10 @@ class V11BoundingBoxObstructionStrategy(BoundingBoxObstructionStrategy):
     """
 
     def __init__(self) -> None:
-        from src.components.region_encoders.obstruction_bar_encoder import V11ObstructionBarEncoder
+        from src.components.region_encoders.obstruction_bar_encoder import (
+            V11ObstructionBarEncoder,
+        )
+
         self._encoder = V11ObstructionBarEncoder(encoding_scheme=EncodingScheme.V11)
 
 
@@ -249,7 +264,10 @@ class WindowProjectionObstructionStrategy(ObstructionEncodingStrategy):
     """
 
     def __init__(self) -> None:
-        from src.components.region_encoders.obstruction_bar_encoder import ObstructionBarEncoder
+        from src.components.region_encoders.obstruction_bar_encoder import (
+            ObstructionBarEncoder,
+        )
+
         self._encoder = ObstructionBarEncoder(encoding_scheme=EncodingScheme.V8)
 
     def apply(
@@ -268,8 +286,8 @@ class WindowProjectionObstructionStrategy(ObstructionEncodingStrategy):
         border = GRAPHICS_CONSTANTS.BORDER_PX
 
         # Vertical extent matches the window stripe (based on window_width_3d)
-        x_stripe_start, y_start, _x_stripe_end, y_end = window_geometry.get_pixel_bounds(
-            image_size=width
+        x_stripe_start, y_start, _x_stripe_end, y_end = (
+            window_geometry.get_pixel_bounds(image_size=width)
         )
 
         # Rectangle extends leftward from the window stripe's left edge
@@ -281,14 +299,18 @@ class WindowProjectionObstructionStrategy(ObstructionEncodingStrategy):
             return image
 
         # Single-row obstruction vector → uniform fill across the rectangle
-        obs_vector = self._encoder.compute_obstruction_vector(parameters, model_type, height=1)
+        obs_vector = self._encoder.compute_obstruction_vector(
+            parameters, model_type, height=1
+        )
         obs_fill = obs_vector[0].astype(np.uint8)  # shape (4,)
 
         # Clip to room mask so the rectangle never bleeds into background pixels
         if room_mask is not None:
             mask_slice = room_mask[y_start:y_end, rect_x_start:rect_x_end]
             image[y_start:y_end, rect_x_start:rect_x_end, :] = np.where(
-                mask_slice[:, :, np.newaxis] > 0, obs_fill, image[y_start:y_end, rect_x_start:rect_x_end, :]
+                mask_slice[:, :, np.newaxis] > 0,
+                obs_fill,
+                image[y_start:y_end, rect_x_start:rect_x_end, :],
             )
         else:
             image[y_start:y_end, rect_x_start:rect_x_end, :] = obs_fill
@@ -306,9 +328,15 @@ _STRATEGY_MAP = {
     EncodingScheme.V6: lambda: V6BoundingBoxObstructionStrategy(),
     EncodingScheme.V7: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
     EncodingScheme.V8: lambda: BoundingBoxObstructionStrategy(),  # Same as V4
-    EncodingScheme.V9: lambda: BoundingBoxObstructionStrategy(),  # Same as V7; alpha dropped in service
-    EncodingScheme.V10: lambda: BoundingBoxObstructionStrategy(),  # Same as V8; alpha dropped in service
-    EncodingScheme.V11: lambda: V11BoundingBoxObstructionStrategy(),  # Like V10; gap/midpoint encoder
+    EncodingScheme.V9: lambda: (
+        BoundingBoxObstructionStrategy()
+    ),  # Same as V7; alpha dropped in service
+    EncodingScheme.V10: lambda: (
+        BoundingBoxObstructionStrategy()
+    ),  # Same as V8; alpha dropped in service
+    EncodingScheme.V11: lambda: (
+        V11BoundingBoxObstructionStrategy()
+    ),  # Like V10; gap/midpoint encoder
     EncodingScheme.V12: lambda: WindowProjectionObstructionStrategy(),
     EncodingScheme.V13: lambda: WindowProjectionObstructionStrategy(),
 }
@@ -333,5 +361,7 @@ class ObstructionStrategyFactory:
         """
         factory_fn = _STRATEGY_MAP.get(encoding_scheme)
         if factory_fn is None:
-            raise ValueError(f"Unknown encoding scheme for obstruction strategy: {encoding_scheme}")
+            raise ValueError(
+                f"Unknown encoding scheme for obstruction strategy: {encoding_scheme}"
+            )
         return factory_fn()

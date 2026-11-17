@@ -10,6 +10,7 @@ from typing import Optional
 
 class WindowEncoderException(Exception):
     """Base exception class for all window encoder errors"""
+
     pass
 
 
@@ -20,11 +21,13 @@ class ClientInputError(ValueError):
     carry internal details (coordinates, array shapes, library internals) and
     must be answered with a generic error instead.
     """
+
     pass
 
 
 class GeometryValidationError(WindowEncoderException):
     """Base exception for geometry validation errors"""
+
     pass
 
 
@@ -42,7 +45,7 @@ class WindowNotOnPolygonError(GeometryValidationError):
         direction_angle: float,
         tolerance: float,
         polygon_edges: Optional[list] = None,
-        window_edges: Optional[list] = None
+        window_edges: Optional[list] = None,
     ):
         """
         Initialize WindowNotOnPolygonError.
@@ -100,7 +103,7 @@ class WindowHeightValidationError(GeometryValidationError):
         window_top: float,
         floor_height: float,
         roof_height: float,
-        error_type: str = "unknown"
+        error_type: str = "unknown",
     ):
         """
         Initialize WindowHeightValidationError.
@@ -161,6 +164,7 @@ class ParameterValidationError(WindowEncoderException):
 
 class EncodingError(WindowEncoderException):
     """Base exception for encoding-related errors"""
+
     pass
 
 

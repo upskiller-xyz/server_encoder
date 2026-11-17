@@ -1,10 +1,10 @@
-from typing import Dict, Any, List
-from src.core import RegionType, REQUIRED_PARAMETERS
+from typing import Any, Dict, List
+
+from src.core import REQUIRED_PARAMETERS, RegionType
 
 
 def validate_required_parameters(
-    region_type: RegionType,
-    parameters: Dict[str, Any]
+    region_type: RegionType, parameters: Dict[str, Any]
 ) -> List[str]:
     """
     Validate required parameters for a region using list comprehension (Strategy Pattern)

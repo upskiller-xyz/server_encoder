@@ -5,20 +5,20 @@ V3: Same channel mapping as V2 (HSV) but the obstruction bar is removed entirely
 V4: Same channel mapping as V2 (HSV) but instead of a bar, the obstruction vector
     is applied to the floor-plan bounding box via element-wise multiplication.
 """
+
 import numpy as np
 import pytest
 
-from src.core import EncodingScheme, ModelType, RegionType, ImageDimensions
-from src.core.enums import REGION_CHANNEL_MAPPING_V2
-from src.components.image_builder.room_image_director import RoomImageDirector
 from src.components.image_builder.room_image_builder import RoomImageBuilder
+from src.components.image_builder.room_image_director import RoomImageDirector
 from src.components.region_encoders.obstruction_strategies import (
-    ObstructionStrategyFactory,
-    ObstructionBarStrategy,
-    NoObstructionStrategy,
     BoundingBoxObstructionStrategy,
+    NoObstructionStrategy,
+    ObstructionBarStrategy,
+    ObstructionStrategyFactory,
 )
-
+from src.core import EncodingScheme, ImageDimensions, ModelType, RegionType
+from src.core.enums import REGION_CHANNEL_MAPPING_V2
 
 # ---------------------------------------------------------------------------
 # Shared test parameters
@@ -30,8 +30,12 @@ _BASE_PARAMS = {
     "window_frame_ratio": 0.3,
     "horizon": 45.0,
     "zenith": 30.0,
-    "x1": -0.6, "y1": 0.0, "z1": 1.5,
-    "x2": 0.6, "y2": 0.0, "z2": 3.0,
+    "x1": -0.6,
+    "y1": 0.0,
+    "z1": 1.5,
+    "x2": 0.6,
+    "y2": 0.0,
+    "z2": 3.0,
 }
 
 
@@ -42,7 +46,9 @@ def _make_director(encoding_scheme: EncodingScheme) -> RoomImageDirector:
 
 def _encode(encoding_scheme: EncodingScheme) -> np.ndarray:
     director = _make_director(encoding_scheme)
-    image, _ = director.construct_from_flat_parameters(ModelType.DF_DEFAULT, dict(_BASE_PARAMS))
+    image, _ = director.construct_from_flat_parameters(
+        ModelType.DF_DEFAULT, dict(_BASE_PARAMS)
+    )
     return image
 
 
@@ -185,7 +191,9 @@ class TestV3V4ChannelMapping:
 
         # Green channel (index 1) should encode floor height (same as V2)
         bg_green = image[64, 50, 1]  # Background pixel, green channel
-        assert bg_green > 0, "V3 background green channel should encode floor height like V2"
+        assert bg_green > 0, (
+            "V3 background green channel should encode floor height like V2"
+        )
 
     def test_v4_background_uses_v2_channel_order(self):
         """V4 background region should encode floor_height in green (V2 style)."""
@@ -195,7 +203,9 @@ class TestV3V4ChannelMapping:
         image, _ = director.construct_from_flat_parameters(ModelType.DF_DEFAULT, params)
 
         bg_green = image[64, 50, 1]
-        assert bg_green > 0, "V4 background green channel should encode floor height like V2"
+        assert bg_green > 0, (
+            "V4 background green channel should encode floor height like V2"
+        )
 
 
 # ---------------------------------------------------------------------------

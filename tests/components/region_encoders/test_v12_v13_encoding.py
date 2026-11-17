@@ -10,21 +10,21 @@ V12: 4-channel RGBA image with a window-projection rectangle filled with
 V13: Identical to V12 but the window stripe (wall-thickness indicator) is
      removed from the image.
 """
+
 import numpy as np
 import pytest
 
-from src.core import EncodingScheme, ModelType
-from src.core.enums import V12_STATIC_PARAMS
-from src.core.graphics_constants import GRAPHICS_CONSTANTS
-from src.components.image_builder.room_image_director import RoomImageDirector
 from src.components.image_builder.room_image_builder import RoomImageBuilder
+from src.components.image_builder.room_image_director import RoomImageDirector
 from src.components.region_encoders.obstruction_strategies import (
     ObstructionStrategyFactory,
     WindowProjectionObstructionStrategy,
 )
-from src.server.services.encoding_service_v12 import V12EncodingService
+from src.core import EncodingScheme, ModelType
+from src.core.enums import V12_STATIC_PARAMS
+from src.core.graphics_constants import GRAPHICS_CONSTANTS
 from src.server.services import EncodingServiceFactory
-
+from src.server.services.encoding_service_v12 import V12EncodingService
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -42,8 +42,12 @@ _BASE_PARAMS = {
     "horizon": 20.0,
     "zenith": 30.0,
     "context_reflectance": 0.4,
-    "x1": -0.6, "y1": 0.0, "z1": 2.5,
-    "x2":  0.6, "y2": 0.0, "z2": 4.0,
+    "x1": -0.6,
+    "y1": 0.0,
+    "z1": 2.5,
+    "x2": 0.6,
+    "y2": 0.0,
+    "z2": 4.0,
 }
 
 _MODEL = ModelType.DF_DEFAULT
@@ -64,6 +68,7 @@ def _encode(scheme: EncodingScheme, params: dict | None = None):
 # Obstruction strategy factory
 # ---------------------------------------------------------------------------
 
+
 class TestObstructionStrategyV12V13:
     def test_v12_creates_window_projection_strategy(self):
         assert isinstance(
@@ -81,6 +86,7 @@ class TestObstructionStrategyV12V13:
 # ---------------------------------------------------------------------------
 # Image output format
 # ---------------------------------------------------------------------------
+
 
 class TestV12ImageFormat:
     def test_output_is_4_channel(self):
@@ -118,6 +124,7 @@ class TestV13ImageFormat:
 # Window stripe presence (V12 keeps it; V13 removes it)
 # ---------------------------------------------------------------------------
 
+
 class TestWindowStripe:
     """The window stripe is the 3-pixel-wide column just inside the right edge."""
 
@@ -129,7 +136,7 @@ class TestWindowStripe:
         image, _ = _encode(EncodingScheme.V12)
         col = self._stripe_column(image.shape[1])
         # The stripe columns should differ from a plain background image (non-zero)
-        stripe = image[:, col - 3:col, :]
+        stripe = image[:, col - 3 : col, :]
         assert np.any(stripe > 0)
 
     def test_v13_stripe_absent(self):
@@ -137,8 +144,8 @@ class TestWindowStripe:
         img_v12, _ = _encode(EncodingScheme.V12)
         img_v13, _ = _encode(EncodingScheme.V13)
         col = self._stripe_column(img_v12.shape[1])
-        stripe_v12 = img_v12[:, col - 3:col, :]
-        stripe_v13 = img_v13[:, col - 3:col, :]
+        stripe_v12 = img_v12[:, col - 3 : col, :]
+        stripe_v13 = img_v13[:, col - 3 : col, :]
         # V12 has window encoding at the stripe; V13 has only background there
         assert not np.array_equal(stripe_v12, stripe_v13)
 
@@ -147,11 +154,14 @@ class TestWindowStripe:
 # Projection rectangle
 # ---------------------------------------------------------------------------
 
+
 class TestProjectionRectangle:
     """The projection rectangle is filled with uniform obstruction channel values."""
 
     def _window_stripe_x(self, image_size: int = 128) -> int:
-        wall_px = GRAPHICS_CONSTANTS.get_pixel_value(GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size)
+        wall_px = GRAPHICS_CONSTANTS.get_pixel_value(
+            GRAPHICS_CONSTANTS.WALL_THICKNESS_M, image_size
+        )
         return image_size - GRAPHICS_CONSTANTS.WINDOW_OFFSET_PX - wall_px
 
     def test_rectangle_is_nonzero(self):
@@ -183,11 +193,11 @@ class TestProjectionRectangle:
         """Greater window_height produces a wider projection rectangle."""
         # Use get_pixel_value to compute expected widths directly
         z1 = _BASE_PARAMS["z1"]
-        h_narrow = 1.0   # z2 = z1 + 1.0
-        h_wide   = 2.5   # z2 = z1 + 2.5
+        h_narrow = 1.0  # z2 = z1 + 1.0
+        h_wide = 2.5  # z2 = z1 + 2.5
 
         width_narrow = GRAPHICS_CONSTANTS.get_pixel_value(h_narrow, 128)
-        width_wide   = GRAPHICS_CONSTANTS.get_pixel_value(h_wide,   128)
+        width_wide = GRAPHICS_CONSTANTS.get_pixel_value(h_wide, 128)
 
         assert width_wide > width_narrow
 
@@ -209,6 +219,7 @@ class TestProjectionRectangle:
 # ---------------------------------------------------------------------------
 # V12EncodingService — static vector
 # ---------------------------------------------------------------------------
+
 
 class TestV12StaticVector:
     def _service(self, scheme=EncodingScheme.V12) -> V12EncodingService:

@@ -1,13 +1,20 @@
 """Validator for height parameters (SRP: validates only height values)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 
 
 class HeightValidator(BaseValidator):
     """Validates height values (must be positive numbers)"""
 
-    def __init__(self, parameter_name: str, min_value: float = 0.0, max_value: Optional[float] = None):
+    def __init__(
+        self,
+        parameter_name: str,
+        min_value: float = 0.0,
+        max_value: Optional[float] = None,
+    ):
         """
         Initialize height validator.
 
@@ -20,7 +27,9 @@ class HeightValidator(BaseValidator):
         self._min_value = min_value
         self._max_value = max_value
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate height value.
 
@@ -38,7 +47,7 @@ class HeightValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{self._parameter_name} must be a number, got {type(value).__name__}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -48,7 +57,7 @@ class HeightValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_RANGE,
                 message=f"{self._parameter_name} must be >= {self._min_value}, got {value}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
 
@@ -57,7 +66,7 @@ class HeightValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_RANGE,
                 message=f"{self._parameter_name} must be <= {self._max_value}, got {value}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
 

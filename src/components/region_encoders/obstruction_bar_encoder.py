@@ -1,9 +1,23 @@
 from typing import Any, Dict, List
+
 import numpy as np
-from src.core import RegionType, ModelType, ChannelType, ParameterName, ImageDimensions, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES, HSV_STYLE_SCHEMES
+
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
-from src.components.region_encoders.validation_helpers import validate_required_parameters
-from src.core import GRAPHICS_CONSTANTS
+from src.components.region_encoders.validation_helpers import (
+    validate_required_parameters,
+)
+from src.core import (
+    GRAPHICS_CONSTANTS,
+    HSV_DEFAULT_PIXEL_OVERRIDES,
+    HSV_STYLE_SCHEMES,
+    ChannelType,
+    EncodingScheme,
+    ImageDimensions,
+    ModelType,
+    ParameterName,
+    RegionType,
+    get_channel_mapping,
+)
 
 
 class ObstructionBarEncoder(BaseRegionEncoder):
@@ -21,10 +35,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         super().__init__(RegionType.OBSTRUCTION_BAR, encoding_scheme)
 
     def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
+        self, image: np.ndarray, parameters: Dict[str, Any], model_type: ModelType
     ) -> np.ndarray:
         """
         Override encode_region for obstruction bar to handle per-row encoding
@@ -36,7 +47,9 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         self._validate_required_parameters(parameters)
 
         # Get bar position
-        bar_x_start, bar_y_start, bar_x_end, bar_y_end = self._get_final_bar_position(image)
+        bar_x_start, bar_y_start, bar_x_end, bar_y_end = self._get_final_bar_position(
+            image
+        )
 
         # Get bar dimensions
         dims = ImageDimensions(image.shape[1])
@@ -45,10 +58,22 @@ class ObstructionBarEncoder(BaseRegionEncoder):
 
         # Get channel mapping based on encoding scheme
         channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
-        channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        channel_order = [
+            ChannelType.RED,
+            ChannelType.GREEN,
+            ChannelType.BLUE,
+            ChannelType.ALPHA,
+        ]
 
         for channel_idx, channel_type in enumerate(channel_order):
-            encoded = self._encode_channel(parameters, channel_map, channel_type, model_type, bar_height, actual_bar_height)
+            encoded = self._encode_channel(
+                parameters,
+                channel_map,
+                channel_type,
+                model_type,
+                bar_height,
+                actual_bar_height,
+            )
             # Squeeze and broadcast encoded array to match bar width
             encoded = np.squeeze(encoded)
             bar_width = bar_x_end - bar_x_start
@@ -71,8 +96,6 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         actual_bar_height = y_end - y_start
         return [bar_height, actual_bar_height]
 
-
-
     def _get_area_mask(self, image, parameters, model_type) -> np.ndarray[Any, Any]:
         height, width = image.shape[:2]
         mask = np.zeros((height, width), dtype=bool)
@@ -92,15 +115,13 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         y_end = min(y_end, height - GRAPHICS_CONSTANTS.BORDER_PX)
         return (x_start, y_start, x_end, y_end)
 
-
-
     def _encode_all_channels(
         self,
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
         model_type: ModelType = ModelType.DF_DEFAULT,
         bar_height: int = 64,
-        actual_bar_height: int = 64
+        actual_bar_height: int = 64,
     ) -> List[int | np.ndarray]:
         """
         Encode all 4 channels (RGBA) using list comprehension
@@ -116,33 +137,54 @@ class ObstructionBarEncoder(BaseRegionEncoder):
             List of 4 encoded values [R, G, B, A]
         """
         return [
-            self._encode_channel(parameters, channel_map, channel_type, model_type, bar_height, actual_bar_height)
-            for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+            self._encode_channel(
+                parameters,
+                channel_map,
+                channel_type,
+                model_type,
+                bar_height,
+                actual_bar_height,
+            )
+            for channel_type in [
+                ChannelType.RED,
+                ChannelType.GREEN,
+                ChannelType.BLUE,
+                ChannelType.ALPHA,
+            ]
         ]
 
-    def _encode_override(self, channel_type:ChannelType, bar_height:int,model_type:ModelType, is_using_default:bool)->np.ndarray | None:
+    def _encode_override(
+        self,
+        channel_type: ChannelType,
+        bar_height: int,
+        model_type: ModelType,
+        is_using_default: bool,
+    ) -> np.ndarray | None:
 
-        if (is_using_default and
-            self._encoding_scheme in HSV_STYLE_SCHEMES and
-            model_type is not None):
+        if (
+            is_using_default
+            and self._encoding_scheme in HSV_STYLE_SCHEMES
+            and model_type is not None
+        ):
             override_key = (self._region_type, channel_type, model_type)
             if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
-        
                 px = HSV_DEFAULT_PIXEL_OVERRIDES[override_key]
                 return np.array([px] * bar_height)[:, np.newaxis]
-    
 
-    def _encode_alpha(self,
-        param_name:ParameterName, 
-        param_value:float,
+    def _encode_alpha(
+        self,
+        param_name: ParameterName,
+        param_value: float,
         channel_type: ChannelType,
         model_type: ModelType = ModelType.DF_DEFAULT,
-        is_using_default:bool=True,
-        bar_height: int = 64 )-> np.ndarray:
+        is_using_default: bool = True,
+        bar_height: int = 64,
+    ) -> np.ndarray:
 
         # Check for HSV pixel override for alpha channel
-        overriden = self._encode_override(channel_type, bar_height, 
-                                          model_type, is_using_default)
+        overriden = self._encode_override(
+            channel_type, bar_height, model_type, is_using_default
+        )
         if overriden is not None:
             return overriden
         # Constant value across entire bar
@@ -156,7 +198,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         channel_type: ChannelType,
         model_type: ModelType = ModelType.DF_DEFAULT,
         bar_height: int = 64,
-        actual_bar_height: int = 64
+        actual_bar_height: int = 64,
     ) -> np.ndarray:
         """
         Encode a single channel using the channel mapping (Template Method Pattern)
@@ -177,27 +219,39 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         # Get parameter value with default
         param_value = self._get_parameter_with_default(parameters, param_name)
         if param_value is None:
-            raise ValueError(f"Missing parameter '{param_name.value}' for obstruction bar")
-        
+            raise ValueError(
+                f"Missing parameter '{param_name.value}' for obstruction bar"
+            )
+
         # Check if this is a default value and HSV encoding with an override
         is_using_default = param_name.value not in parameters
 
         # Alpha channel is constant, RGB channels vary per row
         if channel_type == ChannelType.ALPHA:
-            return self._encode_alpha(param_name, param_value, channel_type, model_type, is_using_default, bar_height)
-        
+            return self._encode_alpha(
+                param_name,
+                param_value,
+                channel_type,
+                model_type,
+                is_using_default,
+                bar_height,
+            )
+
         # Check for HSV pixel override for alpha channel
-        overriden = self._encode_override(channel_type, bar_height, 
-                                        model_type, is_using_default)
+        overriden = self._encode_override(
+            channel_type, bar_height, model_type, is_using_default
+        )
         if overriden is not None:
             return overriden
 
         # Array values that vary per row
         normalized_array = self._normalize_parameter(param_value, bar_height)
-        encoded = np.array([
-            self._encode_parameter(param_name.value, val)
-            for val in normalized_array[:actual_bar_height]
-        ])[:, np.newaxis]
+        encoded = np.array(
+            [
+                self._encode_parameter(param_name.value, val)
+                for val in normalized_array[:actual_bar_height]
+            ]
+        )[:, np.newaxis]
 
         return encoded
 
@@ -213,7 +267,9 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         """
         missing = validate_required_parameters(self._region_type, parameters)
         if missing:
-            raise ValueError(f"Missing required obstruction bar parameters: {', '.join(missing)}")
+            raise ValueError(
+                f"Missing required obstruction bar parameters: {', '.join(missing)}"
+            )
 
     def compute_obstruction_vector(
         self,
@@ -239,13 +295,22 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         """
         parameters = self._update_parameters(parameters)
         channel_map = get_channel_mapping(self._encoding_scheme)[self._region_type]
-        channel_order = [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+        channel_order = [
+            ChannelType.RED,
+            ChannelType.GREEN,
+            ChannelType.BLUE,
+            ChannelType.ALPHA,
+        ]
         vector = np.zeros((height, 4), dtype=np.float64)
 
         for col_idx, channel_type in enumerate(channel_order):
             encoded = self._encode_channel(
-                parameters, channel_map, channel_type, model_type,
-                bar_height=height, actual_bar_height=height,
+                parameters,
+                channel_map,
+                channel_type,
+                model_type,
+                bar_height=height,
+                actual_bar_height=height,
             )
             encoded = np.squeeze(encoded)
             if encoded.ndim == 0:
@@ -278,11 +343,7 @@ class ObstructionBarEncoder(BaseRegionEncoder):
         """Replicate single scalar value across all pixels"""
         return [value] * expected_length
 
-    def _normalize_parameter(
-        self,
-        value: Any,
-        expected_length: int
-    ) -> list:
+    def _normalize_parameter(self, value: Any, expected_length: int) -> list:
         """
         Normalize parameter to list format, distributing values evenly across bar height
 
@@ -334,7 +395,7 @@ class V11ObstructionBarEncoder(ObstructionBarEncoder):
     def _update_parameters(self, params):
         zenith = params.get(ParameterName.ZENITH.value, 0.0)
         horizon = params.get(ParameterName.HORIZON.value, 0.0)
-        top = np.subtract(90.0, zenith)          # scalar or array
+        top = np.subtract(90.0, zenith)  # scalar or array
         gap = np.maximum(0.0, np.subtract(top, horizon))
         midpoint = np.add(top, horizon) / 2.0
         updated = dict(params)

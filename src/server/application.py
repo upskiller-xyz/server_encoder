@@ -1,4 +1,5 @@
 """Server application implementation"""
+
 import logging
 import os
 from typing import Any, Dict
@@ -32,7 +33,7 @@ class ServerApplication:
     def __init__(self, app_name: str = "Server Application") -> None:
         """
         Initialize the Flask application with dependencies.
-        
+
         Args:
             app_name: Name of the Flask application
         """
@@ -41,16 +42,30 @@ class ServerApplication:
         HttpPolicy.from_environment(default_max_bytes=64 * MEBIBYTE).apply(self._app)
         self._controller: ServerController | None = None
         self._geometry_service = GeometryService()
-        
+
         # Initialize encoding services
-        self._encoding_service_v1 = EncodingServiceFactory.get_instance(EncodingScheme.V1)
-        self._encoding_service_v2 = EncodingServiceFactory.get_instance(EncodingScheme.V2)
-        self._encoding_service_v3 = EncodingServiceFactory.get_instance(EncodingScheme.V3)
-        self._encoding_service_v4 = EncodingServiceFactory.get_instance(EncodingScheme.V4)
-        self._encoding_service_v5 = EncodingServiceFactory.get_instance(EncodingScheme.V5)
-        self._encoding_service_v12 = EncodingServiceFactory.get_instance(EncodingScheme.V12)
-        self._encoding_service_v13 = EncodingServiceFactory.get_instance(EncodingScheme.V13)
-        
+        self._encoding_service_v1 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V1
+        )
+        self._encoding_service_v2 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V2
+        )
+        self._encoding_service_v3 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V3
+        )
+        self._encoding_service_v4 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V4
+        )
+        self._encoding_service_v5 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V5
+        )
+        self._encoding_service_v12 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V12
+        )
+        self._encoding_service_v13 = EncodingServiceFactory.get_instance(
+            EncodingScheme.V13
+        )
+
         self._setup_dependencies()
         self._setup_routes()
 
@@ -76,43 +91,45 @@ class ServerApplication:
     def _setup_routes(self) -> None:
         """Setup Flask routes"""
         self._app.add_url_rule("/", "get_status", self._get_status, methods=["GET"])
-        self._app.add_url_rule("/encode", "encode", self._encode_room_arrays, methods=["POST"])
+        self._app.add_url_rule(
+            "/encode", "encode", self._encode_room_arrays, methods=["POST"]
+        )
         self._app.add_url_rule(
             "/calculate-direction",
             "calculate_direction",
             self._calculate_direction,
-            methods=["POST"]
+            methods=["POST"],
         )
         self._app.add_url_rule(
             "/get-reference-point",
             "get_reference_point",
             self._get_reference_point,
-            methods=["POST"]
+            methods=["POST"],
         )
         self._app.add_url_rule(
             "/get-external-reference-point",
             "get_external_reference_point",
             self._get_external_reference_point,
-            methods=["POST"]
+            methods=["POST"],
         )
 
         # Documentation endpoints
-        self._app.add_url_rule("/openapi.json", "openapi_spec", self._openapi_spec, methods=["GET"])
+        self._app.add_url_rule(
+            "/openapi.json", "openapi_spec", self._openapi_spec, methods=["GET"]
+        )
         self._app.add_url_rule("/docs", "swagger_ui", self._swagger_ui, methods=["GET"])
         self._app.add_url_rule("/redoc", "redoc", self._redoc, methods=["GET"])
 
     def _get_status(self) -> Response:
         """
         Get server status endpoint.
-        
+
         Returns:
             JSON response with server status information
         """
         if self._controller:
             return jsonify(self._controller.get_status())
         return jsonify({ResponseKey.STATUS.value: "failed to start"})
-
-
 
     @endpoint_error_handler(Endpoint.ENCODE)
     # Optional: Add Pydantic validation for type safety: @endpoint_error_handler(Endpoint.ENCODE, EncodeRequest)
@@ -134,7 +151,9 @@ class ServerApplication:
         """
 
         # Parse encoding scheme (default to V2)
-        encoding_scheme_str = data.get(ParameterName.ENCODING_SCHEME.value, EncodingScheme.V2.value)
+        encoding_scheme_str = data.get(
+            ParameterName.ENCODING_SCHEME.value, EncodingScheme.V2.value
+        )
         try:
             encoding_scheme = EncodingScheme(encoding_scheme_str)
         except ValueError:
@@ -181,17 +200,17 @@ class ServerApplication:
         if is_single_window:
             # Single window - encode and return arrays in NPZ format
             image_array, mask_array = encoding_service.encode_room_image_arrays(
-                parameters=parameters,
-                model_type=model_type
+                parameters=parameters, model_type=model_type
             )
 
-            logger.info(f"Single-window array encoding complete - image shape: {image_array.shape}")
+            logger.info(
+                f"Single-window array encoding complete - image shape: {image_array.shape}"
+            )
             encoder_response.add_window(image_array, mask_array)
         else:
             # Multiple windows - encode and return arrays for all windows
             result = encoding_service.encode_multi_window_images_arrays(
-                parameters=parameters,
-                model_type=model_type
+                parameters=parameters, model_type=model_type
             )
 
             logger.info(
@@ -201,9 +220,7 @@ class ServerApplication:
             # Add each window to response
             for window_id in result.window_ids():
                 encoder_response.add_window(
-                    result.get_image(window_id),
-                    result.get_mask(window_id),
-                    window_id
+                    result.get_image(window_id), result.get_mask(window_id), window_id
                 )
 
         # Return NPZ response
@@ -235,7 +252,9 @@ class ServerApplication:
         # Extract parameters from request (handle wrapper structure)
         parameters = data.get(ResponseKey.PARAMETERS.value, data)
 
-        direction_angles_rad = self._geometry_service.calculate_direction_angle(parameters)
+        direction_angles_rad = self._geometry_service.calculate_direction_angle(
+            parameters
+        )
 
         # Log success
         logger.info(
@@ -243,9 +262,9 @@ class ServerApplication:
             f"window_count: {len(direction_angles_rad)}"
         )
 
-        return jsonify({
-            ParameterName.DIRECTION_ANGLE.value: direction_angles_rad
-        }), HTTPStatus.OK.value
+        return jsonify(
+            {ParameterName.DIRECTION_ANGLE.value: direction_angles_rad}
+        ), HTTPStatus.OK.value
 
     @endpoint_error_handler(Endpoint.GET_REFERENCE_POINT)
     def _get_reference_point(self, data: Dict[str, Any]) -> tuple:
@@ -277,13 +296,10 @@ class ServerApplication:
 
         # Convert ReferencePointResult objects to dict using to_dict property
         reference_points_dict = {
-            window_id: result.to_dict
-            for window_id, result in reference_points.items()
+            window_id: result.to_dict for window_id, result in reference_points.items()
         }
 
-        return jsonify({
-            "reference_point": reference_points_dict
-        }), HTTPStatus.OK.value
+        return jsonify({"reference_point": reference_points_dict}), HTTPStatus.OK.value
 
     @endpoint_error_handler(Endpoint.GET_EXTERNAL_REFERENCE_POINT)
     def _get_external_reference_point(self, data: Dict[str, Any]) -> tuple:
@@ -308,7 +324,9 @@ class ServerApplication:
         Returns:
             tuple: (response_dict, status_code) with external_reference_point for each window
         """
-        external_reference_points = self._geometry_service.calculate_external_reference_point(data)
+        external_reference_points = (
+            self._geometry_service.calculate_external_reference_point(data)
+        )
 
         # Log success
         logger.info(
@@ -322,14 +340,14 @@ class ServerApplication:
             for window_id, result in external_reference_points.items()
         }
 
-        return jsonify({
-            "external_reference_point": external_reference_points_dict
-        }), HTTPStatus.OK.value
+        return jsonify(
+            {"external_reference_point": external_reference_points_dict}
+        ), HTTPStatus.OK.value
 
     def _openapi_spec(self) -> Response:
         """
         Return OpenAPI 3.0 specification.
-        
+
         Returns:
             JSON with complete API specification
         """
@@ -337,7 +355,7 @@ class ServerApplication:
             title="Server Encoder API",
             description="Room encoding service with support for multiple encoding schemes",
             version="0.1.0",
-            base_url="/"
+            base_url="/",
         )
         return jsonify(spec)
 
@@ -361,7 +379,7 @@ class ServerApplication:
     def app(self) -> Flask:
         """
         Get Flask application instance.
-        
+
         Returns:
             Flask: The Flask application object
         """

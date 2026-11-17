@@ -3,8 +3,10 @@ Unit tests for WindowBorderValidator - validates window is positioned on room po
 """
 
 import math
+
 import pytest
-from src.components.geometry import WindowBorderValidator, WindowGeometry, RoomPolygon
+
+from src.components.geometry import RoomPolygon, WindowBorderValidator, WindowGeometry
 
 
 class TestWindowBorderValidator:
@@ -18,7 +20,9 @@ class TestWindowBorderValidator:
         # Window on the edge from (0,0) to (0,-1)
         window_geom = WindowGeometry(x1=0, y1=-0.2, z1=1.0, x2=0, y2=-0.8, z2=2.0)
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
@@ -39,19 +43,27 @@ class TestWindowBorderValidator:
     def test_window_partially_outside_polygon(self):
         """Test window that straddles polygon edge with explicit direction."""
         import math
+
         # Square room
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, -1], [-1, -1], [-1, 0]])
 
         # Window straddles y=0 edge (from y=-0.5 to y=0.5)
         # Window faces east (direction_angle = 0)
         window_geom = WindowGeometry(
-            x1=0, y1=-0.5, z1=1.0, x2=0, y2=0.5, z2=2.0,
-            direction_angle=0  # Facing east
+            x1=0,
+            y1=-0.5,
+            z1=1.0,
+            x2=0,
+            y2=0.5,
+            z2=2.0,
+            direction_angle=0,  # Facing east
         )
 
         # Window straddles the polygon edge - should be valid or rejected based on validator logic
         try:
-            is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+            is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+                window_geom, room_polygon
+            )
             # If no exception, the window was accepted
             assert is_valid is True
         except Exception:
@@ -68,12 +80,18 @@ class TestWindowBorderValidator:
         # Window on bottom edge from (-0.3,-1) to (-0.7,-1)
         # This is a horizontal window facing upward (north), so direction_angle = π/2
         window_geom = WindowGeometry(
-            x1=-0.3, y1=-1, z1=1.0,
-            x2=-0.7, y2=-1, z2=2.0,
-            direction_angle=math.pi/2  # Facing upward (north)
+            x1=-0.3,
+            y1=-1,
+            z1=1.0,
+            x2=-0.7,
+            y2=-1,
+            z2=2.0,
+            direction_angle=math.pi / 2,  # Facing upward (north)
         )
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
@@ -84,14 +102,10 @@ class TestWindowBorderValidator:
         room_polygon = [[0, 0], [0, -1], [-1, -1], [-1, 0]]
 
         # Window coordinates as flat dict (like in demo.ipynb)
-        window_data = {
-            "x1": 0, "y1": -0.2, "z1": 1.0,
-            "x2": 0, "y2": -0.8, "z2": 2.0
-        }
+        window_data = {"x1": 0, "y1": -0.2, "z1": 1.0, "x2": 0, "y2": -0.8, "z2": 2.0}
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=window_data,
-            polygon_data=room_polygon
+            window_data=window_data, polygon_data=room_polygon
         )
 
         assert is_valid is True
@@ -103,18 +117,17 @@ class TestWindowBorderValidator:
         room_polygon = [[0, 0], [0, -1], [-1, -1], [-1, 0]]
 
         # Window OUTSIDE polygon (matches user's example)
-        window_data = {
-            "x1": 0, "y1": 0.2, "z1": 18,
-            "x2": 0, "y2": 1.8, "z2": 19.2
-        }
+        window_data = {"x1": 0, "y1": 0.2, "z1": 18, "x2": 0, "y2": 1.8, "z2": 19.2}
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=window_data,
-            polygon_data=room_polygon
+            window_data=window_data, polygon_data=room_polygon
         )
 
         assert is_valid is False
-        assert "not on polygon border" in error_msg or "does not lie on any polygon edge" in error_msg
+        assert (
+            "not on polygon border" in error_msg
+            or "does not lie on any polygon edge" in error_msg
+        )
 
     def test_validate_from_dict_nested_window_geometry(self):
         """Test validation with nested window_geometry object."""
@@ -123,14 +136,17 @@ class TestWindowBorderValidator:
         # Window as nested object
         window_data = {
             "window_geometry": {
-                "x1": 0, "y1": -0.2, "z1": 1.0,
-                "x2": 0, "y2": -0.8, "z2": 2.0
+                "x1": 0,
+                "y1": -0.2,
+                "z1": 1.0,
+                "x2": 0,
+                "y2": -0.8,
+                "z2": 2.0,
             }
         }
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=window_data,
-            polygon_data=room_polygon
+            window_data=window_data, polygon_data=room_polygon
         )
 
         assert is_valid is True
@@ -141,14 +157,16 @@ class TestWindowBorderValidator:
         # A diagonal window from (0,0) to (-1,-1) where both points
         # are on polygon corners/edges should be valid since both
         # endpoints touch the polygon boundary
-        
+
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, -1], [-1, -1], [-1, 0]])
 
         # Diagonal window from (0,0) to (-1,-1)
         window_geom = WindowGeometry(x1=0, y1=0, z1=1.0, x2=-1, y2=-1, z2=2.0)
-        
+
         # Validator allows this as both endpoints are on polygon edges
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
         assert is_valid is True
 
     def test_window_at_corner(self):
@@ -157,13 +175,20 @@ class TestWindowBorderValidator:
 
         # Window with zero size at (0,0), facing east
         window_geom = WindowGeometry(
-            x1=0, y1=0, z1=1.0, x2=0, y2=0, z2=2.0,
-            direction_angle=0  # Facing east
+            x1=0,
+            y1=0,
+            z1=1.0,
+            x2=0,
+            y2=0,
+            z2=2.0,
+            direction_angle=0,  # Facing east
         )
 
         # Window at corner - should be valid or rejected based on validator logic
         try:
-            is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+            is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+                window_geom, room_polygon
+            )
             assert is_valid is True
         except Exception:
             # If validator rejects it, that's also valid behavior
@@ -173,14 +198,16 @@ class TestWindowBorderValidator:
         """Test window on inner edge of L-shaped room."""
 
         # L-shaped room
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -2], [-2, -2], [-2, -1], [-1, -1], [-1, 0]
-        ])
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -2], [-2, -2], [-2, -1], [-1, -1], [-1, 0]]
+        )
 
         # Window on the inner vertical edge
         window_geom = WindowGeometry(x1=-1, y1=-0.5, z1=1.0, x2=-1, y2=-0.9, z2=2.0)
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
 
@@ -195,15 +222,21 @@ class TestWindowBorderValidator:
         window_geom = WindowGeometry(x1=0, y1=-0.2, z1=1.0, x2=0, y2=-0.8, z2=2.0)
 
         # Should pass - window is on edge
-        is_valid, _ = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        is_valid, _ = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
         assert is_valid is True
 
         # Window far off the edge (beyond tolerance)
-        window_geom_far = WindowGeometry(x1=0.5, y1=-0.2, z1=1.0, x2=0.5, y2=-0.8, z2=2.0)
+        window_geom_far = WindowGeometry(
+            x1=0.5, y1=-0.2, z1=1.0, x2=0.5, y2=-0.8, z2=2.0
+        )
 
         # Should fail - window is too far from edge
         with pytest.raises(WindowNotOnPolygonError):
-            WindowBorderValidator.validate_window_on_border(window_geom_far, room_polygon)
+            WindowBorderValidator.validate_window_on_border(
+                window_geom_far, room_polygon
+            )
 
     def test_polygon_with_dict_coordinates(self):
         """Test validation with polygon defined using dict coordinates."""
@@ -211,17 +244,13 @@ class TestWindowBorderValidator:
             {"x": 0, "y": 0},
             {"x": 0, "y": -1},
             {"x": -1, "y": -1},
-            {"x": -1, "y": 0}
+            {"x": -1, "y": 0},
         ]
 
-        window_data = {
-            "x1": 0, "y1": -0.2, "z1": 1.0,
-            "x2": 0, "y2": -0.8, "z2": 2.0
-        }
+        window_data = {"x1": 0, "y1": -0.2, "z1": 1.0, "x2": 0, "y2": -0.8, "z2": 2.0}
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=window_data,
-            polygon_data=room_polygon
+            window_data=window_data, polygon_data=room_polygon
         )
 
         assert is_valid is True
@@ -234,8 +263,7 @@ class TestWindowBorderValidator:
         invalid_polygon = [[0, 0], [1, 1]]
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=window_data,
-            polygon_data=invalid_polygon
+            window_data=window_data, polygon_data=invalid_polygon
         )
 
         assert is_valid is False
@@ -253,68 +281,68 @@ class TestWindowBorderValidator:
         The edge (0,0)->(0,-1) and (0,-1)->(0,-2) are colinear.
         A window from y=-0.5 to y=-1.5 spans across the shared vertex at (0,-1).
         """
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
-        ])
-
-        window_geom = WindowGeometry(
-            x1=0, y1=-0.5, z1=1.0,
-            x2=0, y2=-1.5, z2=2.0,
-            direction_angle=0
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]]
         )
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.5, z1=1.0, x2=0, y2=-1.5, z2=2.0, direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
 
     def test_window_spanning_colinear_segments_horizontal(self):
         """Test window spanning colinear horizontal segments at a shared vertex."""
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -3], [-1, -3], [-2, -3], [-2, 0]
-        ])
-
-        window_geom = WindowGeometry(
-            x1=-0.5, y1=-3, z1=1.0,
-            x2=-1.5, y2=-3, z2=2.0,
-            direction_angle=math.pi / 2
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -3], [-1, -3], [-2, -3], [-2, 0]]
         )
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        window_geom = WindowGeometry(
+            x1=-0.5, y1=-3, z1=1.0, x2=-1.5, y2=-3, z2=2.0, direction_angle=math.pi / 2
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
 
     def test_window_spanning_multiple_colinear_segments(self):
         """Test window spanning three colinear segments (two intermediate vertices)."""
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -1], [0, -2], [0, -3], [-3, -3], [-3, 0]
-        ])
-
-        window_geom = WindowGeometry(
-            x1=0, y1=-0.5, z1=1.0,
-            x2=0, y2=-2.5, z2=2.0,
-            direction_angle=0
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -1], [0, -2], [0, -3], [-3, -3], [-3, 0]]
         )
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.5, z1=1.0, x2=0, y2=-2.5, z2=2.0, direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
 
     def test_window_within_single_segment_still_valid(self):
         """Verify that windows fully within one segment still pass after the fix."""
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
-        ])
-
-        window_geom = WindowGeometry(
-            x1=0, y1=-0.2, z1=1.0,
-            x2=0, y2=-0.8, z2=2.0,
-            direction_angle=0
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]]
         )
 
-        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(window_geom, room_polygon)
+        window_geom = WindowGeometry(
+            x1=0, y1=-0.2, z1=1.0, x2=0, y2=-0.8, z2=2.0, direction_angle=0
+        )
+
+        is_valid, error_msg = WindowBorderValidator.validate_window_on_border(
+            window_geom, room_polygon
+        )
 
         assert is_valid is True
         assert error_msg == ""
@@ -323,14 +351,12 @@ class TestWindowBorderValidator:
         """Ensure windows not on the boundary are still rejected with colinear segments."""
         from src.core.exceptions import WindowNotOnPolygonError
 
-        room_polygon = RoomPolygon.from_dict([
-            [0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]
-        ])
+        room_polygon = RoomPolygon.from_dict(
+            [[0, 0], [0, -1], [0, -2], [-3, -2], [-3, 0]]
+        )
 
         window_geom = WindowGeometry(
-            x1=1, y1=-0.5, z1=1.0,
-            x2=1, y2=-1.5, z2=2.0,
-            direction_angle=0
+            x1=1, y1=-0.5, z1=1.0, x2=1, y2=-1.5, z2=2.0, direction_angle=0
         )
 
         with pytest.raises(WindowNotOnPolygonError):
@@ -344,8 +370,7 @@ class TestWindowBorderValidator:
         incomplete_window = {"x1": 0, "y1": 0, "z1": 1.0, "x2": 0, "y2": 1}
 
         is_valid, error_msg = WindowBorderValidator.validate_from_dict(
-            window_data=incomplete_window,
-            polygon_data=room_polygon
+            window_data=incomplete_window, polygon_data=room_polygon
         )
 
         assert is_valid is False

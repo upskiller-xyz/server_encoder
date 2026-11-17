@@ -1,5 +1,7 @@
 """Tests for ModelTypeManager utility class"""
+
 import pytest
+
 from src.core.model_type_manager import ModelTypeManager
 
 

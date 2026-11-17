@@ -1,15 +1,33 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 import numpy as np
-from src.models import IRegionEncoder
-from src.core import RegionType, ModelType, ChannelType, ParameterName, DEFAULT_PARAMETER_VALUES, EncodingScheme, get_channel_mapping, HSV_DEFAULT_PIXEL_OVERRIDES, HSV_STYLE_SCHEMES
+
 from src.components.parameter_encoders import EncoderFactory as ParameterEncoderFactory
-from src.components.region_encoders.validation_helpers import validate_required_parameters
+from src.components.region_encoders.validation_helpers import (
+    validate_required_parameters,
+)
+from src.core import (
+    DEFAULT_PARAMETER_VALUES,
+    HSV_DEFAULT_PIXEL_OVERRIDES,
+    HSV_STYLE_SCHEMES,
+    ChannelType,
+    EncodingScheme,
+    ModelType,
+    ParameterName,
+    RegionType,
+    get_channel_mapping,
+)
+from src.models import IRegionEncoder
 
 
 class BaseRegionEncoder(IRegionEncoder):
     """Base class for region encoders with common functionality"""
 
-    def __init__(self, region_type: RegionType, encoding_scheme: EncodingScheme = EncodingScheme.V2):
+    def __init__(
+        self,
+        region_type: RegionType,
+        encoding_scheme: EncodingScheme = EncodingScheme.V2,
+    ):
         self._region_type = region_type
         self._encoder_factory = ParameterEncoderFactory()
         self._encoding_scheme = encoding_scheme
@@ -28,10 +46,7 @@ class BaseRegionEncoder(IRegionEncoder):
         return self._last_mask
 
     def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
+        self, image: np.ndarray, parameters: Dict[str, Any], model_type: ModelType
     ) -> np.ndarray:
         """
         Encode window region
@@ -57,7 +72,9 @@ class BaseRegionEncoder(IRegionEncoder):
 
         _extra_params = self._get_extra(image, parameters)
 
-        image[mask] = self._encode_all_channels(parameters, channel_map, model_type, *_extra_params)
+        image[mask] = self._encode_all_channels(
+            parameters, channel_map, model_type, *_extra_params
+        )
 
         return image
 
@@ -71,7 +88,9 @@ class BaseRegionEncoder(IRegionEncoder):
         """Validate required background parameters using list comprehension"""
         missing = validate_required_parameters(self._region_type, parameters)
         if missing:
-            raise ValueError(f"Missing required {self.__class__.__name__} parameters: {', '.join(missing)}")
+            raise ValueError(
+                f"Missing required {self.__class__.__name__} parameters: {', '.join(missing)}"
+            )
 
     def _get_area_mask(self, image, parameters, model_type) -> np.ndarray[Any, Any]:
         height, width = image.shape[:2]
@@ -101,9 +120,7 @@ class BaseRegionEncoder(IRegionEncoder):
         return model_type in [ModelType.DA_DEFAULT, ModelType.DA_CUSTOM]
 
     def _get_parameter_with_default(
-        self,
-        parameters: Dict[str, Any],
-        param_name: ParameterName
+        self, parameters: Dict[str, Any], param_name: ParameterName
     ) -> Any:
         """
         Get parameter value with fallback to default value
@@ -115,10 +132,10 @@ class BaseRegionEncoder(IRegionEncoder):
         Returns:
             Parameter value or default value
         """
-        pr = parameters #.to_dict()
+        pr = parameters  # .to_dict()
         return pr.get(
             param_name.value,
-            DEFAULT_PARAMETER_VALUES.get(param_name, pr.get(param_name.value))
+            DEFAULT_PARAMETER_VALUES.get(param_name, pr.get(param_name.value)),
         )
 
     def _encode_channel(
@@ -126,7 +143,7 @@ class BaseRegionEncoder(IRegionEncoder):
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
         channel_type: ChannelType,
-        model_type: ModelType = ModelType.DF_DEFAULT
+        model_type: ModelType = ModelType.DF_DEFAULT,
     ) -> int | np.ndarray:
         """
         Encode a single channel using the channel mapping (Template Method Pattern)
@@ -147,14 +164,15 @@ class BaseRegionEncoder(IRegionEncoder):
             raise ValueError(
                 f"{self.__class__} parameter '{param_name.value}' is missing or could not be calculated. "
                 f"Available parameters: {list(parameters.keys())}. "
-
             )
 
         # Check if this is a default value and using an HSV-style scheme (V2/V3/V4)
         is_using_default = param_name.value not in parameters
-        if (is_using_default and
-            self._encoding_scheme in HSV_STYLE_SCHEMES and
-            model_type is not None):
+        if (
+            is_using_default
+            and self._encoding_scheme in HSV_STYLE_SCHEMES
+            and model_type is not None
+        ):
             # Check for HSV pixel override
             override_key = (self._region_type, channel_type, model_type)
             if override_key in HSV_DEFAULT_PIXEL_OVERRIDES:
@@ -166,7 +184,7 @@ class BaseRegionEncoder(IRegionEncoder):
         self,
         parameters: Dict[str, Any],
         channel_map: Dict[ChannelType, ParameterName],
-        model_type: ModelType = ModelType.DF_DEFAULT
+        model_type: ModelType = ModelType.DF_DEFAULT,
     ) -> List[int | np.ndarray]:
         """
         Encode all 4 channels (RGBA) using list comprehension
@@ -181,5 +199,10 @@ class BaseRegionEncoder(IRegionEncoder):
         """
         return [
             self._encode_channel(parameters, channel_map, channel_type, model_type)
-            for channel_type in [ChannelType.RED, ChannelType.GREEN, ChannelType.BLUE, ChannelType.ALPHA]
+            for channel_type in [
+                ChannelType.RED,
+                ChannelType.GREEN,
+                ChannelType.BLUE,
+                ChannelType.ALPHA,
+            ]
         ]

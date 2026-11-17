@@ -1,4 +1,5 @@
 from typing import Dict
+
 from src.core import EncodingScheme
 from src.server.services.encoding_service import EncodingService
 from src.server.services.encoding_service_v5 import V5EncodingService
@@ -11,7 +12,9 @@ class EncodingServiceFactory:
     _instances: Dict[EncodingScheme, EncodingService] = {}
 
     @classmethod
-    def get_instance(cls, encoding_scheme: EncodingScheme = EncodingScheme.V2) -> EncodingService:
+    def get_instance(
+        cls, encoding_scheme: EncodingScheme = EncodingScheme.V2
+    ) -> EncodingService:
         """
         Get singleton instance of encoding service for the specified encoding scheme.
 

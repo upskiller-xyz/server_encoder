@@ -1,9 +1,11 @@
 """Validation enums for type-safe validation"""
+
 from enum import Enum
 
 
 class ValidationErrorType(Enum):
     """Types of validation errors"""
+
     MISSING_PARAMETER = "missing_parameter"
     INVALID_TYPE = "invalid_type"
     INVALID_VALUE = "invalid_value"
@@ -16,6 +18,7 @@ class ValidationErrorType(Enum):
 
 class ValidationType(Enum):
     """Types of validation to perform"""
+
     REQUIRED = "required"
     TYPE_CHECK = "type_check"
     RANGE_CHECK = "range_check"
@@ -26,6 +29,7 @@ class ValidationType(Enum):
 
 class RequestType(Enum):
     """Types of API requests"""
+
     ENCODE = "encode"
     CALCULATE_DIRECTION = "calculate_direction"
     GET_REFERENCE_POINT = "get_reference_point"

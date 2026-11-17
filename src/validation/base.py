@@ -1,13 +1,20 @@
 """Base classes for validation system following OOP and SRP principles"""
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+
 from src.validation.enums import ValidationErrorType
 
 
 class ValidationError(Exception):
     """Custom exception for validation errors"""
 
-    def __init__(self, error_type: ValidationErrorType, message: str, parameter_name: Optional[str] = None):
+    def __init__(
+        self,
+        error_type: ValidationErrorType,
+        message: str,
+        parameter_name: Optional[str] = None,
+    ):
         """
         Initialize validation error.
 
@@ -24,7 +31,9 @@ class ValidationError(Exception):
 class ValidationResult:
     """Result of a validation operation"""
 
-    def __init__(self, is_valid: bool = True, errors: Optional[List[ValidationError]] = None):
+    def __init__(
+        self, is_valid: bool = True, errors: Optional[List[ValidationError]] = None
+    ):
         """
         Initialize validation result.
 
@@ -60,7 +69,9 @@ class BaseValidator(ABC):
     """Abstract base class for all validators (Interface)"""
 
     @abstractmethod
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate a value.
 

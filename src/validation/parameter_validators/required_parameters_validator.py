@@ -1,8 +1,10 @@
 """Validator for required parameters (SRP: validates only presence of required parameters)"""
-from typing import Any, Dict, Optional, List
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
-from src.validation.enums import ValidationErrorType
+
+from typing import Any, Dict, List, Optional
+
 from src.core.enums import ParameterName
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
+from src.validation.enums import ValidationErrorType
 
 
 class RequiredParametersValidator(BaseValidator):
@@ -20,7 +22,9 @@ class RequiredParametersValidator(BaseValidator):
             ParameterName.ROOM_POLYGON,
         ]
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate required parameters are present.
 
@@ -38,7 +42,7 @@ class RequiredParametersValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"Parameters must be a dictionary, got {type(value).__name__}",
-                parameter_name="parameters"
+                parameter_name="parameters",
             )
             result.add_error(error)
             return result
@@ -54,7 +58,7 @@ class RequiredParametersValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.MISSING_PARAMETER,
                 message=f"Missing required parameters: {', '.join(missing)}",
-                parameter_name="parameters"
+                parameter_name="parameters",
             )
             result.add_error(error)
 

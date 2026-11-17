@@ -4,6 +4,7 @@ Graphics Constants for Image Encoding
 Centralized location for all magic numbers related to image rendering.
 Following the Single Responsibility Principle and avoiding magic numbers in code.
 """
+
 from dataclasses import dataclass
 
 
@@ -36,12 +37,13 @@ class ImageGraphicsConstants:
 
     # Window placement tolerance (meters) for edge matching
     WINDOW_PLACEMENT_TOLERANCE: float = 0.05
-    WINDOW_HEIGHT_CORRECTION_TOLERANCE: float = 0.40  # 40cm - BIM frames may extend slightly beyond floor/roof
+    WINDOW_HEIGHT_CORRECTION_TOLERANCE: float = (
+        0.40  # 40cm - BIM frames may extend slightly beyond floor/roof
+    )
 
     @classmethod
-    def get_pixel_value(cls, value:float, 
-                        image_size:int=BASE_IMAGE_SIZE_PX):
-        
+    def get_pixel_value(cls, value: float, image_size: int = BASE_IMAGE_SIZE_PX):
+
         return round(value / cls.get_resolution(image_size))
 
     @classmethod

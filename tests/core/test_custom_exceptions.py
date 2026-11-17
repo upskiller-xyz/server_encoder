@@ -3,17 +3,18 @@ Tests for custom exception classes
 """
 
 import unittest
-from src.core import (
-    WindowNotOnPolygonError,
-    WindowHeightValidationError,
-    ParameterValidationError,
-    RegionEncodingError
-)
+
 from src.components.geometry import (
-    WindowGeometry,
     RoomPolygon,
     WindowBorderValidator,
-    WindowHeightValidator
+    WindowGeometry,
+    WindowHeightValidator,
+)
+from src.core import (
+    ParameterValidationError,
+    RegionEncodingError,
+    WindowHeightValidationError,
+    WindowNotOnPolygonError,
 )
 
 
@@ -129,5 +130,5 @@ class TestRegionEncodingError(unittest.TestCase):
         self.assertIn("Invalid pixel bounds", str(exc))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

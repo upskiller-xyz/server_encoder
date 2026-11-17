@@ -1,7 +1,10 @@
-from typing import Dict, Any
 import logging
-from src.components.calculators.window_sill_height_calculator import WindowSillHeightCalculator
+from typing import Any, Dict
+
 from src.components.calculators.window_height_calculator import WindowHeightCalculator
+from src.components.calculators.window_sill_height_calculator import (
+    WindowSillHeightCalculator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +18,12 @@ class ParameterCalculatorRegistry:
 
     # Available calculators (order matters: dependencies should be calculated first)
     _CALCULATORS = [
-        WindowHeightCalculator(),         # No dependencies
-        WindowSillHeightCalculator(),     # Depends on floor_height_above_terrain
+        WindowHeightCalculator(),  # No dependencies
+        WindowSillHeightCalculator(),  # Depends on floor_height_above_terrain
     ]
 
     @classmethod
-    def calculate_derived_parameters(
-        cls,
-        parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def calculate_derived_parameters(cls, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate all derived parameters that can be computed
 
@@ -51,12 +51,8 @@ class ParameterCalculatorRegistry:
                 try:
                     calculated_value = calculator.calculate(parameters)
                     result[param_name] = calculated_value
-                    logger.debug(
-                            f"Auto-calculated {param_name} = {calculated_value}"
-                        )
+                    logger.debug(f"Auto-calculated {param_name} = {calculated_value}")
                 except ValueError as e:
-                    logger.warning(
-                            f"Could not auto-calculate {param_name}: {str(e)}"
-                        )
+                    logger.warning(f"Could not auto-calculate {param_name}: {str(e)}")
 
         return result

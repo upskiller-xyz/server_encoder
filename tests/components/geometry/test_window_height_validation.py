@@ -4,7 +4,8 @@ Windows within 40cm tolerance are clamped, beyond that an error is raised.
 """
 
 import pytest
-from src.components.geometry import WindowHeightValidator, WindowGeometry
+
+from src.components.geometry import WindowGeometry, WindowHeightValidator
 from src.core.exceptions import WindowHeightValidationError
 
 
@@ -236,7 +237,14 @@ class TestWindowHeightValidator:
 
     def test_validate_from_parameters_below_floor(self):
         """Test validation from parameters with window far below floor."""
-        window_data = {"x1": 0.0, "y1": 0.0, "z1": -0.5, "x2": 1.0, "y2": 0.0, "z2": 2.0}
+        window_data = {
+            "x1": 0.0,
+            "y1": 0.0,
+            "z1": -0.5,
+            "x2": 1.0,
+            "y2": 0.0,
+            "z2": 2.0,
+        }
         is_valid, error_msg = WindowHeightValidator.validate_from_parameters(
             window_data, floor_height=0.0, roof_height=3.0
         )
@@ -263,7 +271,14 @@ class TestWindowHeightValidator:
 
     def test_validate_from_parameters_invalid_data_type(self):
         """Test validation with invalid data type."""
-        window_data = {"x1": "invalid", "y1": 0.0, "z1": 1.0, "x2": 1.0, "y2": 0.0, "z2": 2.0}
+        window_data = {
+            "x1": "invalid",
+            "y1": 0.0,
+            "z1": 1.0,
+            "x2": 1.0,
+            "y2": 0.0,
+            "z2": 2.0,
+        }
         is_valid, error_msg = WindowHeightValidator.validate_from_parameters(
             window_data, floor_height=0.0, roof_height=3.0
         )

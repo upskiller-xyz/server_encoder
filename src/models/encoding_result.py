@@ -1,5 +1,6 @@
-from typing import Dict, Optional
 from dataclasses import dataclass, field
+from typing import Dict, Optional
+
 import numpy as np
 
 
@@ -10,6 +11,7 @@ class EncodingResult:
 
     Encapsulates encoding results to avoid Dict[str, ...] returns
     """
+
     images: Dict[str, np.ndarray] = field(default_factory=dict)
     masks: Dict[str, Optional[np.ndarray]] = field(default_factory=dict)
 
@@ -21,7 +23,9 @@ class EncodingResult:
         """Get mask for specific window"""
         return self.masks.get(window_id)
 
-    def add_window(self, window_id: str, image: np.ndarray, mask: Optional[np.ndarray] = None) -> None:
+    def add_window(
+        self, window_id: str, image: np.ndarray, mask: Optional[np.ndarray] = None
+    ) -> None:
         """Add window encoding result"""
         self.images[window_id] = image
         self.masks[window_id] = mask

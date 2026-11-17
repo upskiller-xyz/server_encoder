@@ -12,11 +12,13 @@ Tests verify:
 """
 
 import unittest
+
 import numpy as np
-from src.components.region_encoders import WindowRegionEncoder
+
 from src.components.geometry import WindowGeometry
-from src.core import ModelType, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
+from src.components.region_encoders import WindowRegionEncoder
+from src.core import EncodingScheme, ModelType, RegionType
 
 
 class TestWindowGeometry(unittest.TestCase):
@@ -25,10 +27,7 @@ class TestWindowGeometry(unittest.TestCase):
     def test_window_dimensions_from_bbox(self):
         """Test window dimensions calculated from bounding box"""
         # Window: 1.2m wide (x), 1.5m tall (z)
-        window = WindowGeometry(
-            x1=-0.6, y1=0.0, z1=0.9,
-            x2=0.6, y2=0.0, z2=2.4
-        )
+        window = WindowGeometry(x1=-0.6, y1=0.0, z1=0.9, x2=0.6, y2=0.0, z2=2.4)
 
         self.assertEqual(window.window_width_3d, 1.2)
         self.assertEqual(window.window_height_3d, 1.5)
@@ -38,10 +37,7 @@ class TestWindowGeometry(unittest.TestCase):
     def test_window_dimensions_order_independent(self):
         """Test that corner order doesn't matter"""
         # Reversed corners
-        window = WindowGeometry(
-            x1=0.6, y1=0.0, z1=2.4,
-            x2=-0.6, y2=0.0, z2=0.9
-        )
+        window = WindowGeometry(x1=0.6, y1=0.0, z1=2.4, x2=-0.6, y2=0.0, z2=0.9)
 
         self.assertEqual(window.window_width_3d, 1.2)
         self.assertEqual(window.window_height_3d, 1.5)
@@ -50,10 +46,7 @@ class TestWindowGeometry(unittest.TestCase):
 
     def test_window_pixel_bounds_128(self):
         """Test window pixel bounds for 128x128 image"""
-        window = WindowGeometry(
-            x1=-0.6, y1=0.0, z1=0.9,
-            x2=0.6, y2=0.0, z2=2.4
-        )
+        window = WindowGeometry(x1=-0.6, y1=0.0, z1=0.9, x2=0.6, y2=0.0, z2=2.4)
 
         x_start, y_start, x_end, y_end = window.get_pixel_bounds(image_size=128)
 
@@ -69,10 +62,7 @@ class TestWindowGeometry(unittest.TestCase):
 
     def test_window_pixel_bounds_256(self):
         """Test window pixel bounds scale for 256x256 image"""
-        window = WindowGeometry(
-            x1=-0.6, y1=0.0, z1=0.9,
-            x2=0.6, y2=0.0, z2=2.4
-        )
+        window = WindowGeometry(x1=-0.6, y1=0.0, z1=0.9, x2=0.6, y2=0.0, z2=2.4)
 
         x_start, y_start, x_end, y_end = window.get_pixel_bounds(image_size=256)
 
@@ -97,11 +87,15 @@ class TestWindowConstruction(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -113,15 +107,13 @@ class TestWindowConstruction(unittest.TestCase):
         # Check that window region has non-zero values
         window_pixel = result[window_y, window_x, :]
         self.assertTrue(
-            np.any(window_pixel > 0),
-            "Window should have non-zero pixel values"
+            np.any(window_pixel > 0), "Window should have non-zero pixel values"
         )
 
         # Check that area far from window is still zero
         far_pixel = result[window_y, 50, :]
         self.assertTrue(
-            np.all(far_pixel == 0),
-            "Area far from window should remain zero"
+            np.all(far_pixel == 0), "Area far from window should remain zero"
         )
 
     def test_window_centered_vertically(self):
@@ -130,11 +122,15 @@ class TestWindowConstruction(unittest.TestCase):
 
         # Window with 1.2m width = 12 pixels tall in top view
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -154,8 +150,7 @@ class TestWindowConstruction(unittest.TestCase):
             y_center = (y_min + y_max) // 2
 
             self.assertAlmostEqual(
-                y_center, 64, delta=2,
-                msg="Window should be centered vertically"
+                y_center, 64, delta=2, msg="Window should be centered vertically"
             )
 
 
@@ -172,11 +167,15 @@ class TestWindowDimensions(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -193,8 +192,10 @@ class TestWindowDimensions(unittest.TestCase):
             window_width = len(window_xs)
             # Should be approximately 3 pixels (0.3m wall thickness / 0.1m per pixel)
             self.assertAlmostEqual(
-                window_width, 3, delta=1,
-                msg="Window width should be ~3 pixels (wall thickness)"
+                window_width,
+                3,
+                delta=1,
+                msg="Window width should be ~3 pixels (wall thickness)",
             )
 
     def test_window_height_from_3d_width(self):
@@ -203,11 +204,15 @@ class TestWindowDimensions(unittest.TestCase):
 
         # Window with 1.2m width in 3D = 12 pixels in top view
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -224,8 +229,10 @@ class TestWindowDimensions(unittest.TestCase):
             window_height = len(window_ys)
             # 1.2m = 12 pixels at 0.1m/pixel
             self.assertAlmostEqual(
-                window_height, 12, delta=2,
-                msg="Window height should match window width in 3D (12 pixels for 1.2m)"
+                window_height,
+                12,
+                delta=2,
+                msg="Window height should match window width in 3D (12 pixels for 1.2m)",
             )
 
     def test_different_window_sizes(self):
@@ -235,20 +242,28 @@ class TestWindowDimensions(unittest.TestCase):
 
         # Small window: 0.8m wide
         params_small = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.4, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.4, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.4,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.4,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         # Large window: 2.0m wide
         params_large = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -1.0, 'y1': 0.0, 'z1': 0.9,
-            'x2': 1.0, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -1.0,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 1.0,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result1 = self.encoder.encode_region(image1, params_small, self.model_type)
@@ -281,9 +296,9 @@ class TestWindowColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.2, 252),    # 0.2m height → ~252 (reversed)
-            (2.6, 127),    # 2.6m height → ~127 (middle)
-            (5.0, 2),      # 5.0m height → ~2 (reversed)
+            (0.2, 252),  # 0.2m height → ~252 (reversed)
+            (2.6, 127),  # 2.6m height → ~127 (middle)
+            (5.0, 2),  # 5.0m height → ~2 (reversed)
         ]
 
         for window_height, expected_value in test_cases:
@@ -292,14 +307,18 @@ class TestWindowColorEncoding(unittest.TestCase):
             z2 = z1 + window_height  # Window height = z2 - z1
 
             parameters = {
-                'floor_height_above_terrain': floor_height,
-                'height_roof_over_floor': 15.0,  # Required parameter
-                'window_frame_ratio': 0.8,
-                'horizon': 0,
-                'zenith': 0,
-                'room_polygon': [[0, 2], [0, -7], [-3, -7], [-3, 2]],
-                'x1': -0.6, 'y1': 0.0, 'z1': z1,
-                'x2': 0.6, 'y2': 0.0, 'z2': z2
+                "floor_height_above_terrain": floor_height,
+                "height_roof_over_floor": 15.0,  # Required parameter
+                "window_frame_ratio": 0.8,
+                "horizon": 0,
+                "zenith": 0,
+                "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": z1,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": z2,
             }
 
             result = self.encoder.encode_region(
@@ -310,8 +329,10 @@ class TestWindowColorEncoding(unittest.TestCase):
             window_pixel = result[64, 115, 0]  # Red channel
 
             self.assertAlmostEqual(
-                window_pixel, expected_value, delta=2,
-                msg=f"Window height {window_height}m should encode to ~{expected_value} in red channel"
+                window_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Window height {window_height}m should encode to ~{expected_value} in red channel",
             )
 
     def test_green_channel_frame_ratio_reversed(self):
@@ -319,18 +340,22 @@ class TestWindowColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (1.0, 0),      # 1.0 → 0 (reversed)
-            (0.5, 127),    # 0.5 → ~127
-            (0.0, 255),    # 0.0 → 255 (reversed)
+            (1.0, 0),  # 1.0 → 0 (reversed)
+            (0.5, 127),  # 0.5 → ~127
+            (0.0, 255),  # 0.0 → 255 (reversed)
         ]
 
         for frame_ratio, expected_value in test_cases:
             parameters = {
-                'window_sill_height': 0.9,
-                'window_frame_ratio': frame_ratio,
-                'window_height': 1.5,
-                'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-                'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+                "window_sill_height": 0.9,
+                "window_frame_ratio": frame_ratio,
+                "window_height": 1.5,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
             }
 
             result = self.encoder.encode_region(
@@ -341,8 +366,10 @@ class TestWindowColorEncoding(unittest.TestCase):
             window_pixel = result[64, 115, 1]  # Green channel
 
             self.assertAlmostEqual(
-                window_pixel, expected_value, delta=2,
-                msg=f"Frame ratio {frame_ratio} should encode to ~{expected_value} in green channel (reversed)"
+                window_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Frame ratio {frame_ratio} should encode to ~{expected_value} in green channel (reversed)",
             )
 
     def test_blue_channel_sill_height(self):
@@ -354,9 +381,9 @@ class TestWindowColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0m sill → 0
-            (2.5, 127),    # 2.5m sill → ~127
-            (5.0, 255),    # 5m sill → 255
+            (0.0, 0),  # 0m sill → 0
+            (2.5, 127),  # 2.5m sill → ~127
+            (5.0, 255),  # 5m sill → 255
         ]
 
         for sill_height, expected_value in test_cases:
@@ -365,14 +392,18 @@ class TestWindowColorEncoding(unittest.TestCase):
             z2 = z1 + 1.5  # Window height of 1.5m
 
             parameters = {
-                'floor_height_above_terrain': floor_height,
-                'height_roof_over_floor': 15.0,
-                'window_frame_ratio': 0.8,
-                'horizon': 0,
-                'zenith': 0,
-                'room_polygon': [[0, 2], [0, -7], [-3, -7], [-3, 2]],
-                'x1': -0.6, 'y1': 0.0, 'z1': z1,
-                'x2': 0.6, 'y2': 0.0, 'z2': z2
+                "floor_height_above_terrain": floor_height,
+                "height_roof_over_floor": 15.0,
+                "window_frame_ratio": 0.8,
+                "horizon": 0,
+                "zenith": 0,
+                "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": z1,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": z2,
             }
 
             result = self.encoder.encode_region(
@@ -383,8 +414,10 @@ class TestWindowColorEncoding(unittest.TestCase):
             window_pixel = result[64, 115, 2]  # Blue channel
 
             self.assertAlmostEqual(
-                window_pixel, expected_value, delta=2,
-                msg=f"Sill height {sill_height}m should encode to ~{expected_value} in blue channel"
+                window_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Sill height {sill_height}m should encode to ~{expected_value} in blue channel",
             )
 
     def test_alpha_channel_default_frame_reflectance(self):
@@ -393,11 +426,15 @@ class TestWindowColorEncoding(unittest.TestCase):
 
         # Don't provide window_frame_reflectance parameter
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -414,7 +451,10 @@ class TestWindowColorEncoding(unittest.TestCase):
         window_pixel_custom = result_custom[64, 115, 3]
 
         self.assertAlmostEqual(
-            window_pixel_custom, 204, delta=2, msg="Default window_frame_reflectance should be 0.8 (encoded as 204)"
+            window_pixel_custom,
+            204,
+            delta=2,
+            msg="Default window_frame_reflectance should be 0.8 (encoded as 204)",
         )
 
     def test_alpha_channel_custom_frame_reflectance(self):
@@ -422,23 +462,28 @@ class TestWindowColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'window_frame_reflectance': 0.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "window_frame_reflectance": 0.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
-        result = self.encoder.encode_region(
-            image, parameters, ModelType.DF_CUSTOM
-        )
+        result = self.encoder.encode_region(image, parameters, ModelType.DF_CUSTOM)
 
         # 0.5 should map to 127 in alpha channel (0.5*255)
         window_pixel = result[64, 115, 3]  # Alpha channel
 
         self.assertAlmostEqual(
-            window_pixel, 127, delta=2, msg="Custom window_frame_reflectance 0.5 should encode to ~127 in alpha channel"
+            window_pixel,
+            127,
+            delta=2,
+            msg="Custom window_frame_reflectance 0.5 should encode to ~127 in alpha channel",
         )
 
 
@@ -459,51 +504,65 @@ class TestWindowParameterValidation(unittest.TestCase):
         error_msg = str(context.exception)
         # window_sill_height and window_height are now auto-calculated from window geometry
         # Only window_frame_ratio and window geometry are required
-        self.assertIn('window_frame_ratio', error_msg)
-        self.assertIn('window geometry', error_msg.lower())
+        self.assertIn("window_frame_ratio", error_msg)
+        self.assertIn("window geometry", error_msg.lower())
 
     def test_missing_sill_height(self):
         """Test error when sill_height is missing"""
         parameters = {
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('window_sill_height', error_msg)
+        self.assertIn("window_sill_height", error_msg)
 
     def test_missing_frame_ratio(self):
         """Test error when frame_ratio is missing"""
         parameters = {
-            'window_sill_height': 0.9,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('window_frame_ratio', error_msg)
+        self.assertIn("window_frame_ratio", error_msg)
 
     def test_missing_window_height(self):
         """Test that window_height is auto-calculated when missing (no error expected)"""
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4,
-            'floor_height_above_terrain': 0.0  # Required for auto-calculation
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
+            "floor_height_above_terrain": 0.0,  # Required for auto-calculation
         }
 
         # Should NOT raise an error - window_height is auto-calculated
-        result_image = self.encoder.encode_region(self.image, parameters, self.model_type)
+        result_image = self.encoder.encode_region(
+            self.image, parameters, self.model_type
+        )
 
         # Verify encoding succeeded
         self.assertIsNotNone(result_image)
@@ -511,33 +570,35 @@ class TestWindowParameterValidation(unittest.TestCase):
     def test_missing_geometry(self):
         """Test error when window geometry is missing"""
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
         }
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('geometry', error_msg.lower())
+        self.assertIn("geometry", error_msg.lower())
 
     def test_window_frame_reflectance_optional(self):
         """Test that window_frame_reflectance is optional"""
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
             # window_frame_reflectance not provided
         }
 
         # Should not raise an error
         try:
-            result = self.encoder.encode_region(
-                self.image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(self.image, parameters, self.model_type)
             self.assertIsNotNone(result)
         except ValueError:
             self.fail("window_frame_reflectance should be optional")
@@ -545,38 +606,35 @@ class TestWindowParameterValidation(unittest.TestCase):
     def test_all_parameters_provided(self):
         """Test successful encoding when all parameters provided"""
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'window_frame_reflectance': 0.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "window_frame_reflectance": 0.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
-        result = self.encoder.encode_region(
-            self.image, parameters, self.model_type
-        )
+        result = self.encoder.encode_region(self.image, parameters, self.model_type)
 
         self.assertIsNotNone(result)
         self.assertEqual(result.shape, (128, 128, 4))
 
     def test_geometry_as_object(self):
         """Test geometry can be provided as WindowGeometry object"""
-        geometry = WindowGeometry(
-            x1=-0.6, y1=0.0, z1=0.9,
-            x2=0.6, y2=0.0, z2=2.4
-        )
+        geometry = WindowGeometry(x1=-0.6, y1=0.0, z1=0.9, x2=0.6, y2=0.0, z2=2.4)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'window_geometry': geometry
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "window_geometry": geometry,
         }
 
-        result = self.encoder.encode_region(
-            self.image, parameters, self.model_type
-        )
+        result = self.encoder.encode_region(self.image, parameters, self.model_type)
 
         self.assertIsNotNone(result)
         self.assertEqual(result.shape, (128, 128, 4))
@@ -595,11 +653,15 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -612,14 +674,13 @@ class TestWindowImageScaling(unittest.TestCase):
         window_pixel = result[64, window_x_end - 1, :]
         self.assertTrue(
             np.any(window_pixel > 0),
-            "Window should exist 12px from right edge in 128px image"
+            "Window should exist 12px from right edge in 128px image",
         )
 
         # Check outside window area is zero
         outside_pixel = result[64, window_x_end - 10, :]
         self.assertTrue(
-            np.all(outside_pixel == 0),
-            "Area outside window should be zero"
+            np.all(outside_pixel == 0), "Area outside window should be zero"
         )
 
     def test_window_position_256px(self):
@@ -627,11 +688,15 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((256, 256, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -643,7 +708,7 @@ class TestWindowImageScaling(unittest.TestCase):
         window_pixel = result[128, window_x_end - 1, :]
         self.assertTrue(
             np.any(window_pixel > 0),
-            "Window should exist 12px from right edge in 256px image"
+            "Window should exist 12px from right edge in 256px image",
         )
 
     def test_window_position_512px(self):
@@ -651,11 +716,15 @@ class TestWindowImageScaling(unittest.TestCase):
         image = np.zeros((512, 512, 4), dtype=np.uint8)
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -667,31 +736,33 @@ class TestWindowImageScaling(unittest.TestCase):
         window_pixel = result[256, window_x_end - 1, :]
         self.assertTrue(
             np.any(window_pixel > 0),
-            "Window should exist 12px from right edge in 512px image"
+            "Window should exist 12px from right edge in 512px image",
         )
 
     def test_window_width_scales_with_image_size(self):
         """Test window width (wall thickness) scales proportionally"""
         test_sizes = [128, 256, 512]
         expected_widths = {
-            128: 3,   # Base: 0.3m / 0.1m per pixel = 3px
-            256: 6,   # Scaled 2x
-            512: 12   # Scaled 4x
+            128: 3,  # Base: 0.3m / 0.1m per pixel = 3px
+            256: 6,  # Scaled 2x
+            512: 12,  # Scaled 4x
         }
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         for size in test_sizes:
             image = np.zeros((size, size, 4), dtype=np.uint8)
-            result = self.encoder.encode_region(
-                image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(image, parameters, self.model_type)
 
             # Count pixels with window values along center horizontal line
             center_y = size // 2
@@ -705,8 +776,10 @@ class TestWindowImageScaling(unittest.TestCase):
                 expected = expected_widths[size]
 
                 self.assertAlmostEqual(
-                    window_width, expected, delta=2,
-                    msg=f"Window width should be ~{expected}px for {size}x{size} image"
+                    window_width,
+                    expected,
+                    delta=2,
+                    msg=f"Window width should be ~{expected}px for {size}x{size} image",
                 )
 
     def test_window_height_scales_with_image_size(self):
@@ -717,22 +790,24 @@ class TestWindowImageScaling(unittest.TestCase):
         expected_heights = {
             128: 12,  # Base: 1.2m / 0.1m = 12px
             256: 24,  # Scaled 2x
-            512: 48   # Scaled 4x
+            512: 48,  # Scaled 4x
         }
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         for size in test_sizes:
             image = np.zeros((size, size, 4), dtype=np.uint8)
-            result = self.encoder.encode_region(
-                image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(image, parameters, self.model_type)
 
             # Count pixels with window values along vertical line near window
             window_x = size - 14  # Just left of window edge
@@ -746,8 +821,10 @@ class TestWindowImageScaling(unittest.TestCase):
                 expected = expected_heights[size]
 
                 self.assertAlmostEqual(
-                    window_height, expected, delta=3,
-                    msg=f"Window height should be ~{expected}px for {size}x{size} image"
+                    window_height,
+                    expected,
+                    delta=3,
+                    msg=f"Window height should be ~{expected}px for {size}x{size} image",
                 )
 
     def test_window_centered_vertically_all_sizes(self):
@@ -755,18 +832,20 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256, 512, 1024]
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         for size in test_sizes:
             image = np.zeros((size, size, 4), dtype=np.uint8)
-            result = self.encoder.encode_region(
-                image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(image, parameters, self.model_type)
 
             # Find window extent vertically
             window_x = size - 14
@@ -782,8 +861,10 @@ class TestWindowImageScaling(unittest.TestCase):
                 expected_center = size // 2
 
                 self.assertAlmostEqual(
-                    y_center, expected_center, delta=2,
-                    msg=f"Window should be vertically centered in {size}x{size} image"
+                    y_center,
+                    expected_center,
+                    delta=2,
+                    msg=f"Window should be vertically centered in {size}x{size} image",
                 )
 
     def test_window_area_proportional_to_image_size(self):
@@ -791,19 +872,21 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256]
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         areas = {}
         for size in test_sizes:
             image = np.zeros((size, size, 4), dtype=np.uint8)
-            result = self.encoder.encode_region(
-                image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(image, parameters, self.model_type)
 
             # Count total pixels with window values
             window_pixels = 0
@@ -818,28 +901,34 @@ class TestWindowImageScaling(unittest.TestCase):
         # 256/128 = 2, but since window position doesn't scale (stays 12px from right),
         # the actual area ratio will be slightly more than 4x
         size_ratio = 256 / 128
-        expected_area_ratio = size_ratio ** 2  # ~4.0
+        expected_area_ratio = size_ratio**2  # ~4.0
         actual_area_ratio = areas[256] / areas[128] if areas[128] > 0 else 0
 
         # Window area should be close to 4x (allowing for fixed position offset)
         self.assertGreater(
-            actual_area_ratio, expected_area_ratio - 0.5,
-            msg=f"Window area should scale by at least {expected_area_ratio}x when image doubles"
+            actual_area_ratio,
+            expected_area_ratio - 0.5,
+            msg=f"Window area should scale by at least {expected_area_ratio}x when image doubles",
         )
         self.assertLess(
-            actual_area_ratio, expected_area_ratio + 2.0,
-            msg=f"Window area should scale by at most {expected_area_ratio + 2.0}x when image doubles"
+            actual_area_ratio,
+            expected_area_ratio + 2.0,
+            msg=f"Window area should scale by at most {expected_area_ratio + 2.0}x when image doubles",
         )
 
     def test_different_window_sizes_scale_correctly(self):
         """Test different window sizes scale correctly across image sizes"""
         # Test with a larger window
         parameters_large = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -1.0, 'y1': 0.0, 'z1': 0.9,  # 2.0m wide
-            'x2': 1.0, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -1.0,
+            "y1": 0.0,
+            "z1": 0.9,  # 2.0m wide
+            "x2": 1.0,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         test_sizes = [128, 256]
@@ -857,7 +946,7 @@ class TestWindowImageScaling(unittest.TestCase):
             window_pixel = result[center_y, window_x, :]
             self.assertTrue(
                 np.any(window_pixel > 0),
-                f"Large window should exist in {size}x{size} image"
+                f"Large window should exist in {size}x{size} image",
             )
 
             # Count height
@@ -873,8 +962,10 @@ class TestWindowImageScaling(unittest.TestCase):
                 expected_height = int(20 * scale_factor)
 
                 self.assertAlmostEqual(
-                    window_height, expected_height, delta=4,
-                    msg=f"Large window (2.0m) height should be ~{expected_height}px in {size}x{size} image"
+                    window_height,
+                    expected_height,
+                    delta=4,
+                    msg=f"Large window (2.0m) height should be ~{expected_height}px in {size}x{size} image",
                 )
 
     def test_window_color_values_consistent_across_sizes(self):
@@ -882,20 +973,22 @@ class TestWindowImageScaling(unittest.TestCase):
         test_sizes = [128, 256, 512]
 
         parameters = {
-            'window_sill_height': 2.5,    # Should encode to ~127
-            'window_frame_ratio': 0.5,    # Should encode to ~127 (reversed)
-            'window_height': 2.6,  # Should encode to ~127 (reversed)
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 2.5,  # Should encode to ~127
+            "window_frame_ratio": 0.5,  # Should encode to ~127 (reversed)
+            "window_height": 2.6,  # Should encode to ~127 (reversed)
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         reference_values = None
 
         for size in test_sizes:
             image = np.zeros((size, size, 4), dtype=np.uint8)
-            result = self.encoder.encode_region(
-                image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(image, parameters, self.model_type)
 
             # Get window pixel values
             center_y = size // 2
@@ -911,7 +1004,7 @@ class TestWindowImageScaling(unittest.TestCase):
                     window_pixel[:3],  # RGB channels
                     reference_values[:3],
                     atol=2,
-                    err_msg=f"Window color values should be consistent in {size}x{size} image"
+                    err_msg=f"Window color values should be consistent in {size}x{size} image",
                 )
 
 
@@ -923,53 +1016,57 @@ class TestWindowIntegration(unittest.TestCase):
         builder = RoomImageBuilder()
 
         parameters = {
-            'window_sill_height': 0.9,
-            'window_frame_ratio': 0.8,
-            'window_height': 1.5,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "window_sill_height": 0.9,
+            "window_frame_ratio": 0.8,
+            "window_height": 1.5,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
-        image = (builder
-                 .reset()
-                 .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_region(RegionType.WINDOW, parameters)
-                 .build())
+        image = (
+            builder.reset()
+            .set_model_type(ModelType.DF_DEFAULT)
+            .encode_region(RegionType.WINDOW, parameters)
+            .build()
+        )
 
         # Verify image dimensions
         self.assertEqual(image.shape, (128, 128, 4))
 
         # Verify window exists at expected location
         window_pixel = image[64, 115, :]
-        self.assertTrue(
-            np.any(window_pixel > 0),
-            "Builder should create window"
-        )
+        self.assertTrue(np.any(window_pixel > 0), "Builder should create window")
 
     def test_builder_with_all_regions(self):
         """Test building image with window and other regions"""
         builder = RoomImageBuilder()
 
         all_params = {
-            'obstruction_bar': {
-                'horizon': 45.0,
-                'zenith': 30.0
+            "obstruction_bar": {"horizon": 45.0, "zenith": 30.0},
+            "window": {
+                "window_sill_height": 0.9,
+                "window_frame_ratio": 0.8,
+                "window_height": 1.5,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
             },
-            'window': {
-                'window_sill_height': 0.9,
-                'window_frame_ratio': 0.8,
-                'window_height': 1.5,
-                'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-                'x2': 0.6, 'y2': 0.0, 'z2': 2.4
-            }
         }
 
-        image = (builder
-                 .reset()
-                 .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_region(RegionType.OBSTRUCTION_BAR, all_params['obstruction_bar'])
-                 .encode_region(RegionType.WINDOW, all_params['window'])
-                 .build())
+        image = (
+            builder.reset()
+            .set_model_type(ModelType.DF_DEFAULT)
+            .encode_region(RegionType.OBSTRUCTION_BAR, all_params["obstruction_bar"])
+            .encode_region(RegionType.WINDOW, all_params["window"])
+            .build()
+        )
 
         # Verify both regions exist
         # Window
@@ -981,5 +1078,5 @@ class TestWindowIntegration(unittest.TestCase):
         self.assertTrue(np.any(bar_pixel > 0), "Obstruction bar should exist")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

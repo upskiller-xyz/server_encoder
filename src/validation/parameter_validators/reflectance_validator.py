@@ -1,6 +1,8 @@
 """Validator for reflectance parameters (SRP: validates only reflectance values)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 
 
@@ -18,7 +20,9 @@ class ReflectanceValidator(BaseValidator):
         self._min_value = 0.0
         self._max_value = 1.0
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate reflectance value.
 
@@ -36,7 +40,7 @@ class ReflectanceValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{self._parameter_name} must be a number, got {type(value).__name__}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -46,7 +50,7 @@ class ReflectanceValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_RANGE,
                 message=f"{self._parameter_name} must be between {self._min_value} and {self._max_value}, got {value}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
 

@@ -1,9 +1,10 @@
 """Test roof height calculation with high floor_height_above_terrain values."""
 
 import pytest
-from src.server.services import EncodingService
+
 from src.core import ModelType
 from src.server.enums import LogLevel
+from src.server.services import EncodingService
 
 
 class TestRoofHeightCalculation:
@@ -12,7 +13,7 @@ class TestRoofHeightCalculation:
     @pytest.fixture
     def encoding_service(self):
         """Create encoding service instance."""
-        
+
         return EncodingService()
 
     def test_window_validation_uses_original_floor_height(self, encoding_service):
@@ -34,13 +35,17 @@ class TestRoofHeightCalculation:
             "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
             "windows": {
                 "test_window": {
-                    "x1": 0, "y1": 0.2, "z1": 18.0,
-                    "x2": 0, "y2": 1.8, "z2": 19.2,
+                    "x1": 0,
+                    "y1": 0.2,
+                    "z1": 18.0,
+                    "x2": 0,
+                    "y2": 1.8,
+                    "z2": 19.2,
                     "window_frame_ratio": 0.2,
                     "horizon": 0,
                     "zenith": 0,
                 }
-            }
+            },
         }
 
         # Should pass validation - window is within original roof bounds
@@ -68,13 +73,17 @@ class TestRoofHeightCalculation:
                 "test_window": {
                     # Window at 1m above original floor (13.0), height 1.5m
                     # After floor clips to 10.0: sill = 13.0 - 10.0 = 3.0m (valid)
-                    "x1": 0, "y1": 0.2, "z1": 13.0,
-                    "x2": 0, "y2": 1.8, "z2": 14.5,
+                    "x1": 0,
+                    "y1": 0.2,
+                    "z1": 13.0,
+                    "x2": 0,
+                    "y2": 1.8,
+                    "z2": 14.5,
                     "window_frame_ratio": 0.2,
                     "horizon": 0,
                     "zenith": 0,
                 }
-            }
+            },
         }
 
         # Validation should pass
@@ -111,13 +120,17 @@ class TestRoofHeightCalculation:
             "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
             "windows": {
                 "test_window": {
-                    "x1": 0, "y1": 0.2, "z1": 18.0,
-                    "x2": 0, "y2": 1.8, "z2": 20.3,  # Above roof, beyond tolerance
+                    "x1": 0,
+                    "y1": 0.2,
+                    "z1": 18.0,
+                    "x2": 0,
+                    "y2": 1.8,
+                    "z2": 20.3,  # Above roof, beyond tolerance
                     "window_frame_ratio": 0.2,
                     "horizon": 0,
                     "zenith": 0,
                 }
-            }
+            },
         }
 
         is_valid, error_msg = encoding_service.validate_parameters(

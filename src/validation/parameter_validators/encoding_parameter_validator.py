@@ -5,6 +5,7 @@ SRP: owns all parameter-level validation, clipping, and scheme-specific
 preprocessing for encoding requests. EncodingService delegates to this class
 and performs no parameter logic itself.
 """
+
 import logging
 from typing import Any, Dict, Tuple
 
@@ -57,7 +58,9 @@ class EncodingParameterValidator:
         ParameterName.ROOM_POLYGON,
     )
 
-    def __init__(self, encoding_scheme: EncodingScheme, encoder_factory: EncoderFactory) -> None:
+    def __init__(
+        self, encoding_scheme: EncodingScheme, encoder_factory: EncoderFactory
+    ) -> None:
         self._encoding_scheme = encoding_scheme
         self._encoder_factory = encoder_factory
 
@@ -74,7 +77,9 @@ class EncodingParameterValidator:
         """
         room_polygon = None
         if ParameterName.ROOM_POLYGON.value in parameters:
-            room_polygon = RoomPolygon.from_dict(parameters[ParameterName.ROOM_POLYGON.value])
+            room_polygon = RoomPolygon.from_dict(
+                parameters[ParameterName.ROOM_POLYGON.value]
+            )
 
         if ValidationUtils.has_flat_window_coordinates(parameters) and room_polygon:
             if ParameterName.DIRECTION_ANGLE.value not in parameters:
@@ -89,7 +94,9 @@ class EncodingParameterValidator:
                         and ParameterName.DIRECTION_ANGLE.value not in window_params
                         and ValidationUtils.has_flat_window_coordinates(window_params)
                     ):
-                        self._fill_direction_angle(window_params, room_polygon, window_id)
+                        self._fill_direction_angle(
+                            window_params, room_polygon, window_id
+                        )
 
         return parameters
 
@@ -101,7 +108,9 @@ class EncodingParameterValidator:
     ) -> None:
         label = f" for '{window_id}'" if window_id else ""
         try:
-            angle = WindowGeometry.from_dict(parameters).calculate_direction_from_polygon(room_polygon)
+            angle = WindowGeometry.from_dict(
+                parameters
+            ).calculate_direction_from_polygon(room_polygon)
             parameters[ParameterName.DIRECTION_ANGLE.value] = angle
             logger.info("Auto-calculated direction_angle%s: %.4f rad", label, angle)
         except Exception as exc:
@@ -111,7 +120,9 @@ class EncodingParameterValidator:
     # Public validation entry point
     # ------------------------------------------------------------------
 
-    def validate(self, parameters: Dict[str, Any], model_type: ModelType) -> Tuple[bool, str]:
+    def validate(
+        self, parameters: Dict[str, Any], model_type: ModelType
+    ) -> Tuple[bool, str]:
         """
         Validate parameters, handling both flat and windows-dict structures.
 
@@ -124,11 +135,19 @@ class EncodingParameterValidator:
         """
         if ParameterName.WINDOWS.value in parameters:
             if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
-                return False, "Parameter 'windows' must be a dictionary mapping window_id to window parameters"
+                return (
+                    False,
+                    "Parameter 'windows' must be a dictionary mapping window_id to window parameters",
+                )
 
-            for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
+            for window_id, window_params in parameters[
+                ParameterName.WINDOWS.value
+            ].items():
                 if not isinstance(window_params, dict):
-                    return False, f"Window '{window_id}' parameters must be a dictionary, got {type(window_params).__name__}"
+                    return (
+                        False,
+                        f"Window '{window_id}' parameters must be a dictionary, got {type(window_params).__name__}",
+                    )
 
                 merged = {**parameters, **window_params}
                 merged.pop(ParameterName.WINDOWS.value, None)
@@ -160,10 +179,14 @@ class EncodingParameterValidator:
         except ValueError as exc:
             return False, str(exc)
 
-        calculated = ParameterCalculatorRegistry.calculate_derived_parameters(parameters)
+        calculated = ParameterCalculatorRegistry.calculate_derived_parameters(
+            parameters
+        )
         parameters.update(calculated)
 
-        missing = [p.value for p in self._REQUIRED_PARAMETERS if p.value not in parameters]
+        missing = [
+            p.value for p in self._REQUIRED_PARAMETERS if p.value not in parameters
+        ]
         if missing:
             return False, f"Missing required parameters: {', '.join(missing)}"
 
@@ -212,10 +235,15 @@ class EncodingParameterValidator:
     def _validate_geometry(self, parameters: Dict[str, Any]) -> str:
         """Validate window geometry placement. Returns error string or empty string."""
         room_polygon = parameters.get(ParameterName.ROOM_POLYGON.value)
-        if not ValidationUtils.has_window_coordinates(parameters, require_3d=True) or not room_polygon:
+        if (
+            not ValidationUtils.has_window_coordinates(parameters, require_3d=True)
+            or not room_polygon
+        ):
             return ""
 
-        border_result = WindowBorderValidator().validate(parameters, {"room_polygon": room_polygon})
+        border_result = WindowBorderValidator().validate(
+            parameters, {"room_polygon": room_polygon}
+        )
         if not border_result.is_valid:
             return "; ".join(str(e) for e in border_result.errors)
 
@@ -223,7 +251,8 @@ class EncodingParameterValidator:
         height_roof = parameters.get(ParameterName.HEIGHT_ROOF_OVER_FLOOR.value)
         if floor_height is not None and height_roof is not None:
             height_result = WindowHeightValidator().validate(
-                parameters, {"floor_height": floor_height, "height_roof_over_floor": height_roof}
+                parameters,
+                {"floor_height": floor_height, "height_roof_over_floor": height_roof},
             )
             if not height_result.is_valid:
                 return "; ".join(str(e) for e in height_result.errors)
@@ -241,7 +270,11 @@ class EncodingParameterValidator:
         Raises:
             ValueError: For values that cannot be clipped (e.g. negative heights)
         """
-        for param_name, (min_val, max_val, reject_below_min) in self._CLIPPING_CONFIG.items():
+        for param_name, (
+            min_val,
+            max_val,
+            reject_below_min,
+        ) in self._CLIPPING_CONFIG.items():
             if param_name not in parameters:
                 continue
 
@@ -252,13 +285,17 @@ class EncodingParameterValidator:
             try:
                 value = float(value)
             except (TypeError, ValueError) as exc:
-                raise ClientInputError(f"Parameter '{param_name}' has invalid value: {parameters[param_name]}. Error: {exc}")
+                raise ClientInputError(
+                    f"Parameter '{param_name}' has invalid value: {parameters[param_name]}. Error: {exc}"
+                )
 
             original, clipped = value, False
 
             if param_name == ParameterName.HEIGHT_ROOF_OVER_FLOOR.value:
                 if value <= 0.0:
-                    raise ClientInputError(f"Parameter '{param_name}' value {value} not supported. Must be greater than 0.")
+                    raise ClientInputError(
+                        f"Parameter '{param_name}' value {value} not supported. Must be greater than 0."
+                    )
                 if value < min_val:
                     value, clipped = min_val, True
             elif value < min_val:
@@ -275,7 +312,11 @@ class EncodingParameterValidator:
             if clipped:
                 logger.warning(
                     "Parameter '%s' value %s outside range [%s, %s]. Clipped to %s.",
-                    param_name, original, min_val, max_val, value,
+                    param_name,
+                    original,
+                    min_val,
+                    max_val,
+                    value,
                 )
                 parameters[param_name] = value
 
@@ -293,7 +334,11 @@ class EncodingParameterValidator:
         Raises:
             ValueError: If height_vector has wrong shape
         """
-        if self._encoding_scheme in (EncodingScheme.V8, EncodingScheme.V10, EncodingScheme.V11):
+        if self._encoding_scheme in (
+            EncodingScheme.V8,
+            EncodingScheme.V10,
+            EncodingScheme.V11,
+        ):
             key = ParameterName.HEIGHT_VECTOR.value
             if key in parameters:
                 vec = parameters[key]
@@ -303,9 +348,20 @@ class EncodingParameterValidator:
                         f"[height_roof_over_floor, floor_height_above_terrain], got: {vec!r}"
                     )
                 parameters[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = float(vec[0])
-                parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = float(vec[1])
+                parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = float(
+                    vec[1]
+                )
 
-        if self._encoding_scheme in (EncodingScheme.V7, EncodingScheme.V8, EncodingScheme.V9, EncodingScheme.V10, EncodingScheme.V11):
-            for param in (ParameterName.HEIGHT_ROOF_OVER_FLOOR, ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN):
+        if self._encoding_scheme in (
+            EncodingScheme.V7,
+            EncodingScheme.V8,
+            EncodingScheme.V9,
+            EncodingScheme.V10,
+            EncodingScheme.V11,
+        ):
+            for param in (
+                ParameterName.HEIGHT_ROOF_OVER_FLOOR,
+                ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN,
+            ):
                 if param.value not in parameters:
                     parameters[param.value] = DEFAULT_PARAMETER_VALUES[param]
