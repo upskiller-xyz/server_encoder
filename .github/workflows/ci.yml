@@ -105,6 +105,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # Exceptions in .grype.yaml carry an expiry date; an expired exception
+      # fails the job instead of silently hiding the finding.
+      - name: Check grype exceptions have not expired
+        run: |
+          today=$(date -u +%F)
+          expired=$(grep -oE 'expires: [0-9]{4}-[0-9]{2}-[0-9]{2}' .grype.yaml | awk -v t="$today" '$2 < t {print $2}')
+          if [ -n "$expired" ]; then echo "::error file=.grype.yaml::Expired grype exception ($expired). Fix it, extend it with a new reason, or remove it."; exit 1; fi
+
       - name: Build image
         run: docker build -t encoder:scan .
 
@@ -119,3 +127,5 @@ jobs:
           severity-cutoff: high
           output-format: table
           by-cve: true
+          # Explicit, so the exceptions apply even if auto-detection changes.
+          config: .grype.yaml

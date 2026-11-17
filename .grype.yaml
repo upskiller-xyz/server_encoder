@@ -1,0 +1,21 @@
+# Exceptions for the grype scan in the image job of ci.yml. Each entry covers
+# one package and one CVE, and carries a reason and an expiry date
+# (`# expires: YYYY-MM-DD`). The step "Check grype exceptions have not
+# expired" fails CI once the date has passed, so an exception cannot linger by
+# mistake: fix it, extend it with a new reason, or remove it.
+ignore:
+  # sqlite-libs 3.54.1-1.hum1 in the Hummingbird base: High, no fixed version
+  # published yet. The service does not use sqlite.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-119586
+    package:
+      name: sqlite-libs
+      type: rpm
+
+  # libuuid 2.42.4-2.1.hum1 in the Hummingbird base: High, no fixed version
+  # published yet. The service code does not generate UUIDs.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-53615
+    package:
+      name: libuuid
+      type: rpm
