@@ -11,11 +11,13 @@ Tests verify:
 """
 
 import unittest
+
 import numpy as np
-from src.components.region_encoders import RoomRegionEncoder
+
 from src.components.geometry import RoomPolygon
-from src.core import ModelType, ImageDimensions, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
+from src.components.region_encoders import RoomRegionEncoder
+from src.core import EncodingScheme, ImageDimensions, ModelType, RegionType
 
 
 class TestRoomPolygonConstruction(unittest.TestCase):
@@ -33,17 +35,21 @@ class TestRoomPolygonConstruction(unittest.TestCase):
         # Simple rectangular room: 3m wide (along facade), 5m deep
         room_polygon = [
             {"x": -1.5, "y": 0.0},  # Left front corner
-            {"x": 1.5, "y": 0.0},   # Right front corner
-            {"x": 1.5, "y": 5.0},   # Right back corner
-            {"x": -1.5, "y": 5.0}   # Left back corner
+            {"x": 1.5, "y": 0.0},  # Right front corner
+            {"x": 1.5, "y": 5.0},  # Right back corner
+            {"x": -1.5, "y": 5.0},  # Left back corner
         ]
 
         # Window centered at x=0, y=0
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "height_roof_over_floor": 3.0,
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -55,8 +61,7 @@ class TestRoomPolygonConstruction(unittest.TestCase):
         room_pixel = result[64, window_x - 10, :]  # 10px left of window
 
         self.assertTrue(
-            np.any(room_pixel > 0),
-            "Room should exist near window position"
+            np.any(room_pixel > 0), "Room should exist near window position"
         )
 
     def test_room_mask_created_from_polygon(self):
@@ -70,14 +75,18 @@ class TestRoomPolygonConstruction(unittest.TestCase):
             {"x": 2.0, "y": 3.0},
             {"x": -1.0, "y": 3.0},
             {"x": -1.0, "y": 6.0},
-            {"x": -2.0, "y": 6.0}
+            {"x": -2.0, "y": 6.0},
         ]
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "height_roof_over_floor": 3.0,
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -86,8 +95,7 @@ class TestRoomPolygonConstruction(unittest.TestCase):
         non_zero_pixels = np.count_nonzero(np.any(result > 0, axis=2))
 
         self.assertGreater(
-            non_zero_pixels, 100,
-            "Room polygon should create filled area"
+            non_zero_pixels, 100, "Room polygon should create filled area"
         )
 
 
@@ -106,28 +114,28 @@ class TestRoomDimensions(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "height_roof_over_floor": 3.0,
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         # Test at 128x128
         image_128 = np.zeros((128, 128, 4), dtype=np.uint8)
-        result_128 = self.encoder.encode_region(
-            image_128, parameters, self.model_type
-        )
+        result_128 = self.encoder.encode_region(image_128, parameters, self.model_type)
         area_128 = np.count_nonzero(np.any(result_128 > 0, axis=2))
 
         # Test at 256x256 (should have ~4x area)
         image_256 = np.zeros((256, 256, 4), dtype=np.uint8)
-        result_256 = self.encoder.encode_region(
-            image_256, parameters, self.model_type
-        )
+        result_256 = self.encoder.encode_region(image_256, parameters, self.model_type)
         area_256 = np.count_nonzero(np.any(result_256 > 0, axis=2))
 
         # Area should scale approximately by 4 (2x in each dimension)
@@ -135,13 +143,9 @@ class TestRoomDimensions(unittest.TestCase):
         area_ratio = area_256 / area_128
 
         self.assertGreater(
-            area_ratio, 2.8,
-            "Room area should scale proportionally with image size"
+            area_ratio, 2.8, "Room area should scale proportionally with image size"
         )
-        self.assertLess(
-            area_ratio, 4.5,
-            "Room area scaling should be approximately 4x"
-        )
+        self.assertLess(area_ratio, 4.5, "Room area scaling should be approximately 4x")
 
 
 class TestRoomColorEncoding(unittest.TestCase):
@@ -155,11 +159,15 @@ class TestRoomColorEncoding(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
         self.window_coords = {
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
     def test_red_channel_roof_height(self):
@@ -167,17 +175,17 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0 reflectance -> 0
-            (0.5, 127),    # 0.5 reflectance -> ~127
-            (1.0, 255),    # 1.0 reflectance -> 255
+            (0.0, 0),  # 0.0 reflectance -> 0
+            (0.5, 127),  # 0.5 reflectance -> ~127
+            (1.0, 255),  # 1.0 reflectance -> 255
         ]
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': 3.0,
-                'wall_reflectance': reflectance,
-                'room_polygon': self.room_polygon,
-                **self.window_coords
+                "height_roof_over_floor": 3.0,
+                "wall_reflectance": reflectance,
+                "room_polygon": self.room_polygon,
+                **self.window_coords,
             }
 
             result = self.encoder.encode_region(
@@ -189,8 +197,10 @@ class TestRoomColorEncoding(unittest.TestCase):
             if len(room_pixels) > 0:
                 red_value = room_pixels[0, 0]
                 self.assertAlmostEqual(
-                    red_value, expected_value, delta=2,
-                    msg=f"Wall reflectance {reflectance} should encode to ~{expected_value}"
+                    red_value,
+                    expected_value,
+                    delta=2,
+                    msg=f"Wall reflectance {reflectance} should encode to ~{expected_value}",
                 )
 
     def test_green_channel_horizontal_reflectance(self):
@@ -198,17 +208,17 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0 -> 0
-            (0.5, 127),    # 0.5 -> ~127
-            (1.0, 255),    # 1.0 -> 255
+            (0.0, 0),  # 0.0 -> 0
+            (0.5, 127),  # 0.5 -> ~127
+            (1.0, 255),  # 1.0 -> 255
         ]
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': 3.0,
-                'floor_reflectance': reflectance,  # Correct parameter name
-                'room_polygon': self.room_polygon,
-                **self.window_coords
+                "height_roof_over_floor": 3.0,
+                "floor_reflectance": reflectance,  # Correct parameter name
+                "room_polygon": self.room_polygon,
+                **self.window_coords,
             }
 
             # Use DF_CUSTOM to test reflectance encoding
@@ -221,8 +231,10 @@ class TestRoomColorEncoding(unittest.TestCase):
             if len(room_pixels) > 0:
                 green_value = room_pixels[0, 1]
                 self.assertAlmostEqual(
-                    green_value, expected_value, delta=2,
-                    msg=f"Floor reflectance {reflectance} should encode to ~{expected_value}"
+                    green_value,
+                    expected_value,
+                    delta=2,
+                    msg=f"Floor reflectance {reflectance} should encode to ~{expected_value}",
                 )
 
     def test_blue_channel_height_roof_over_floor(self):
@@ -230,16 +242,16 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0m -> 0
-            (15.0, 127),   # 15.0m -> ~127 (middle of 0-30 range)
-            (30.0, 255),   # 30.0m -> 255
+            (0.0, 0),  # 0.0m -> 0
+            (15.0, 127),  # 15.0m -> ~127 (middle of 0-30 range)
+            (30.0, 255),  # 30.0m -> 255
         ]
 
         for height, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': height,
-                'room_polygon': self.room_polygon,
-                **self.window_coords
+                "height_roof_over_floor": height,
+                "room_polygon": self.room_polygon,
+                **self.window_coords,
             }
 
             # Use DF_CUSTOM to test height encoding
@@ -252,8 +264,10 @@ class TestRoomColorEncoding(unittest.TestCase):
             if len(room_pixels) > 0:
                 blue_value = room_pixels[0, 2]
                 self.assertAlmostEqual(
-                    blue_value, expected_value, delta=2,
-                    msg=f"Height {height}m should encode to ~{expected_value}"
+                    blue_value,
+                    expected_value,
+                    delta=2,
+                    msg=f"Height {height}m should encode to ~{expected_value}",
                 )
 
     def test_alpha_channel_ceiling_reflectance(self):
@@ -261,17 +275,17 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.5, 0),      # 0.5 -> 0
-            (0.75, 127),   # 0.75 -> ~127
-            (1.0, 255),    # 1.0 -> 255
+            (0.5, 0),  # 0.5 -> 0
+            (0.75, 127),  # 0.75 -> ~127
+            (1.0, 255),  # 1.0 -> 255
         ]
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'height_roof_over_floor': 3.0,
-                'ceiling_reflectance': reflectance,
-                'room_polygon': self.room_polygon,
-                **self.window_coords
+                "height_roof_over_floor": 3.0,
+                "ceiling_reflectance": reflectance,
+                "room_polygon": self.room_polygon,
+                **self.window_coords,
             }
 
             result = self.encoder.encode_region(
@@ -283,8 +297,10 @@ class TestRoomColorEncoding(unittest.TestCase):
             if len(room_pixels) > 0:
                 alpha_value = room_pixels[0, 3]
                 self.assertAlmostEqual(
-                    alpha_value, expected_value, delta=2,
-                    msg=f"Ceiling reflectance {reflectance} should encode to ~{expected_value}"
+                    alpha_value,
+                    expected_value,
+                    delta=2,
+                    msg=f"Ceiling reflectance {reflectance} should encode to ~{expected_value}",
                 )
 
     def test_default_floor_reflectance(self):
@@ -292,9 +308,9 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': self.room_polygon,
-            **self.window_coords
+            "height_roof_over_floor": 3.0,
+            "room_polygon": self.room_polygon,
+            **self.window_coords,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -304,8 +320,9 @@ class TestRoomColorEncoding(unittest.TestCase):
         if len(room_pixels) > 0:
             green_value = room_pixels[0, 1]
             self.assertEqual(
-                green_value, 255,
-                "Default floor_reflectance should be 1.0 (encoded as 255)"
+                green_value,
+                255,
+                "Default floor_reflectance should be 1.0 (encoded as 255)",
             )
 
     def test_default_height_roof_over_floor(self):
@@ -313,9 +330,9 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': self.room_polygon,
-            **self.window_coords
+            "height_roof_over_floor": 3.0,
+            "room_polygon": self.room_polygon,
+            **self.window_coords,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -326,8 +343,10 @@ class TestRoomColorEncoding(unittest.TestCase):
             blue_value = room_pixels[0, 2]
             # 3.0m / 30.0m = 0.1 -> 0.1 * 255 ≈ 25
             self.assertAlmostEqual(
-                blue_value, 25, delta=2,
-                msg="3.0m height should encode to ~25 in 0-255 scale"
+                blue_value,
+                25,
+                delta=2,
+                msg="3.0m height should encode to ~25 in 0-255 scale",
             )
 
     def test_default_ceiling_reflectance(self):
@@ -335,9 +354,9 @@ class TestRoomColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': self.room_polygon,
-            **self.window_coords
+            "height_roof_over_floor": 3.0,
+            "room_polygon": self.room_polygon,
+            **self.window_coords,
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -347,8 +366,9 @@ class TestRoomColorEncoding(unittest.TestCase):
         if len(room_pixels) > 0:
             alpha_value = room_pixels[0, 3]
             self.assertEqual(
-                alpha_value, 255,
-                "Default ceiling_reflectance should be 1.0 (encoded as 255)"
+                alpha_value,
+                255,
+                "Default ceiling_reflectance should be 1.0 (encoded as 255)",
             )
 
 
@@ -367,20 +387,24 @@ class TestRoomParameterValidation(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
 
         parameters = {
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('height_roof_over_floor', error_msg)
+        self.assertIn("height_roof_over_floor", error_msg)
 
     def test_optional_reflectances_work(self):
         """Test that all reflectance parameters are optional"""
@@ -388,21 +412,23 @@ class TestRoomParameterValidation(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "height_roof_over_floor": 3.0,
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         # Should not raise error even without reflectance parameters
         try:
-            result = self.encoder.encode_region(
-                self.image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(self.image, parameters, self.model_type)
             self.assertIsNotNone(result)
         except ValueError as e:
             self.fail(f"Should not require reflectance parameters: {e}")
@@ -419,19 +445,23 @@ class TestRoomImageScaling(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
         self.window_coords = {
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
     def test_room_area_scales_quadratically(self):
         """Test that room area scales quadratically with image size"""
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'room_polygon': self.room_polygon,
-            **self.window_coords
+            "height_roof_over_floor": 3.0,
+            "room_polygon": self.room_polygon,
+            **self.window_coords,
         }
 
         image_sizes = [128, 256, 512]
@@ -457,12 +487,12 @@ class TestRoomImageScaling(unittest.TestCase):
     def test_color_values_consistent_across_sizes(self):
         """Test that color encoding is consistent across image sizes"""
         parameters = {
-            'height_roof_over_floor': 15.0,
-            'horizontal_reflectance': 0.5,
-            'vertical_reflectance': 0.7,
-            'ceiling_reflectance': 0.8,
-            'room_polygon': self.room_polygon,
-            **self.window_coords
+            "height_roof_over_floor": 15.0,
+            "horizontal_reflectance": 0.5,
+            "vertical_reflectance": 0.7,
+            "ceiling_reflectance": 0.8,
+            "room_polygon": self.room_polygon,
+            **self.window_coords,
         }
 
         image_sizes = [128, 256, 512]
@@ -484,7 +514,7 @@ class TestRoomImageScaling(unittest.TestCase):
                     color_values[0][channel],
                     color_values[i][channel],
                     delta=2,
-                    msg=f"Color values should be consistent across image sizes"
+                    msg=f"Color values should be consistent across image sizes",
                 )
 
 
@@ -499,57 +529,65 @@ class TestRoomIntegration(unittest.TestCase):
             {"x": -1.5, "y": 0.0},
             {"x": 1.5, "y": 0.0},
             {"x": 1.5, "y": 5.0},
-            {"x": -1.5, "y": 5.0}
+            {"x": -1.5, "y": 5.0},
         ]
 
         parameters = {
-            'height_roof_over_floor': 3.0,
-            'floor_reflectance': 0.3,  # Correct parameter name
-            'wall_reflectance': 0.7,  # Correct parameter name
-            'ceiling_reflectance': 0.85,
-            'room_polygon': room_polygon,
-            'x1': -0.6, 'y1': 0.0, 'z1': 0.9,
-            'x2': 0.6, 'y2': 0.0, 'z2': 2.4
+            "height_roof_over_floor": 3.0,
+            "floor_reflectance": 0.3,  # Correct parameter name
+            "wall_reflectance": 0.7,  # Correct parameter name
+            "ceiling_reflectance": 0.85,
+            "room_polygon": room_polygon,
+            "x1": -0.6,
+            "y1": 0.0,
+            "z1": 0.9,
+            "x2": 0.6,
+            "y2": 0.0,
+            "z2": 2.4,
         }
 
         # Use DF_CUSTOM to test reflectance encoding
-        image = (builder
-                 .reset()
-                 .set_model_type(ModelType.DF_CUSTOM)
-                 .encode_region(RegionType.ROOM, parameters)
-                 .build())
+        image = (
+            builder.reset()
+            .set_model_type(ModelType.DF_CUSTOM)
+            .encode_region(RegionType.ROOM, parameters)
+            .build()
+        )
 
         # Verify image dimensions
         self.assertEqual(image.shape, (128, 128, 4))
 
         # Verify room exists
         room_pixels = image[image[:, :, 0] > 0]
-        self.assertGreater(
-            len(room_pixels), 0,
-            "Builder should create room area"
-        )
+        self.assertGreater(len(room_pixels), 0, "Builder should create room area")
 
         # Verify color encoding
         if len(room_pixels) > 0:
             # Red: wall reflectance (0.7 -> 178.5)
             expected_red = int(0.7 * 255)
             self.assertAlmostEqual(
-                room_pixels[0, 0], expected_red, delta=2,
-                msg="Builder should encode wall reflectance correctly"
+                room_pixels[0, 0],
+                expected_red,
+                delta=2,
+                msg="Builder should encode wall reflectance correctly",
             )
 
             # Green: floor reflectance (0.3 -> 76.5)
             expected_green = int(0.3 * 255)
             self.assertAlmostEqual(
-                room_pixels[0, 1], expected_green, delta=2,
-                msg="Builder should encode floor reflectance correctly"
+                room_pixels[0, 1],
+                expected_green,
+                delta=2,
+                msg="Builder should encode floor reflectance correctly",
             )
 
             # Blue: roof height (3.0m / 30.0m = 0.1 -> 25.5)
             expected_blue = int(3.0 / 30.0 * 255)
             self.assertAlmostEqual(
-                room_pixels[0, 2], expected_blue, delta=2,
-                msg="Builder should encode roof height correctly"
+                room_pixels[0, 2],
+                expected_blue,
+                delta=2,
+                msg="Builder should encode roof height correctly",
             )
 
 
@@ -559,19 +597,11 @@ class TestRoomPolygonGeometry(unittest.TestCase):
     def test_rectangular_room_to_pixels(self):
         """Test rectangular room conversion to pixel coordinates"""
         # 3m x 5m room
-        vertices = [
-            (-1.5, 0.0),
-            (1.5, 0.0),
-            (1.5, 5.0),
-            (-1.5, 5.0)
-        ]
+        vertices = [(-1.5, 0.0), (1.5, 0.0), (1.5, 5.0), (-1.5, 5.0)]
 
         polygon = RoomPolygon(vertices)
         pixel_coords = polygon.to_pixel_array(
-            
-            window_x1=-0.6, window_y1=0.0,
-            window_x2=0.6, window_y2=0.0,
-            image_size=128
+            window_x1=-0.6, window_y1=0.0, window_x2=0.6, window_y2=0.0, image_size=128
         )
 
         # Should return array with shape (1, 4, 2) - 4 vertices
@@ -587,15 +617,12 @@ class TestRoomPolygonGeometry(unittest.TestCase):
             (2.0, 3.0),
             (-1.0, 3.0),
             (-1.0, 6.0),
-            (-2.0, 6.0)
+            (-2.0, 6.0),
         ]
 
         polygon = RoomPolygon(vertices)
         pixel_coords = polygon.to_pixel_array(
-            
-            window_x1=-0.6, window_y1=0.0,
-            window_x2=0.6, window_y2=0.0,
-            image_size=128
+            window_x1=-0.6, window_y1=0.0, window_x2=0.6, window_y2=0.0, image_size=128
         )
 
         # Should return array with shape (1, 6, 2) - 6 vertices
@@ -605,12 +632,7 @@ class TestRoomPolygonGeometry(unittest.TestCase):
 
     def test_polygon_requires_window_coordinates(self):
         """Test that to_pixel_array requires window coordinates"""
-        vertices = [
-            (-1.5, 0.0),
-            (1.5, 0.0),
-            (1.5, 5.0),
-            (-1.5, 5.0)
-        ]
+        vertices = [(-1.5, 0.0), (1.5, 0.0), (1.5, 5.0), (-1.5, 5.0)]
 
         polygon = RoomPolygon(vertices)
 
@@ -619,8 +641,8 @@ class TestRoomPolygonGeometry(unittest.TestCase):
             polygon.to_pixel_array(image_size=128)
 
         error_msg = str(context.exception)
-        self.assertIn('required', error_msg.lower())
+        self.assertIn("required", error_msg.lower())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

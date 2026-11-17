@@ -6,14 +6,14 @@ V5 produces a (H, W, 1) float32 image where:
   Room       → 1.0
   Window     → 0.6
 """
+
 import numpy as np
 import pytest
 
+from src.components.image_builder.v5_image_director import V5ImageDirector
 from src.core import EncodingScheme, ModelType, RegionType
 from src.core.enums import V5_MASK_VALUES
-from src.components.image_builder.v5_image_director import V5ImageDirector
 from src.server.services.encoding_service_v5 import V5EncodingService
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -23,8 +23,12 @@ _PARAMS = {
     "height_roof_over_floor": 3.0,
     "room_polygon": [[-3, 0], [3, 0], [3, 5], [-3, 5]],
     "window_frame_ratio": 0.3,
-    "x1": -0.6, "y1": 0.0, "z1": 1.5,
-    "x2": 0.6, "y2": 0.0, "z2": 3.0,
+    "x1": -0.6,
+    "y1": 0.0,
+    "z1": 1.5,
+    "x2": 0.6,
+    "y2": 0.0,
+    "z2": 3.0,
 }
 
 _MODEL = ModelType.DF_DEFAULT
@@ -100,8 +104,8 @@ class TestV5VsV2:
     """V5 output is fundamentally different from V2 (RGBA uint8)."""
 
     def test_v5_is_single_channel_vs_v2_four_channels(self):
-        from src.components.image_builder.room_image_director import RoomImageDirector
         from src.components.image_builder.room_image_builder import RoomImageBuilder
+        from src.components.image_builder.room_image_director import RoomImageDirector
 
         builder = RoomImageBuilder(encoding_scheme=EncodingScheme.V2)
         v2_director = RoomImageDirector(builder, encoding_scheme=EncodingScheme.V2)
@@ -112,8 +116,8 @@ class TestV5VsV2:
         assert v5_image.shape[2] == 1
 
     def test_v5_dtype_differs_from_v2(self):
-        from src.components.image_builder.room_image_director import RoomImageDirector
         from src.components.image_builder.room_image_builder import RoomImageBuilder
+        from src.components.image_builder.room_image_director import RoomImageDirector
 
         builder = RoomImageBuilder(encoding_scheme=EncodingScheme.V2)
         v2_director = RoomImageDirector(builder, encoding_scheme=EncodingScheme.V2)
@@ -144,7 +148,7 @@ class TestV5RoomMask:
         director = V5ImageDirector()
         image, mask = director.construct_from_flat_parameters(_MODEL, dict(_PARAMS))
         # Every pixel set to 1.0 in the image should be inside the room mask
-        room_value_positions = (image[:, :, 0] == 1.0)
+        room_value_positions = image[:, :, 0] == 1.0
         # Room mask area should cover at least the room-value pixels
         # (window may overlap, but room pixels must be within the mask)
         assert np.all(mask[room_value_positions] > 0), (
@@ -188,8 +192,11 @@ class TestV5EncodingService:
         """V5 should succeed without any reflectance parameters."""
         service = V5EncodingService()
         reflectance_keys = {
-            "facade_reflectance", "terrain_reflectance",
-            "ceiling_reflectance", "floor_reflectance", "wall_reflectance",
+            "facade_reflectance",
+            "terrain_reflectance",
+            "ceiling_reflectance",
+            "floor_reflectance",
+            "wall_reflectance",
             "window_frame_reflectance",
         }
         params = {k: v for k, v in _PARAMS.items() if k not in reflectance_keys}
@@ -200,8 +207,11 @@ class TestV5EncodingService:
         """V5 parse_request should not fail when height_roof_over_floor or
         floor_height_above_terrain are absent (they are unused by V5)."""
         service = V5EncodingService()
-        geometry_only = {k: v for k, v in _PARAMS.items()
-                         if k not in {"height_roof_over_floor", "floor_height_above_terrain"}}
+        geometry_only = {
+            k: v
+            for k, v in _PARAMS.items()
+            if k not in {"height_roof_over_floor", "floor_height_above_terrain"}
+        }
         request_data = {"model_type": "df_default", "parameters": geometry_only}
         req = service.parse_request(request_data)
         assert req.model_type.value == "df_default"

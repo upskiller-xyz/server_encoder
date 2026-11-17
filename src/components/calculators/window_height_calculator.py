@@ -23,7 +23,10 @@ class WindowHeightCalculator(IParameterCalculator):
     def can_calculate(self, parameters: Dict[str, Any]) -> bool:
         """Check if we have window Z coordinates"""
         has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
-        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
+        has_z_coords = (
+            ParameterName.Z1.value in parameters
+            and ParameterName.Z2.value in parameters
+        )
 
         return has_window_geometry or has_z_coords
 
@@ -61,7 +64,9 @@ class WindowHeightCalculator(IParameterCalculator):
 
             # Check if floor height is available
             if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters:
-                floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
+                floor_height = float(
+                    parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
+                )
 
                 window_height = window_top - window_bottom
                 # If window bottom is below floor, calculate height from floor

@@ -1,8 +1,10 @@
 """Test direction_angle calculation fix - windows should face outward."""
 
-import pytest
 import math
-from src.components.geometry import WindowGeometry, RoomPolygon
+
+import pytest
+
+from src.components.geometry import RoomPolygon, WindowGeometry
 
 
 class TestDirectionAngleFix:
@@ -19,11 +21,7 @@ class TestDirectionAngleFix:
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, 7], [-3, 7], [-3, 0]])
 
         # Window on east wall (x=0)
-        window = WindowGeometry(
-            x1=0, y1=1,
-            x2=0, y2=2,
-            z1=1.0, z2=2.0
-        )
+        window = WindowGeometry(x1=0, y1=1, x2=0, y2=2, z1=1.0, z2=2.0)
 
         direction_angle = window.calculate_direction_from_polygon(room_polygon)
         direction_degrees = direction_angle * 180 / math.pi
@@ -40,11 +38,7 @@ class TestDirectionAngleFix:
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, 7], [-3, 7], [-3, 0]])
 
         # Window on west wall (x=-3)
-        window = WindowGeometry(
-            x1=-3, y1=1,
-            x2=-3, y2=2,
-            z1=1.0, z2=2.0
-        )
+        window = WindowGeometry(x1=-3, y1=1, x2=-3, y2=2, z1=1.0, z2=2.0)
 
         direction_angle = window.calculate_direction_from_polygon(room_polygon)
         direction_degrees = direction_angle * 180 / math.pi
@@ -61,11 +55,7 @@ class TestDirectionAngleFix:
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, 7], [-3, 7], [-3, 0]])
 
         # Window on north wall (y=7)
-        window = WindowGeometry(
-            x1=-1, y1=7,
-            x2=-2, y2=7,
-            z1=1.0, z2=2.0
-        )
+        window = WindowGeometry(x1=-1, y1=7, x2=-2, y2=7, z1=1.0, z2=2.0)
 
         direction_angle = window.calculate_direction_from_polygon(room_polygon)
         direction_degrees = direction_angle * 180 / math.pi
@@ -82,11 +72,7 @@ class TestDirectionAngleFix:
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, 7], [-3, 7], [-3, 0]])
 
         # Window on south wall (y=0)
-        window = WindowGeometry(
-            x1=-1, y1=0,
-            x2=-2, y2=0,
-            z1=1.0, z2=2.0
-        )
+        window = WindowGeometry(x1=-1, y1=0, x2=-2, y2=0, z1=1.0, z2=2.0)
 
         direction_angle = window.calculate_direction_from_polygon(room_polygon)
         direction_degrees = direction_angle * 180 / math.pi
@@ -101,11 +87,7 @@ class TestDirectionAngleFix:
         room_polygon = RoomPolygon.from_dict([[0, 0], [0, 7], [-3, 7], [-3, 0]])
 
         # User's window (fixed to be on edge)
-        window = WindowGeometry(
-            x1=0, y1=1,
-            x2=0, y2=1.8,
-            z1=10.9, z2=11.9
-        )
+        window = WindowGeometry(x1=0, y1=1, x2=0, y2=1.8, z1=10.9, z2=11.9)
 
         direction_angle = window.calculate_direction_from_polygon(room_polygon)
         direction_degrees = direction_angle * 180 / math.pi

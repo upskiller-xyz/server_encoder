@@ -1,11 +1,13 @@
-from typing import Tuple
 from dataclasses import dataclass
+from typing import Tuple
+
 from src.components.geometry.point_2d import Point2D
 
 
 @dataclass
 class Point3D:
     """Represents a 3D point in meters"""
+
     x: float
     y: float
     z: float

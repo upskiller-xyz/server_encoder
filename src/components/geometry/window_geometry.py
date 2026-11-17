@@ -36,7 +36,7 @@ class WindowGeometry:
         x2: float,
         y2: float,
         z2: float,
-        direction_angle: Optional[float] = None
+        direction_angle: Optional[float] = None,
     ):
         """
         Initialize window geometry from bounding box
@@ -88,7 +88,9 @@ class WindowGeometry:
         if self._direction_angle is None:
             return min(self._y_max - self._y_min, self._x_max - self._x_min)
 
-        return GeometryOps.projection_dist(self._corner1, self._corner2, self._direction_angle)
+        return GeometryOps.projection_dist(
+            self._corner1, self._corner2, self._direction_angle
+        )
 
     @property
     def window_height_3d(self) -> float:
@@ -151,15 +153,16 @@ class WindowGeometry:
 
     @property
     def niche_center(self) -> Point2D:
-        return Point2D((self.x1 + self.x2) * 0.5,
-                       (self.y1 + self.y2) * 0.5)
+        return Point2D((self.x1 + self.x2) * 0.5, (self.y1 + self.y2) * 0.5)
 
     @property
     def direction_angle(self) -> float:
         """Get window direction angle in radians (None if not set)"""
         return self._direction_angle
 
-    def rotate(self, angle_degrees: float, center: Point2D | None = None) -> 'WindowGeometry':
+    def rotate(
+        self, angle_degrees: float, center: Point2D | None = None
+    ) -> "WindowGeometry":
         """
         Rotate window geometry around a center point using Shapely
 
@@ -174,7 +177,9 @@ class WindowGeometry:
             center = Point2D(0, 0)
 
         # Create line segment from the two corners
-        line = ShapelyLine([(self._corner1.x, self._corner1.y), (self._corner2.x, self._corner2.y)])
+        line = ShapelyLine(
+            [(self._corner1.x, self._corner1.y), (self._corner2.x, self._corner2.y)]
+        )
         rotated_line = shapely_rotate(line, angle_degrees, origin=(center.x, center.y))
 
         # Extract rotated coordinates
@@ -183,14 +188,11 @@ class WindowGeometry:
         new_x2, new_y2 = coords[1]
 
         return WindowGeometry(
-            new_x1, new_y1, self._corner1.z,
-            new_x2, new_y2, self._corner2.z
+            new_x1, new_y1, self._corner1.z, new_x2, new_y2, self._corner2.z
         )
 
     def get_pixel_bounds(
-        self,
-        image_size: int = 128,
-        window_offset_px: int | None = None
+        self, image_size: int = 128, window_offset_px: int | None = None
     ) -> Tuple[int, int, int, int]:
         """
         Get window bounds in pixel coordinates for top view
@@ -218,12 +220,16 @@ class WindowGeometry:
         if wall_thickness_m == 0:
             # Fallback to default if calculated thickness is 0 (e.g., when y1==y2)
             wall_thickness_m = GRAPHICS_CONSTANTS.WALL_THICKNESS_M
-        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(wall_thickness_m, image_size)
+        wall_thickness_px = GRAPHICS_CONSTANTS.get_pixel_value(
+            wall_thickness_m, image_size
+        )
 
         window_x_start = window_x_end - wall_thickness_px
 
         # Get window height in pixels, scaled for the image size
-        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(self.window_width_3d, image_size)
+        window_height_px = GRAPHICS_CONSTANTS.get_pixel_value(
+            self.window_width_3d, image_size
+        )
 
         # Center vertically
         window_y_start = image_size // 2 - window_height_px // 2
@@ -247,10 +253,8 @@ class WindowGeometry:
 
     @classmethod
     def from_corners(
-        cls,
-        x1: float, y1: float, z1: float,
-        x2: float, y2: float, z2: float
-    ) -> 'WindowGeometry':
+        cls, x1: float, y1: float, z1: float, x2: float, y2: float, z2: float
+    ) -> "WindowGeometry":
         """
         Create window geometry from corner coordinates
 
@@ -264,7 +268,7 @@ class WindowGeometry:
         return cls(x1, y1, z1, x2, y2, z2)
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'WindowGeometry':
+    def from_dict(cls, data: dict) -> "WindowGeometry":
         """
         Create window geometry from dictionary
 
@@ -281,10 +285,12 @@ class WindowGeometry:
             x2=data[ParameterName.X2.value],
             y2=data[ParameterName.Y2.value],
             z2=data[ParameterName.Z2.value],
-            direction_angle=data.get(ParameterName.DIRECTION_ANGLE.value, None)
+            direction_angle=data.get(ParameterName.DIRECTION_ANGLE.value, None),
         )
 
-    def _rotated_corner(self, up:bool=True, right:bool=True)->Tuple[float, float]:
+    def _rotated_corner(
+        self, up: bool = True, right: bool = True
+    ) -> Tuple[float, float]:
         center = self.niche_center
         _up = up
         _right = right
@@ -328,11 +334,14 @@ class WindowGeometry:
             ShapelyLine([c2, c3]),  # side
         ]
 
-    def get_room_edge(self, room_polygon, tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE) -> list:
+    def get_room_edge(
+        self, room_polygon, tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+    ) -> list:
         w_edges = self.get_candidate_edges()
 
         boundary_matched = [
-            (j, w_edge) for j, w_edge in enumerate(w_edges)
+            (j, w_edge)
+            for j, w_edge in enumerate(w_edges)
             if room_polygon.boundary_contains(w_edge, tolerance)
         ]
 
@@ -349,7 +358,7 @@ class WindowGeometry:
     def _project_to_polygon_edge(
         self,
         room_polygon,
-        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
     ) -> tuple:
         """
         Project window center onto the polygon boundary and find the containing edge.
@@ -371,7 +380,9 @@ class WindowGeometry:
         window_center = ShapelyPoint(self.niche_center.x, self.niche_center.y)
 
         # Create polygon boundary as closed line
-        poly_boundary = ShapelyLine(room_polygon.get_coords() + [room_polygon.get_coords()[0]])
+        poly_boundary = ShapelyLine(
+            room_polygon.get_coords() + [room_polygon.get_coords()[0]]
+        )
 
         # Project window center onto the closest point on the boundary
         dist_along = poly_boundary.project(window_center)
@@ -392,7 +403,7 @@ class WindowGeometry:
     def calculate_reference_point_from_polygon(
         self,
         room_polygon,
-        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
     ) -> Point3D:
         """
         Calculate window reference point from room polygon edge
@@ -418,7 +429,7 @@ class WindowGeometry:
     def calculate_external_reference_point_from_polygon(
         self,
         room_polygon,
-        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
     ) -> Point3D:
         """
         Calculate external window reference point (opposite edge from room polygon)
@@ -438,12 +449,16 @@ class WindowGeometry:
             ValueError: If direction_angle is not set or cannot be calculated
         """
         # Get internal reference point (on room polygon edge)
-        internal_point = self.calculate_reference_point_from_polygon(room_polygon, tolerance)
+        internal_point = self.calculate_reference_point_from_polygon(
+            room_polygon, tolerance
+        )
 
         # Calculate direction angle if not already set
         direction_angle = self._direction_angle
         if direction_angle is None:
-            direction_angle = self.calculate_direction_from_polygon(room_polygon, tolerance)
+            direction_angle = self.calculate_direction_from_polygon(
+                room_polygon, tolerance
+            )
 
         # Store the calculated direction so dependent properties (e.g., wall_thickness)
         # can use the correct non-axis-aligned window direction
@@ -462,7 +477,7 @@ class WindowGeometry:
     def calculate_direction_from_polygon(
         self,
         room_polygon,
-        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+        tolerance: float = GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
     ) -> float:
         """
         EXPERIMENTAL: Calculate direction_angle from room polygon edge
@@ -496,7 +511,9 @@ class WindowGeometry:
         # Select the perpendicular pointing OUTSIDE the room (window facing direction)
         calculated_angle = perps[0]
         for perp in perps:
-            if not GeometryOps.perpendicular_dir_inside_polygon(room_poly, edge_coords, perp):
+            if not GeometryOps.perpendicular_dir_inside_polygon(
+                room_poly, edge_coords, perp
+            ):
                 calculated_angle = perp
                 break
 

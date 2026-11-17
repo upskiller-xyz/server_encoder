@@ -1,14 +1,16 @@
 """Tests for Pydantic request/response schemas"""
+
 import pytest
 from pydantic import ValidationError
+
 from src.server.schemas import (
-    EncodeRequest,
     CalculateDirectionRequest,
-    ReferencePointRequest,
     DirectionAngleResponse,
-    ReferencePointResponse,
-    ReferencePoint,
+    EncodeRequest,
     ErrorResponse,
+    ReferencePoint,
+    ReferencePointRequest,
+    ReferencePointResponse,
 )
 
 
@@ -18,8 +20,7 @@ class TestEncodeRequest:
     def test_valid_encode_request_with_defaults(self):
         """Test creating valid EncodeRequest with default encoding_scheme"""
         request = EncodeRequest(
-            model_type="df_default",
-            parameters={"window_orientation": 3.14}
+            model_type="df_default", parameters={"window_orientation": 3.14}
         )
         assert request.model_type == "df_default"
         assert request.parameters == {"window_orientation": 3.14}
@@ -30,7 +31,7 @@ class TestEncodeRequest:
         request = EncodeRequest(
             model_type="da_custom",
             parameters={"facade_reflectance": 0.5},
-            encoding_scheme="v1"
+            encoding_scheme="v1",
         )
         assert request.encoding_scheme == "v1"
 
@@ -39,7 +40,7 @@ class TestEncodeRequest:
         request = EncodeRequest(
             model_type="df_default",
             parameters={"facade_reflectance": 0.5},
-            encoding_scheme="v3"
+            encoding_scheme="v3",
         )
         assert request.encoding_scheme == "v3"
 
@@ -48,7 +49,7 @@ class TestEncodeRequest:
         request = EncodeRequest(
             model_type="df_default",
             parameters={"facade_reflectance": 0.5},
-            encoding_scheme="v4"
+            encoding_scheme="v4",
         )
         assert request.encoding_scheme == "v4"
 
@@ -57,7 +58,7 @@ class TestEncodeRequest:
         request = EncodeRequest(
             model_type="df_default",
             parameters={"room_polygon": [[-3, 0], [3, 0], [3, 5], [-3, 5]]},
-            encoding_scheme="v5"
+            encoding_scheme="v5",
         )
         assert request.encoding_scheme == "v5"
 
@@ -74,9 +75,7 @@ class TestEncodeRequest:
     def test_encode_request_model_dump(self):
         """Test converting EncodeRequest to dict"""
         request = EncodeRequest(
-            model_type="df_default",
-            parameters={"test": "value"},
-            encoding_scheme="v2"
+            model_type="df_default", parameters={"test": "value"}, encoding_scheme="v2"
         )
         data = request.model_dump()
         assert data["model_type"] == "df_default"
@@ -91,7 +90,7 @@ class TestCalculateDirectionRequest:
         """Test creating valid CalculateDirectionRequest"""
         request = CalculateDirectionRequest(
             room_polygon=[[0, 0], [10, 0], [10, 10], [0, 10]],
-            windows={"window1": {"x1": -0.6, "y1": 0.0, "x2": 0.6, "y2": 0.0}}
+            windows={"window1": {"x1": -0.6, "y1": 0.0, "x2": 0.6, "y2": 0.0}},
         )
         assert len(request.room_polygon) == 4
         assert "window1" in request.windows
@@ -99,16 +98,12 @@ class TestCalculateDirectionRequest:
     def test_calculate_direction_request_missing_room_polygon(self):
         """Test validation fails without room_polygon"""
         with pytest.raises(ValidationError):
-            CalculateDirectionRequest(
-                windows={"window1": {"x1": -0.6, "y1": 0.0}}
-            )
+            CalculateDirectionRequest(windows={"window1": {"x1": -0.6, "y1": 0.0}})
 
     def test_calculate_direction_request_missing_windows(self):
         """Test validation fails without windows"""
         with pytest.raises(ValidationError):
-            CalculateDirectionRequest(
-                room_polygon=[[0, 0], [10, 0], [10, 10]]
-            )
+            CalculateDirectionRequest(room_polygon=[[0, 0], [10, 0], [10, 10]])
 
     def test_calculate_direction_request_multiple_windows(self):
         """Test request with multiple windows"""
@@ -116,8 +111,8 @@ class TestCalculateDirectionRequest:
             room_polygon=[[0, 0], [10, 0], [10, 10], [0, 10]],
             windows={
                 "window1": {"x1": -0.6, "y1": 0.0, "x2": 0.6, "y2": 0.0},
-                "window2": {"x1": 2.0, "y1": 0.0, "x2": 3.0, "y2": 0.0}
-            }
+                "window2": {"x1": 2.0, "y1": 0.0, "x2": 3.0, "y2": 0.0},
+            },
         )
         assert len(request.windows) == 2
 
@@ -131,10 +126,14 @@ class TestReferencePointRequest:
             room_polygon=[[0, 0], [10, 0], [10, 10], [0, 10]],
             windows={
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.0, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.0,
+                    "z2": 2.5,
                 }
-            }
+            },
         )
         assert request.room_polygon == [[0, 0], [10, 0], [10, 10], [0, 10]]
         assert "window1" in request.windows
@@ -146,10 +145,14 @@ class TestReferencePointRequest:
             room_polygon=[[0, 0], [10, 0], [10, 10], [0, 10]],
             windows={
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.0, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.0,
+                    "z2": 2.5,
                 }
-            }
+            },
         )
         window = request.windows["window1"]
         assert window["z1"] == 1.0
@@ -192,9 +195,7 @@ class TestDirectionAngleResponse:
 
     def test_direction_angle_response_single_window(self):
         """Test response with single window"""
-        response = DirectionAngleResponse(
-            direction_angle={"window1": 0.0}
-        )
+        response = DirectionAngleResponse(direction_angle={"window1": 0.0})
         assert len(response.direction_angle) == 1
         assert response.direction_angle["window1"] == 0.0
 
@@ -207,7 +208,7 @@ class TestReferencePointResponse:
         response = ReferencePointResponse(
             reference_point={
                 "window1": ReferencePoint(x=0.0, y=0.0, z=1.75),
-                "window2": ReferencePoint(x=2.0, y=1.0, z=1.5)
+                "window2": ReferencePoint(x=2.0, y=1.0, z=1.5),
             }
         )
         assert response.reference_point["window1"].z == 1.75
@@ -216,9 +217,7 @@ class TestReferencePointResponse:
     def test_reference_point_response_from_dict(self):
         """Test creating response from dict data"""
         response = ReferencePointResponse(
-            reference_point={
-                "window1": {"x": 0.0, "y": 0.0, "z": 1.75}
-            }
+            reference_point={"window1": {"x": 0.0, "y": 0.0, "z": 1.75}}
         )
         assert response.reference_point["window1"].x == 0.0
 
@@ -229,8 +228,7 @@ class TestErrorResponse:
     def test_valid_error_response_with_type(self):
         """Test creating valid ErrorResponse with error_type"""
         response = ErrorResponse(
-            error="Invalid encoding_scheme",
-            error_type="BadRequest"
+            error="Invalid encoding_scheme", error_type="BadRequest"
         )
         assert response.error == "Invalid encoding_scheme"
         assert response.error_type == "BadRequest"

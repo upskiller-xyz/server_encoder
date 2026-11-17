@@ -1,8 +1,10 @@
 """Validator for model type parameter (SRP: validates only model type values)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
-from src.validation.enums import ValidationErrorType
+
 from src.core.enums import ModelType
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
+from src.validation.enums import ValidationErrorType
 
 
 class ModelTypeValidator(BaseValidator):
@@ -13,7 +15,9 @@ class ModelTypeValidator(BaseValidator):
         self._parameter_name = "model_type"
         self._valid_types = {model_type.value for model_type in ModelType}
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate model type value.
 
@@ -31,7 +35,7 @@ class ModelTypeValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{self._parameter_name} must be a string, got {type(value).__name__}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -41,7 +45,7 @@ class ModelTypeValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_VALUE,
                 message=f"{self._parameter_name} must be one of {sorted(self._valid_types)}, got '{value}'",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
 

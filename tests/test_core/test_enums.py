@@ -1,10 +1,17 @@
 """Unit tests for core enums and constants"""
 
 import pytest
+
 from src.core.enums import (
-    ModelType, ChannelType, FileFormat, RegionType,
-    ParameterName, ImageDimensions, EncoderType,
-    GeometryType, EncodingScheme
+    ChannelType,
+    EncoderType,
+    EncodingScheme,
+    FileFormat,
+    GeometryType,
+    ImageDimensions,
+    ModelType,
+    ParameterName,
+    RegionType,
 )
 
 
@@ -80,7 +87,10 @@ class TestParameterName:
         assert ParameterName.WINDOW_HEIGHT.value == "window_height"
         assert ParameterName.WINDOW_SILL_HEIGHT.value == "window_sill_height"
         assert ParameterName.ROOM_POLYGON.value == "room_polygon"
-        assert ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value == "floor_height_above_terrain"
+        assert (
+            ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value
+            == "floor_height_above_terrain"
+        )
 
     def test_parameter_name_by_value(self):
         """Test accessing parameter name by value"""

@@ -15,9 +15,9 @@ import unittest
 
 import numpy as np
 
-from src.components.region_encoders import BackgroundRegionEncoder
-from src.core import ModelType, ImageDimensions, RegionType, EncodingScheme
 from src.components.image_builder import RoomImageBuilder
+from src.components.region_encoders import BackgroundRegionEncoder
+from src.core import EncodingScheme, ImageDimensions, ModelType, RegionType
 
 
 class TestBackgroundConstruction(unittest.TestCase):
@@ -32,17 +32,14 @@ class TestBackgroundConstruction(unittest.TestCase):
         """Test that background fills entire image (obstruction bar can be overwritten later)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 2.0
-        }
+        parameters = {"floor_height_above_terrain": 2.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
         # Background should exist at left side
         bg_pixel = result[64, 60, :]
         self.assertTrue(
-            np.any(bg_pixel > 0),
-            "Background should exist on left side of image"
+            np.any(bg_pixel > 0), "Background should exist on left side of image"
         )
 
         # Background should fill entire image (including where obstruction bar will be)
@@ -54,7 +51,7 @@ class TestBackgroundConstruction(unittest.TestCase):
         # Background should exist here too (will be overwritten by obstruction bar later)
         self.assertTrue(
             np.any(bar_pixel > 0),
-            "Background should fill entire image including obstruction bar area"
+            "Background should fill entire image including obstruction bar area",
         )
 
 
@@ -71,15 +68,13 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 25),     # 0m -> 0.1*255 = 25.5
-            (5.0, 140),    # 5m -> 0.55*255 = 140.25
-            (10.0, 255),   # 10m -> 1.0*255 = 255
+            (0.0, 25),  # 0m -> 0.1*255 = 25.5
+            (5.0, 140),  # 5m -> 0.55*255 = 140.25
+            (10.0, 255),  # 10m -> 1.0*255 = 255
         ]
 
         for height, expected_value in test_cases:
-            parameters = {
-                'floor_height_above_terrain': height
-            }
+            parameters = {"floor_height_above_terrain": height}
 
             result = self.encoder.encode_region(
                 image.copy(), parameters, self.model_type
@@ -89,8 +84,10 @@ class TestBackgroundColorEncoding(unittest.TestCase):
             bg_pixel = result[64, 60, 1]  # Green channel
 
             self.assertAlmostEqual(
-                bg_pixel, expected_value, delta=2,
-                msg=f"Floor height {height}m should encode to ~{expected_value}"
+                bg_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Floor height {height}m should encode to ~{expected_value}",
             )
 
     def test_red_channel_terrain_reflectance(self):
@@ -98,15 +95,15 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0 -> 0
-            (0.5, 127),    # 0.5 -> ~127
-            (1.0, 255),    # 1.0 -> 255
+            (0.0, 0),  # 0.0 -> 0
+            (0.5, 127),  # 0.5 -> ~127
+            (1.0, 255),  # 1.0 -> 255
         ]
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'floor_height_above_terrain': 2.0,
-                'terrain_reflectance': reflectance
+                "floor_height_above_terrain": 2.0,
+                "terrain_reflectance": reflectance,
             }
 
             result = self.encoder.encode_region(
@@ -117,8 +114,10 @@ class TestBackgroundColorEncoding(unittest.TestCase):
             bg_pixel = result[64, 60, 0]  # Red channel
 
             self.assertAlmostEqual(
-                bg_pixel, expected_value, delta=2,
-                msg=f"Terrain reflectance {reflectance} should encode to ~{expected_value}"
+                bg_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Terrain reflectance {reflectance} should encode to ~{expected_value}",
             )
 
     def test_blue_channel_facade_reflectance(self):
@@ -126,15 +125,15 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),      # 0.0 -> 0
-            (0.5, 127),    # 0.5 -> ~127
-            (1.0, 255),    # 1.0 -> 255
+            (0.0, 0),  # 0.0 -> 0
+            (0.5, 127),  # 0.5 -> ~127
+            (1.0, 255),  # 1.0 -> 255
         ]
 
         for reflectance, expected_value in test_cases:
             parameters = {
-                'floor_height_above_terrain': 2.0,
-                'facade_reflectance': reflectance
+                "floor_height_above_terrain": 2.0,
+                "facade_reflectance": reflectance,
             }
 
             result = self.encoder.encode_region(
@@ -145,8 +144,10 @@ class TestBackgroundColorEncoding(unittest.TestCase):
             bg_pixel = result[64, 60, 2]  # Blue channel
 
             self.assertAlmostEqual(
-                bg_pixel, expected_value, delta=2,
-                msg=f"Facade reflectance {reflectance} should encode to ~{expected_value}"
+                bg_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Facade reflectance {reflectance} should encode to ~{expected_value}",
             )
 
     def test_alpha_channel_direction_angle(self):
@@ -154,15 +155,15 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         test_cases = [
-            (0.0, 0),                    # 0 rad (East) -> 0
-            (math.pi, 127),              # pi rad -> ~127
-            (2 * math.pi, 255),          # 2pi rad -> 255
+            (0.0, 0),  # 0 rad (East) -> 0
+            (math.pi, 127),  # pi rad -> ~127
+            (2 * math.pi, 255),  # 2pi rad -> 255
         ]
 
         for angle, expected_value in test_cases:
             parameters = {
-                'floor_height_above_terrain': 2.0,
-                'window_orientation': angle
+                "floor_height_above_terrain": 2.0,
+                "window_orientation": angle,
             }
 
             result = self.encoder.encode_region(
@@ -173,17 +174,17 @@ class TestBackgroundColorEncoding(unittest.TestCase):
             bg_pixel = result[64, 60, 3]  # Alpha channel
 
             self.assertAlmostEqual(
-                bg_pixel, expected_value, delta=2,
-                msg=f"Direction angle {angle:.2f} rad should encode to ~{expected_value}"
+                bg_pixel,
+                expected_value,
+                delta=2,
+                msg=f"Direction angle {angle:.2f} rad should encode to ~{expected_value}",
             )
 
     def test_default_facade_reflectance(self):
         """Test red channel defaults to 1.0 when facade_reflectance not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 2.0
-        }
+        parameters = {"floor_height_above_terrain": 2.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -191,17 +192,14 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         bg_pixel = result[64, 60, 0]  # Red channel
 
         self.assertEqual(
-            bg_pixel, 255,
-            "Default facade_reflectance should be 1.0 (encoded as 255)"
+            bg_pixel, 255, "Default facade_reflectance should be 1.0 (encoded as 255)"
         )
 
     def test_default_terrain_reflectance(self):
         """Test blue channel defaults to 1.0 when terrain_reflectance not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 2.0
-        }
+        parameters = {"floor_height_above_terrain": 2.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -209,17 +207,14 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         bg_pixel = result[64, 60, 2]  # Blue channel
 
         self.assertEqual(
-            bg_pixel, 255,
-            "Default terrain_reflectance should be 1.0 (encoded as 255)"
+            bg_pixel, 255, "Default terrain_reflectance should be 1.0 (encoded as 255)"
         )
 
     def test_default_direction_angle(self):
         """Test alpha channel defaults to pi when window_orientation not provided"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 2.0
-        }
+        parameters = {"floor_height_above_terrain": 2.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -227,8 +222,10 @@ class TestBackgroundColorEncoding(unittest.TestCase):
         bg_pixel = result[64, 60, 3]  # Alpha channel
 
         self.assertAlmostEqual(
-            bg_pixel, 127, delta=2,
-            msg="Default window_orientation should be pi (encoded as ~127)"
+            bg_pixel,
+            127,
+            delta=2,
+            msg="Default window_orientation should be pi (encoded as ~127)",
         )
 
 
@@ -243,27 +240,21 @@ class TestBackgroundParameterValidation(unittest.TestCase):
 
     def test_missing_floor_height_above_terrain(self):
         """Test error when floor_height_above_terrain is missing"""
-        parameters = {
-            'facade_reflectance': 0.6
-        }
+        parameters = {"facade_reflectance": 0.6}
 
         with self.assertRaises(ValueError) as context:
             self.encoder.encode_region(self.image, parameters, self.model_type)
 
         error_msg = str(context.exception)
-        self.assertIn('floor_height_above_terrain', error_msg)
+        self.assertIn("floor_height_above_terrain", error_msg)
 
     def test_optional_reflectances_work(self):
         """Test that all reflectance parameters are optional"""
-        parameters = {
-            'floor_height_above_terrain': 2.0
-        }
+        parameters = {"floor_height_above_terrain": 2.0}
 
         # Should not raise error even without reflectance parameters
         try:
-            result = self.encoder.encode_region(
-                self.image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(self.image, parameters, self.model_type)
             self.assertIsNotNone(result)
         except ValueError as e:
             self.fail(f"Should not require reflectance parameters: {e}")
@@ -271,16 +262,14 @@ class TestBackgroundParameterValidation(unittest.TestCase):
     def test_all_parameters_provided(self):
         """Test encoding with all parameters provided"""
         parameters = {
-            'floor_height_above_terrain': 2.5,
-            'facade_reflectance': 0.6,
-            'terrain_reflectance': 0.25,
-            'window_orientation': math.pi
+            "floor_height_above_terrain": 2.5,
+            "facade_reflectance": 0.6,
+            "terrain_reflectance": 0.25,
+            "window_orientation": math.pi,
         }
 
         try:
-            result = self.encoder.encode_region(
-                self.image, parameters, self.model_type
-            )
+            result = self.encoder.encode_region(self.image, parameters, self.model_type)
             self.assertIsNotNone(result)
 
             # Verify all channels encoded
@@ -303,10 +292,10 @@ class TestBackgroundUniformEncoding(unittest.TestCase):
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
         parameters = {
-            'floor_height_above_terrain': 3.0,
-            'facade_reflectance': 0.5,
-            'terrain_reflectance': 0.3,
-            'window_orientation': math.pi / 2  # 90 degrees in radians
+            "floor_height_above_terrain": 3.0,
+            "facade_reflectance": 0.5,
+            "terrain_reflectance": 0.3,
+            "window_orientation": math.pi / 2,  # 90 degrees in radians
         }
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
@@ -316,7 +305,7 @@ class TestBackgroundUniformEncoding(unittest.TestCase):
             result[10, 10, :],
             result[50, 50, :],
             result[100, 10, :],
-            result[10, 100, :]
+            result[10, 100, :],
         ]
 
         # All should be identical (or very close due to floating point)
@@ -324,8 +313,9 @@ class TestBackgroundUniformEncoding(unittest.TestCase):
         for pixel in sample_pixels[1:]:
             for channel in range(4):
                 self.assertEqual(
-                    pixel[channel], reference[channel],
-                    "All background pixels should have same values"
+                    pixel[channel],
+                    reference[channel],
+                    "All background pixels should have same values",
                 )
 
 
@@ -341,9 +331,7 @@ class TestBackgroundSpecialOutputRange(unittest.TestCase):
         """Test that 0m maps to 0.1 normalized (25.5 in pixel value)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 0.0
-        }
+        parameters = {"floor_height_above_terrain": 0.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -351,17 +339,17 @@ class TestBackgroundSpecialOutputRange(unittest.TestCase):
 
         # 0m should map to 0.1 normalized = 0.1 * 255 = 25.5
         self.assertAlmostEqual(
-            bg_pixel, 25, delta=2,
-            msg="0m floor height should map to 0.1 normalized (~25)"
+            bg_pixel,
+            25,
+            delta=2,
+            msg="0m floor height should map to 0.1 normalized (~25)",
         )
 
     def test_floor_height_maximum_maps_to_1_0(self):
         """Test that 10m maps to 1.0 normalized (255 in pixel value)"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 10.0
-        }
+        parameters = {"floor_height_above_terrain": 10.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -369,17 +357,14 @@ class TestBackgroundSpecialOutputRange(unittest.TestCase):
 
         # 10m should map to 1.0 normalized = 255
         self.assertEqual(
-            bg_pixel, 255,
-            "10m floor height should map to 1.0 normalized (255)"
+            bg_pixel, 255, "10m floor height should map to 1.0 normalized (255)"
         )
 
     def test_floor_height_never_below_minimum(self):
         """Test that floor height never encodes below 0.1 normalized"""
         image = np.zeros((128, 128, 4), dtype=np.uint8)
 
-        parameters = {
-            'floor_height_above_terrain': 0.0
-        }
+        parameters = {"floor_height_above_terrain": 0.0}
 
         result = self.encoder.encode_region(image, parameters, self.model_type)
 
@@ -387,8 +372,7 @@ class TestBackgroundSpecialOutputRange(unittest.TestCase):
 
         # Should never be less than 0.1 * 255 = 25.5
         self.assertGreaterEqual(
-            bg_pixel, 25,
-            "Floor height should never encode below 0.1 normalized"
+            bg_pixel, 25, "Floor height should never encode below 0.1 normalized"
         )
 
 
@@ -400,50 +384,54 @@ class TestBackgroundIntegration(unittest.TestCase):
         builder = RoomImageBuilder()
 
         parameters = {
-            'floor_height_above_terrain': 2.0,
-            'facade_reflectance': 0.6,
-            'terrain_reflectance': 0.3,
-            'window_orientation': math.pi
+            "floor_height_above_terrain": 2.0,
+            "facade_reflectance": 0.6,
+            "terrain_reflectance": 0.3,
+            "window_orientation": math.pi,
         }
 
-        image = (builder
-                 .reset()
-                 .set_model_type(ModelType.DF_DEFAULT)
-                 .encode_region(RegionType.BACKGROUND, parameters)
-                 .build())
+        image = (
+            builder.reset()
+            .set_model_type(ModelType.DF_DEFAULT)
+            .encode_region(RegionType.BACKGROUND, parameters)
+            .build()
+        )
 
         # Verify image dimensions
         self.assertEqual(image.shape, (128, 128, 4))
 
         # Verify background exists
         bg_pixel = image[64, 60, :]
-        self.assertTrue(
-            np.any(bg_pixel > 0),
-            "Builder should create background area"
-        )
+        self.assertTrue(np.any(bg_pixel > 0), "Builder should create background area")
 
         # Verify color encoding
         # Green: floor height (2.0m / 10.0m = 0.2, maps to 0.1 + 0.2*0.9 = 0.28 -> 71.4)
-        expected_green = int((0.1 + (2.0/10.0)*0.9) * 255)
+        expected_green = int((0.1 + (2.0 / 10.0) * 0.9) * 255)
         self.assertAlmostEqual(
-            bg_pixel[1], expected_green, delta=2,
-            msg="Builder should encode floor height correctly"
+            bg_pixel[1],
+            expected_green,
+            delta=2,
+            msg="Builder should encode floor height correctly",
         )
 
         # Red: terrain reflectance (0.3 -> 76)
         expected_red = int(0.3 * 255)
         self.assertAlmostEqual(
-            bg_pixel[0], expected_red, delta=2,
-            msg="Builder should encode terrain reflectance correctly"
+            bg_pixel[0],
+            expected_red,
+            delta=2,
+            msg="Builder should encode terrain reflectance correctly",
         )
 
         # Blue: facade reflectance (0.6 -> 153)
         expected_blue = int(0.6 * 255)
         self.assertAlmostEqual(
-            bg_pixel[2], expected_blue, delta=2,
-            msg="Builder should encode facade reflectance correctly"
+            bg_pixel[2],
+            expected_blue,
+            delta=2,
+            msg="Builder should encode facade reflectance correctly",
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

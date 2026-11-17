@@ -3,7 +3,8 @@ Example of using the validation system.
 
 This demonstrates how to integrate the ValidatorManager into the application.
 """
-from src.validation import ValidatorManager, RequestType, ValidationResult
+
+from src.validation import RequestType, ValidationResult, ValidatorManager
 
 
 def example_encode_validation():
@@ -20,11 +21,15 @@ def example_encode_validation():
             "floor_height_above_terrain": 0.0,
             "windows": {
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.0, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.0,
+                    "z2": 2.5,
                 }
-            }
-        }
+            },
+        },
     }
 
     result = manager.validate(RequestType.ENCODE, valid_request)
@@ -34,8 +39,12 @@ def example_encode_validation():
     invalid_request = {
         "model_type": "df_default",
         "parameters": {
-            "room_polygon": [[0, 0], [10, 0], [10, 10]]  # Invalid polygon (< 3 vertices)
-        }
+            "room_polygon": [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ]  # Invalid polygon (< 3 vertices)
+        },
     }
 
     result = manager.validate(RequestType.ENCODE, invalid_request)
@@ -51,12 +60,7 @@ def example_calculate_direction_validation():
     # Valid request
     valid_request = {
         "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
-        "windows": {
-            "window1": {
-                "x1": -0.6, "y1": 0.0,
-                "x2": 0.6, "y2": 0.0
-            }
-        }
+        "windows": {"window1": {"x1": -0.6, "y1": 0.0, "x2": 0.6, "y2": 0.0}},
     }
 
     result = manager.validate(RequestType.CALCULATE_DIRECTION, valid_request)
@@ -69,7 +73,7 @@ def example_calculate_direction_validation():
             "window1": {
                 "x1": -0.6  # Missing y1, x2, y2
             }
-        }
+        },
     }
 
     result = manager.validate(RequestType.CALCULATE_DIRECTION, invalid_request)
@@ -104,10 +108,7 @@ def example_integration_with_endpoint():
 
     # Test with invalid request
     try:
-        invalid_request = {
-            "model_type": "invalid_model",
-            "parameters": {}
-        }
+        invalid_request = {"model_type": "invalid_model", "parameters": {}}
         encode_endpoint(invalid_request)
     except BadRequest as e:
         print(f"Caught validation error: {e.description}")

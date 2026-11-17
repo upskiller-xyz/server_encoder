@@ -178,13 +178,17 @@ payload = {
             "main_window": {
                 "window_sill_height": 0.9,
                 "window_frame_ratio": 0.15,
-                "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
                 "horizon": 15.0,
-                "zenith": 10.0
+                "zenith": 10.0,
             }
-        }
-    }
+        },
+    },
 }
 
 response = requests.post(url, json=payload)
@@ -193,8 +197,8 @@ response = requests.post(url, json=payload)
 npz_data = np.load(io.BytesIO(response.content))
 
 # Get image and mask (window ID is "main_window")
-image = npz_data['main_window_image']  # (128, 128, 4) RGBA
-mask = npz_data['main_window_mask']    # (128, 128) binary
+image = npz_data["main_window_image"]  # (128, 128, 4) RGBA
+mask = npz_data["main_window_mask"]  # (128, 128) binary
 
 # Display
 plt.imshow(image)
@@ -270,17 +274,25 @@ payload = {
         "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
         "windows": {
             "south_window": {
-                "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
                 # ... other parameters
             },
             "west_window": {
-                "x1": 0.0, "y1": -0.5, "z1": 1.0,
-                "x2": 0.0, "y2": 0.5, "z2": 2.0,
+                "x1": 0.0,
+                "y1": -0.5,
+                "z1": 1.0,
+                "x2": 0.0,
+                "y2": 0.5,
+                "z2": 2.0,
                 # ... other parameters
-            }
-        }
-    }
+            },
+        },
+    },
 }
 
 response = requests.post(url, json=payload)

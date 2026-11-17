@@ -1,11 +1,12 @@
 import math
+
 from shapely.geometry import Point as ShapelyPoint
+
 from src.components.geometry.point_2d import Point2D
 from src.components.geometry.point_3d import Point3D
 
 
 class GeometryOps:
-
     @classmethod
     def project(cls, vv: Point2D | Point3D, sin_a: float, cos_a: float):
         return vv.x * cos_a + vv.y * sin_a
@@ -37,7 +38,9 @@ class GeometryOps:
         return (rot_x, rot_y)
 
     @classmethod
-    def rotate_coord(cls, vv: Point2D | Point3D, sin_a: float, cos_a: float, x_axis=True):
+    def rotate_coord(
+        cls, vv: Point2D | Point3D, sin_a: float, cos_a: float, x_axis=True
+    ):
         if x_axis:
             return vv.x * cos_a - vv.y * sin_a
         return vv.x * sin_a + vv.y * cos_a

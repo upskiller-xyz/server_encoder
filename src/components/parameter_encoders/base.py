@@ -1,5 +1,3 @@
-
-
 from typing import Tuple
 
 
@@ -11,7 +9,7 @@ class BaseChannelEncoder:
         min_value: float,
         max_value: float,
         output_min: float = 0.0,
-        output_max: float = 1.0
+        output_max: float = 1.0,
     ):
         """
         Initialize angle encoder

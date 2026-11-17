@@ -1,5 +1,5 @@
-from src.core import RegionType, EncodingScheme
 from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
+from src.core import EncodingScheme, RegionType
 
 
 class BackgroundRegionEncoder(BaseRegionEncoder):

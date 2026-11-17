@@ -1,6 +1,8 @@
 """Validator for polygon parameters (SRP: validates only polygon structures)"""
-from typing import Any, Dict, Optional, List
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from typing import Any, Dict, List, Optional
+
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 
 
@@ -18,7 +20,9 @@ class PolygonValidator(BaseValidator):
         self._parameter_name = parameter_name
         self._min_vertices = min_vertices
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate polygon structure.
 
@@ -36,7 +40,7 @@ class PolygonValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{self._parameter_name} must be a list, got {type(value).__name__}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -46,7 +50,7 @@ class PolygonValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_LENGTH,
                 message=f"{self._parameter_name} must have at least {self._min_vertices} vertices, got {len(value)}",
-                parameter_name=self._parameter_name
+                parameter_name=self._parameter_name,
             )
             result.add_error(error)
             return result
@@ -57,7 +61,7 @@ class PolygonValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_FORMAT,
                     message=f"{self._parameter_name}[{i}] must be a list or tuple, got {type(vertex).__name__}",
-                    parameter_name=self._parameter_name
+                    parameter_name=self._parameter_name,
                 )
                 result.add_error(error)
                 continue
@@ -66,7 +70,7 @@ class PolygonValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_FORMAT,
                     message=f"{self._parameter_name}[{i}] must have exactly 2 coordinates [x, y], got {len(vertex)}",
-                    parameter_name=self._parameter_name
+                    parameter_name=self._parameter_name,
                 )
                 result.add_error(error)
                 continue
@@ -77,7 +81,7 @@ class PolygonValidator(BaseValidator):
                     error = ValidationError(
                         error_type=ValidationErrorType.INVALID_TYPE,
                         message=f"{self._parameter_name}[{i}][{j}] must be a number, got {type(coord).__name__}",
-                        parameter_name=self._parameter_name
+                        parameter_name=self._parameter_name,
                     )
                     result.add_error(error)
 

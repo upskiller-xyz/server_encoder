@@ -1,5 +1,5 @@
-from typing import Dict, Any
 from dataclasses import dataclass, field
+from typing import Any, Dict
 
 
 @dataclass
@@ -9,6 +9,7 @@ class RegionParameters:
 
     Replaces Dict[str, Any] with a proper type-safe class
     """
+
     parameters: Dict[str, Any] = field(default_factory=dict)
 
     def get(self, key: str, default=None) -> Any:

@@ -1,6 +1,9 @@
 from typing import Tuple
+
 from src.components.parameter_encoders.base import BaseChannelEncoder
-from src.components.parameter_encoders.linear_channel_encoder import LinearChannelEncoder
+from src.components.parameter_encoders.linear_channel_encoder import (
+    LinearChannelEncoder,
+)
 
 
 class AngleChannelEncoder(BaseChannelEncoder):
@@ -11,7 +14,7 @@ class AngleChannelEncoder(BaseChannelEncoder):
         min_value: float,
         max_value: float,
         output_min: float = 0.0,
-        output_max: float = 1.0
+        output_max: float = 1.0,
     ):
         """
         Initialize angle encoder

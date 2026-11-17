@@ -1,8 +1,8 @@
 import logging
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
+
 from src.components.geometry.window_geometry import WindowGeometry
-from src.core import GRAPHICS_CONSTANTS
-from src.core import WindowHeightValidationError
+from src.core import GRAPHICS_CONSTANTS, WindowHeightValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +12,7 @@ class WindowHeightValidator:
 
     @classmethod
     def validate_window_height_bounds(
-        cls,
-        window_geometry: WindowGeometry,
-        floor_height: float,
-        roof_height: float
+        cls, window_geometry: WindowGeometry, floor_height: float, roof_height: float
     ) -> Tuple[bool, str]:
         """
         Validate that window z-coordinates are within floor-roof bounds.
@@ -49,11 +46,13 @@ class WindowHeightValidator:
                         window_top=window_top,
                         floor_height=floor_height,
                         roof_height=roof_height,
-                        error_type="below_floor"
+                        error_type="below_floor",
                     )
                 logger.info(
                     "Window bottom (%.2fm) clamped to floor (%.2fm) — deviation: %.3fm",
-                    window_bottom, floor_height, deviation
+                    window_bottom,
+                    floor_height,
+                    deviation,
                 )
                 cls._clamp_z(window_geometry, z1, z2, floor_height, is_bottom=True)
 
@@ -66,18 +65,23 @@ class WindowHeightValidator:
                         window_top=window_top,
                         floor_height=floor_height,
                         roof_height=roof_height,
-                        error_type="above_roof"
+                        error_type="above_roof",
                     )
                 logger.info(
                     "Window top (%.2fm) clamped to roof (%.2fm) — deviation: %.3fm",
-                    window_top, roof_height, deviation
+                    window_top,
+                    roof_height,
+                    deviation,
                 )
                 cls._clamp_z(window_geometry, z1, z2, roof_height, is_bottom=False)
 
             return True, ""
 
         except (KeyError, ValueError, AttributeError) as e:
-            return False, f"Error validating window height: {type(e).__name__}: {str(e)}"
+            return (
+                False,
+                f"Error validating window height: {type(e).__name__}: {str(e)}",
+            )
 
     @staticmethod
     def _clamp_z(
@@ -85,7 +89,7 @@ class WindowHeightValidator:
         z1: float,
         z2: float,
         target: float,
-        is_bottom: bool
+        is_bottom: bool,
     ) -> None:
         """Clamp the bottom or top z-coordinate of the window to the target value."""
         if is_bottom:
@@ -104,7 +108,7 @@ class WindowHeightValidator:
         cls,
         window_geometry_data: Dict[str, Any],
         floor_height: float,
-        roof_height: float
+        roof_height: float,
     ) -> Tuple[bool, str]:
         """
         Validate window height from parameter dictionaries.
@@ -122,7 +126,9 @@ class WindowHeightValidator:
             # Parse window geometry
             window_geom = WindowGeometry.from_dict(window_geometry_data)
 
-            return cls.validate_window_height_bounds(window_geom, floor_height, roof_height)
+            return cls.validate_window_height_bounds(
+                window_geom, floor_height, roof_height
+            )
 
         except WindowHeightValidationError as e:
             return False, str(e)

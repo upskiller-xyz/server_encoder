@@ -1,7 +1,8 @@
 """Server launcher for starting the Flask application"""
-import logging
-from src.server.application import ServerApplication
 
+import logging
+
+from src.server.application import ServerApplication
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class ServerLauncher:
     def create_application() -> ServerApplication:
         """
         Create and configure the Flask application.
-        
+
         Returns:
             ServerApplication: Configured server application instance
         """
@@ -24,11 +25,11 @@ class ServerLauncher:
         app: ServerApplication,
         host: str = "0.0.0.0",
         port: int = 8080,
-        debug: bool = False
+        debug: bool = False,
     ) -> None:
         """
         Run the Flask development server.
-        
+
         Args:
             app: ServerApplication instance to run
             host: Host to bind to (default: 0.0.0.0)

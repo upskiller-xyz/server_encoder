@@ -1,9 +1,10 @@
 """Unit tests for EncodingParameters model"""
 
 import pytest
+
+from src.core import RegionType
 from src.models.encoding_parameters import EncodingParameters
 from src.models.region_parameters import RegionParameters
-from src.core import RegionType
 
 
 class TestEncodingParameters:
@@ -58,7 +59,7 @@ class TestEncodingParameters:
         data = {
             RegionType.BACKGROUND.value: {"bg_param": "value"},
             RegionType.WINDOW.value: {"window_param": "value"},
-            "global_param": "value"
+            "global_param": "value",
         }
         params = EncodingParameters.from_dict(data)
         assert params.background.parameters["bg_param"] == "value"

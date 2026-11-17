@@ -1,4 +1,5 @@
 """Model type management utility"""
+
 import re
 
 
@@ -23,9 +24,9 @@ class ModelTypeManager:
         """
         # Match pattern: anything followed by underscore and version number (e.g., "_2.0.1", "_1.5")
         # Version pattern: _<digit(s)>.<digit(s)> optionally followed by .<digit(s)>
-        version_pattern = r'_\d+\.\d+(?:\.\d+)?$'
+        version_pattern = r"_\d+\.\d+(?:\.\d+)?$"
 
         # Remove version suffix if present
-        model_type_prefix = re.sub(version_pattern, '', model_type_str)
+        model_type_prefix = re.sub(version_pattern, "", model_type_str)
 
         return model_type_prefix

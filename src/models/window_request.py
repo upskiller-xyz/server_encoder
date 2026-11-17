@@ -4,6 +4,7 @@ Window Request Model
 Represents a single window with all its parameters.
 Provides validation and conversion to internal formats.
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -19,6 +20,7 @@ class WindowRequest:
     Represents a single window with all its parameters.
     Provides validation and conversion to internal formats.
     """
+
     # Required coordinates
     x1: float
     y1: float
@@ -51,8 +53,14 @@ class WindowRequest:
             (is_valid, error_message) tuple
         """
         # Validate frame ratio when provided
-        if self.window_frame_ratio is not None and not 0 <= self.window_frame_ratio <= 1:
-            return False, f"window_frame_ratio must be between 0 and 1, got {self.window_frame_ratio}"
+        if (
+            self.window_frame_ratio is not None
+            and not 0 <= self.window_frame_ratio <= 1
+        ):
+            return (
+                False,
+                f"window_frame_ratio must be between 0 and 1, got {self.window_frame_ratio}",
+            )
 
         # Validate window dimensions are positive
         width = abs(self.x2 - self.x1)
@@ -64,7 +72,10 @@ class WindowRequest:
 
         # Validate optional parameters if provided
         if self.window_sill_height is not None and self.window_sill_height < 0:
-            return False, f"window_sill_height must be non-negative, got {self.window_sill_height}"
+            return (
+                False,
+                f"window_sill_height must be non-negative, got {self.window_sill_height}",
+            )
 
         if self.window_height is not None and self.window_height <= 0:
             return False, f"window_height must be positive, got {self.window_height}"
@@ -75,7 +86,10 @@ class WindowRequest:
                     return False, f"horizon array values must be between 0 and 90"
             else:
                 if not 0 <= self.horizon <= 90:
-                    return False, f"horizon must be between 0 and 90, got {self.horizon}"
+                    return (
+                        False,
+                        f"horizon must be between 0 and 90, got {self.horizon}",
+                    )
 
         if self.zenith is not None:
             if isinstance(self.zenith, list):
@@ -123,7 +137,7 @@ class WindowRequest:
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'WindowRequest':
+    def from_dict(cls, data: Dict[str, Any]) -> "WindowRequest":
         """
         Parse dictionary into WindowRequest
 
@@ -147,7 +161,9 @@ class WindowRequest:
         ]
         missing = [field for field in required if field not in data]
         if missing:
-            raise ClientInputError(f"Missing required window fields: {', '.join(missing)}")
+            raise ClientInputError(
+                f"Missing required window fields: {', '.join(missing)}"
+            )
 
         # Parse reflectance parameters
         reflectance = ReflectanceParameters.from_dict(data)
@@ -159,32 +175,46 @@ class WindowRequest:
             x2=float(data[ParameterName.X2.value]),
             y2=float(data[ParameterName.Y2.value]),
             z2=float(data[ParameterName.Z2.value]),
-            window_frame_ratio=float(data[ParameterName.WINDOW_FRAME_RATIO.value]) if ParameterName.WINDOW_FRAME_RATIO.value in data else None,
-            window_sill_height=float(data[ParameterName.WINDOW_SILL_HEIGHT.value]) if ParameterName.WINDOW_SILL_HEIGHT.value in data else None,
-            window_height=float(data[ParameterName.WINDOW_HEIGHT.value]) if ParameterName.WINDOW_HEIGHT.value in data else None,
+            window_frame_ratio=float(data[ParameterName.WINDOW_FRAME_RATIO.value])
+            if ParameterName.WINDOW_FRAME_RATIO.value in data
+            else None,
+            window_sill_height=float(data[ParameterName.WINDOW_SILL_HEIGHT.value])
+            if ParameterName.WINDOW_SILL_HEIGHT.value in data
+            else None,
+            window_height=float(data[ParameterName.WINDOW_HEIGHT.value])
+            if ParameterName.WINDOW_HEIGHT.value in data
+            else None,
             reflectance=reflectance,
-            direction_angle=float(data[ParameterName.DIRECTION_ANGLE.value]) if ParameterName.DIRECTION_ANGLE.value in data else None,
-            horizon=WindowRequest._parse_obstruction_value(data, ParameterName.HORIZON.value),
-            zenith=WindowRequest._parse_obstruction_value(data, ParameterName.ZENITH.value),
+            direction_angle=float(data[ParameterName.DIRECTION_ANGLE.value])
+            if ParameterName.DIRECTION_ANGLE.value in data
+            else None,
+            horizon=WindowRequest._parse_obstruction_value(
+                data, ParameterName.HORIZON.value
+            ),
+            zenith=WindowRequest._parse_obstruction_value(
+                data, ParameterName.ZENITH.value
+            ),
         )
 
     @staticmethod
-    def _parse_obstruction_value(data: Dict[str, Any], key: str) -> Optional[Union[float, List[float]]]:
+    def _parse_obstruction_value(
+        data: Dict[str, Any], key: str
+    ) -> Optional[Union[float, List[float]]]:
         """
         Parse obstruction value (horizon or zenith) from dictionary.
-        
+
         Can be either a scalar float or an array of floats.
-        
+
         Args:
             data: Dictionary to parse from
             key: Key to look up
-            
+
         Returns:
             Float, List[float], or None
         """
         if key not in data:
             return None
-        
+
         value = data[key]
         if isinstance(value, list):
             return [float(v) for v in value]

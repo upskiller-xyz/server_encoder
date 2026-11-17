@@ -33,13 +33,17 @@ payload = {
                 "window_sill_height": 0.9,
                 "window_frame_ratio": 0.15,
                 "window_height": 1.5,
-                "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
                 "horizon": 15.0,
-                "zenith": 10.0
+                "zenith": 10.0,
             }
-        }
-    }
+        },
+    },
 }
 
 response = requests.post(url, json=payload)

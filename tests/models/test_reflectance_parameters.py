@@ -1,6 +1,7 @@
 """Unit tests for ReflectanceParameters model"""
 
 import pytest
+
 from src.models.reflectance_parameters import ReflectanceParameters
 
 
@@ -19,9 +20,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_with_values(self):
         """Test ReflectanceParameters with provided values"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=0.8,
-            floor_reflectance=0.3,
-            window_frame_reflectance=0.8
+            ceiling_reflectance=0.8, floor_reflectance=0.3, window_frame_reflectance=0.8
         )
         assert reflectance.ceiling_reflectance == 0.8
         assert reflectance.floor_reflectance == 0.3
@@ -30,9 +29,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_to_dict(self):
         """Test converting ReflectanceParameters to dict"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=0.8,
-            floor_reflectance=0.3,
-            window_frame_reflectance=0.8
+            ceiling_reflectance=0.8, floor_reflectance=0.3, window_frame_reflectance=0.8
         )
         result = reflectance.to_dict()
         assert isinstance(result, dict)
@@ -46,7 +43,7 @@ class TestReflectanceParameters:
         data = {
             "ceiling_reflectance": 0.8,
             "floor_reflectance": 0.3,
-            "window_frame_reflectance": 0.8
+            "window_frame_reflectance": 0.8,
         }
         reflectance = ReflectanceParameters.from_dict(data)
         assert reflectance.ceiling_reflectance == 0.8
@@ -56,9 +53,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_validate_valid_values(self):
         """Test that valid reflectance values pass validation"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=0.5,
-            floor_reflectance=0.5,
-            window_frame_reflectance=0.5
+            ceiling_reflectance=0.5, floor_reflectance=0.5, window_frame_reflectance=0.5
         )
         is_valid, message = reflectance.validate()
         assert is_valid is True
@@ -67,8 +62,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_validate_invalid_low(self):
         """Test validation fails for values below 0"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=-0.1,
-            floor_reflectance=0.5
+            ceiling_reflectance=-0.1, floor_reflectance=0.5
         )
         is_valid, message = reflectance.validate()
         assert is_valid is False
@@ -77,8 +71,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_validate_invalid_high(self):
         """Test validation fails for values above 1"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=1.5,
-            floor_reflectance=0.5
+            ceiling_reflectance=1.5, floor_reflectance=0.5
         )
         is_valid, message = reflectance.validate()
         assert is_valid is False
@@ -87,9 +80,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_boundary_values(self):
         """Test boundary values 0 and 1"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=0.0,
-            floor_reflectance=1.0,
-            window_frame_reflectance=0.5
+            ceiling_reflectance=0.0, floor_reflectance=1.0, window_frame_reflectance=0.5
         )
         is_valid, message = reflectance.validate()
         assert is_valid is True
@@ -99,9 +90,7 @@ class TestReflectanceParameters:
     def test_reflectance_parameters_partial_initialization(self):
         """Test partial initialization with some None values"""
         reflectance = ReflectanceParameters(
-            ceiling_reflectance=0.8,
-            floor_reflectance=None,
-            wall_reflectance=0.6
+            ceiling_reflectance=0.8, floor_reflectance=None, wall_reflectance=0.6
         )
         assert reflectance.ceiling_reflectance == 0.8
         assert reflectance.floor_reflectance is None

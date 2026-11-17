@@ -4,7 +4,9 @@ Tests for external reference point calculation endpoint
 Tests the /get-external-reference-point endpoint that calculates
 the external face reference point for windows.
 """
+
 import pytest
+
 from src.server.application import ServerApplication
 
 
@@ -16,7 +18,7 @@ class TestExternalReferencePointEndpoint:
         """Create test Flask application"""
         server_app = ServerApplication()
         app = server_app.app
-        app.config['TESTING'] = True
+        app.config["TESTING"] = True
         return app
 
     @pytest.fixture
@@ -30,24 +32,23 @@ class TestExternalReferencePointEndpoint:
         # Window on south wall (y=0, internal edge) extending to y=0.4
         # Window faces south (outward), so external point is at y=-0.4
         payload = {
-            "room_polygon": [
-                [-2.0, 0.0],
-                [2.0, 0.0],
-                [2.0, 3.0],
-                [-2.0, 3.0]
-            ],
+            "room_polygon": [[-2.0, 0.0], [2.0, 0.0], [2.0, 3.0], [-2.0, 3.0]],
             "windows": {
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.4, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.4,
+                    "z2": 2.5,
                 }
-            }
+            },
         }
 
         response = client.post(
-            '/get-external-reference-point',
+            "/get-external-reference-point",
             json=payload,
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 200
@@ -75,28 +76,31 @@ class TestExternalReferencePointEndpoint:
     def test_calculate_external_reference_point_multiple_windows(self, client):
         """Test external reference point calculation for multiple windows"""
         payload = {
-            "room_polygon": [
-                [-2.0, 0.0],
-                [2.0, 0.0],
-                [2.0, 3.0],
-                [-2.0, 3.0]
-            ],
+            "room_polygon": [[-2.0, 0.0], [2.0, 0.0], [2.0, 3.0], [-2.0, 3.0]],
             "windows": {
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.3, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.3,
+                    "z2": 2.5,
                 },
                 "window2": {
-                    "x1": 1.0, "y1": 0.0, "z1": 0.5,
-                    "x2": 1.8, "y2": 0.3, "z2": 2.0
-                }
-            }
+                    "x1": 1.0,
+                    "y1": 0.0,
+                    "z1": 0.5,
+                    "x2": 1.8,
+                    "y2": 0.3,
+                    "z2": 2.0,
+                },
+            },
         }
 
         response = client.post(
-            '/get-external-reference-point',
+            "/get-external-reference-point",
             json=payload,
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 200
@@ -116,19 +120,12 @@ class TestExternalReferencePointEndpoint:
     def test_missing_parameters(self, client):
         """Test error handling for missing parameters"""
         # Missing windows parameter
-        payload = {
-            "room_polygon": [
-                [-2.0, 0.0],
-                [2.0, 0.0],
-                [2.0, 3.0],
-                [-2.0, 3.0]
-            ]
-        }
+        payload = {"room_polygon": [[-2.0, 0.0], [2.0, 0.0], [2.0, 3.0], [-2.0, 3.0]]}
 
         response = client.post(
-            '/get-external-reference-point',
+            "/get-external-reference-point",
             json=payload,
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -141,16 +138,20 @@ class TestExternalReferencePointEndpoint:
         payload = {
             "windows": {
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0,
-                    "x2": 0.6, "y2": 0.4, "z2": 2.5
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
+                    "x2": 0.6,
+                    "y2": 0.4,
+                    "z2": 2.5,
                 }
             }
         }
 
         response = client.post(
-            '/get-external-reference-point',
+            "/get-external-reference-point",
             json=payload,
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -161,24 +162,21 @@ class TestExternalReferencePointEndpoint:
     def test_missing_window_coordinates(self, client):
         """Test error handling for missing window coordinates"""
         payload = {
-            "room_polygon": [
-                [-2.0, 0.0],
-                [2.0, 0.0],
-                [2.0, 3.0],
-                [-2.0, 3.0]
-            ],
+            "room_polygon": [[-2.0, 0.0], [2.0, 0.0], [2.0, 3.0], [-2.0, 3.0]],
             "windows": {
                 "window1": {
-                    "x1": -0.6, "y1": 0.0, "z1": 1.0
+                    "x1": -0.6,
+                    "y1": 0.0,
+                    "z1": 1.0,
                     # Missing x2, y2, z2
                 }
-            }
+            },
         }
 
         response = client.post(
-            '/get-external-reference-point',
+            "/get-external-reference-point",
             json=payload,
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -188,5 +186,5 @@ class TestExternalReferencePointEndpoint:
 
     def test_endpoint_requires_post(self, client):
         """Test that GET requests are not allowed"""
-        response = client.get('/get-external-reference-point')
+        response = client.get("/get-external-reference-point")
         assert response.status_code == 405  # Method Not Allowed

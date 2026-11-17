@@ -1,8 +1,10 @@
 """Test direction_angle calculation endpoint."""
 
-import pytest
 import json
 import math
+
+import pytest
+
 from src.main import ServerApplication
 
 
@@ -13,7 +15,7 @@ class TestDirectionAngleEndpoint:
     def client(self):
         """Create test client."""
         app = ServerApplication("TestApp")
-        app.app.config['TESTING'] = True
+        app.app.config["TESTING"] = True
         with app.app.test_client() as client:
             yield client
 
@@ -25,20 +27,15 @@ class TestDirectionAngleEndpoint:
             "parameters": {
                 "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
                 "windows": {
-                    "test_window": {
-                        "x1": 0.0,
-                        "y1": 0.2,
-                        "x2": 0.0,
-                        "y2": 1.8
-                    }
-                }
+                    "test_window": {"x1": 0.0, "y1": 0.2, "x2": 0.0, "y2": 1.8}
+                },
             }
         }
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 200
@@ -57,26 +54,16 @@ class TestDirectionAngleEndpoint:
             "parameters": {
                 "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
                 "windows": {
-                    "window1": {
-                        "x1": 0.0,
-                        "y1": 0.2,
-                        "x2": 0.0,
-                        "y2": 1.8
-                    },
-                    "window2": {
-                        "x1": -0.5,
-                        "y1": -7.0,
-                        "x2": -2.5,
-                        "y2": -7.0
-                    }
-                }
+                    "window1": {"x1": 0.0, "y1": 0.2, "x2": 0.0, "y2": 1.8},
+                    "window2": {"x1": -0.5, "y1": -7.0, "x2": -2.5, "y2": -7.0},
+                },
             }
         }
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 200
@@ -90,9 +77,9 @@ class TestDirectionAngleEndpoint:
         payload = {}
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         # Flask BadRequest returns HTML error page, not JSON
@@ -102,21 +89,14 @@ class TestDirectionAngleEndpoint:
         """Test error handling for missing room_polygon."""
         payload = {
             "parameters": {
-                "windows": {
-                    "window1": {
-                        "x1": 0.0,
-                        "y1": 0.2,
-                        "x2": 0.0,
-                        "y2": 1.8
-                    }
-                }
+                "windows": {"window1": {"x1": 0.0, "y1": 0.2, "x2": 0.0, "y2": 1.8}}
             }
         }
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -126,16 +106,12 @@ class TestDirectionAngleEndpoint:
 
     def test_missing_windows(self, client):
         """Test error handling for missing windows."""
-        payload = {
-            "parameters": {
-                "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]]
-            }
-        }
+        payload = {"parameters": {"room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]]}}
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -151,17 +127,17 @@ class TestDirectionAngleEndpoint:
                 "windows": {
                     "window1": {
                         "x1": 0.0,
-                        "y1": 0.2
+                        "y1": 0.2,
                         # Missing x2, y2
                     }
-                }
+                },
             }
         }
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -184,16 +160,16 @@ class TestDirectionAngleEndpoint:
                         "x1": -1.5,
                         "y1": -2.0,
                         "x2": -1.5,
-                        "y2": -4.0
+                        "y2": -4.0,
                     }
-                }
+                },
             }
         }
 
         response = client.post(
-            '/calculate-direction',
+            "/calculate-direction",
             data=json.dumps(payload),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         # Should succeed - endpoint calculates direction by projecting to nearest edge

@@ -11,6 +11,7 @@ on which region it belongs to:
 
 No obstruction bar, no parameter encoding.
 """
+
 import logging
 from typing import Any, Dict, Optional, Tuple
 
@@ -125,7 +126,9 @@ class V5ImageDirector:
         image[mask.astype(bool)] = V5_MASK_VALUES[RegionType.ROOM]
         return mask
 
-    def _draw_window(self, image: np.ndarray, all_parameters: EncodingParameters) -> None:
+    def _draw_window(
+        self, image: np.ndarray, all_parameters: EncodingParameters
+    ) -> None:
         """Fill the window area with V5_MASK_VALUES[WINDOW] (0.6)."""
         window_params = all_parameters.window.parameters
         if not window_params:
@@ -185,10 +188,16 @@ class V5ImageDirector:
 
         if window_geom.direction_angle is None and room_polygon is not None:
             try:
-                calculated_angle = window_geom.calculate_direction_from_polygon(room_polygon)
+                calculated_angle = window_geom.calculate_direction_from_polygon(
+                    room_polygon
+                )
                 window_geom = WindowGeometry(
-                    x1=window_geom.x1, y1=window_geom.y1, z1=window_geom.z1,
-                    x2=window_geom.x2, y2=window_geom.y2, z2=window_geom.z2,
+                    x1=window_geom.x1,
+                    y1=window_geom.y1,
+                    z1=window_geom.z1,
+                    x2=window_geom.x2,
+                    y2=window_geom.y2,
+                    z2=window_geom.z2,
                     direction_angle=calculated_angle,
                 )
             except ValueError:
@@ -200,7 +209,9 @@ class V5ImageDirector:
         if all_parameters.room.parameters:
             all_parameters.room[ParameterName.DIRECTION_ANGLE.value] = direction_angle
 
-        return GeometryRotator.rotate_if_needed(all_parameters, window_geom, room_polygon)
+        return GeometryRotator.rotate_if_needed(
+            all_parameters, window_geom, room_polygon
+        )
 
     # ------------------------------------------------------------------
     # Flat-parameter and multi-window entry points (same contract as RoomImageDirector)
@@ -269,7 +280,9 @@ class V5ImageDirector:
                 window_params[ParameterName.Y2.value] = window_geom.y2
                 window_params[ParameterName.Z2.value] = window_geom.z2
                 if window_geom.direction_angle is not None:
-                    window_params[ParameterName.DIRECTION_ANGLE.value] = window_geom.direction_angle
+                    window_params[ParameterName.DIRECTION_ANGLE.value] = (
+                        window_geom.direction_angle
+                    )
 
         room_params = encoding_params.room.parameters
         if room_params:
@@ -278,9 +291,12 @@ class V5ImageDirector:
                 room_params[ParameterName.ROOM_POLYGON.value] = room_polygon
 
         coord_keys = [
-            ParameterName.X1.value, ParameterName.Y1.value,
-            ParameterName.X2.value, ParameterName.Y2.value,
-            ParameterName.WINDOW_GEOMETRY.value, ParameterName.DIRECTION_ANGLE.value,
+            ParameterName.X1.value,
+            ParameterName.Y1.value,
+            ParameterName.X2.value,
+            ParameterName.Y2.value,
+            ParameterName.WINDOW_GEOMETRY.value,
+            ParameterName.DIRECTION_ANGLE.value,
             ParameterName.WALL_THICKNESS.value,
         ]
         if room_params and window_params:
@@ -289,8 +305,11 @@ class V5ImageDirector:
                     room_params[k] = window_params[k]
 
         background_params = encoding_params.background.parameters
-        if (background_params and window_params and
-                ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params):
+        if (
+            background_params
+            and window_params
+            and ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in background_params
+        ):
             window_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = (
                 background_params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
             )

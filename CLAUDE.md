@@ -48,6 +48,7 @@ class ModelLoader(ABC):
     def load(self) -> Model:
         pass
 
+
 class CheckpointModelLoader(ModelLoader):
     def __init__(self, checkpoint_url: str):
         self.checkpoint_url = checkpoint_url
@@ -64,6 +65,7 @@ class ModelStatus(Enum):
     LOADING = "loading"
     READY = "ready"
     ERROR = "error"
+
 
 # Bad Example
 status = "loading"  # Magic string
