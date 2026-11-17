@@ -304,8 +304,10 @@ Server runs on `http://localhost:8081` with debug mode off by default (set `FLAS
 
 ```sh
 docker build -t room-encoder .
-docker run -p 8081:8081 room-encoder
+docker run -p 8082:8082 room-encoder
 ```
+
+The image is built on [Project Hummingbird](https://gitlab.com/redhat/hummingbird/containers) (Red Hat hardened, distroless Python 3.15): a builder stage creates the venv, and the runtime image has no shell or package manager and runs as UID 65532. Both base images are pinned by digest.
 
 #### Production
 
