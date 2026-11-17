@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 # --build-arg if a newer patched release is needed. These pins clear the
 # pip / setuptools / wheel CVE scan findings (setuptools 83 also vendors the
 # patched jaraco.context 6.1 + wheel 0.46.3 under setuptools/_vendor/).
-ARG PIP_VERSION=26.1.2
+ARG PIP_VERSION=26.2.1
 ARG SETUPTOOLS_VERSION=83.0.0
 ARG WHEEL_VERSION=0.47.0
 # Upgrade build tooling, then purge the vulnerable bundled .whl the base image
