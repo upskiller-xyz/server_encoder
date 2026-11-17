@@ -1,67 +1,48 @@
+# Encoder image on Project Hummingbird (Red Hat hardened, distroless Python).
+#
+# Two stages: the -builder image (has pip and a shell) builds a venv, and the
+# distroless runtime image (no shell, no package manager, runs as UID 65532)
+# only receives the venv and the source. Both are pinned by index digest
+# (multi-arch); Dependabot bumps them, or bump tag and digest together:
+#   docker buildx imagetools inspect registry.access.redhat.com/hi/python:3.15
+#
+# No OS packages are installed: opencv-python-headless, numpy and shapely ship
+# manylinux wheels that bundle their native libraries (no libGL needed).
 
-# Base image pinned by digest (reproducible, tamper-evident); Dependabot bumps it.
-FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
+FROM registry.access.redhat.com/hi/python:3.15-builder@sha256:f0f26eaca78fb6e4a489640ab7578ea1022120ed044f31f575961f9935d102a9 AS build
 
-# Set working directory
+# The builder image runs as 65532 too; installing into /opt needs root.
+USER 0
+RUN python3 -m venv /opt/venv
+COPY requirements.txt /tmp/requirements.txt
+# pip is only needed to build the venv; removing it keeps it (and its CVEs)
+# out of the runtime image.
+RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && /opt/venv/bin/pip uninstall -y pip
+
+FROM registry.access.redhat.com/hi/python:3.15@sha256:0766d2d64024695dc2cb90d251c247b834d5ea8b3dec28134f09e47ff6ad68a0
+
 WORKDIR /app
 
-# Install system dependencies required for OpenCV (headless)
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Pinned build-tooling versions keep the image reproducible; override with
-# --build-arg if a newer patched release is needed. These pins clear the
-# pip / setuptools / wheel CVE scan findings (setuptools 83 also vendors the
-# patched jaraco.context 6.1 + wheel 0.46.3 under setuptools/_vendor/).
-ARG PIP_VERSION=26.2.1
-ARG SETUPTOOLS_VERSION=83.0.0
-ARG WHEEL_VERSION=0.47.0
-# Upgrade build tooling, then purge the vulnerable bundled .whl the base image
-# ships: the scoped find deletes the ensurepip _bundled wheels (old pip/
-# setuptools/wheel that scanners flag), plus the pip cache. Scoped to
-# /usr/local/lib on purpose (no full-filesystem scan). The block ends in
-# `true`, so this best-effort cleanup never fails the build; the pip upgrade
-# stays &&-gated so a failed upgrade still does.
-RUN pip install --no-cache-dir --upgrade "pip==${PIP_VERSION}" "setuptools==${SETUPTOOLS_VERSION}" "wheel==${WHEEL_VERSION}" \
-    && { \
-        find /usr/local/lib -type d -name "_bundled" -path "*ensurepip*" -exec rm -rf {} + 2>/dev/null; \
-        rm -rf /root/.cache/pip; \
-        true; \
-    }
-
-# Copy requirements first for better layer caching
-COPY requirements.txt ./
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy source code
-# Unprivileged runtime user (no shell, no home); the service never writes to disk.
-RUN groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
-
-COPY src/ ./src/
-
-# Set environment variables
-ENV PORT=8082 \
+# PORT is read by gunicorn itself (no --bind: it binds 0.0.0.0:$PORT), so the
+# platform can still override it without a shell to expand $PORT.
+ENV PATH=/opt/venv/bin:$PATH \
+    PORT=8082 \
     PYTHONUNBUFFERED=1 \
     CUDA_VISIBLE_DEVICES=-1 \
     TF_CPP_MIN_LOG_LEVEL=3 \
     OPENCV_IO_ENABLE_OPENEXR=0 \
     OMP_NUM_THREADS=1
 
-# Make files read-only for security
-# Read-only for everyone; directories keep +x so the app user can traverse them.
-RUN chmod -R a-w,a+rX ./src/ && \
-    chmod 444 ./requirements.txt
+COPY --from=build /opt/venv /opt/venv
+# Copied as root-owned files, so the runtime user cannot modify them; the
+# service never writes to disk (HOME is /tmp in the base image).
+COPY requirements.txt ./
+COPY src/ ./src/
 
-USER app
+# The image default (65532), stated explicitly so a base-image change cannot
+# silently make the service run as root.
+USER 65532
 
-# Run with gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 900 --access-logfile - --error-logfile - src.main:app
+EXPOSE 8082
+CMD ["gunicorn", "--workers", "1", "--threads", "8", "--timeout", "900", "--access-logfile", "-", "--error-logfile", "-", "src.main:app"]

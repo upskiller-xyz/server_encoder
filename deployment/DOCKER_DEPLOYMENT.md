@@ -210,14 +210,15 @@ docker compose logs -f
 ### Execute Commands in Container
 
 ```bash
-# Open bash shell in container
-docker exec -it obstruction-server bash
+# The image is distroless (Project Hummingbird): no shell, no curl.
+# Open a Python REPL in the container
+docker exec -it encoder-server python
 
 # Run a single command
-docker exec obstruction-server curl http://localhost:8080/
+docker exec encoder-server python -c "import urllib.request; urllib.request.urlopen('http://localhost:8082/', timeout=5)"
 
 # Check Python version
-docker exec obstruction-server python --version
+docker exec encoder-server python --version
 ```
 
 ### Container Resource Usage
@@ -344,7 +345,7 @@ docker ps | grep obstruction-server
 docker inspect obstruction-server | grep -A 10 Health
 
 # Test from inside container
-docker exec obstruction-server curl http://localhost:8080/
+docker exec encoder-server python -c "import urllib.request; urllib.request.urlopen('http://localhost:8082/', timeout=5)"
 
 # Check logs
 docker logs --tail 50 obstruction-server
@@ -443,7 +444,8 @@ services:
 
 ### 1. Use Non-Root User (Already Implemented)
 
-The Dockerfile should run as non-root user for security.
+The runtime image is Project Hummingbird's distroless Python image (no shell,
+no package manager) and runs as UID 65532. Only `/tmp` is writable.
 
 ### 2. Limit Container Capabilities
 
