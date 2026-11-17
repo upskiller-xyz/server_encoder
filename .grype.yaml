@@ -19,3 +19,14 @@ ignore:
     package:
       name: libuuid
       type: rpm
+
+  # ffmpeg 9.0.2 bundled in the opencv-python-headless 5.1.0.95 wheel (only
+  # for cv2 video I/O): High, no fixed version published yet. The service
+  # never opens video (no VideoCapture/VideoWriter), so libavcodec is not
+  # reached. Scoped to this ffmpeg version so a newer wheel drops the match.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-107696
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
