@@ -82,7 +82,7 @@ The **Room Encoding Server** transforms 3D room geometry and physical parameters
 
 ### Built With
 
-* [Python 3.10+](https://www.python.org/)
+* [Python 3.14+](https://www.python.org/)
 * [Flask](https://flask.palletsprojects.com/) - Web framework
 * [OpenCV](https://opencv.org/) - Image processing
 * [NumPy](https://numpy.org/) - Numerical computing
@@ -95,7 +95,7 @@ The **Room Encoding Server** transforms 3D room geometry and physical parameters
 
 ### Prerequisites
 
-* Python 3.10 or higher
+* Python 3.14 or higher
 * Poetry (recommended) or pip
 
 ### Installation
