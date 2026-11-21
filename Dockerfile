@@ -9,7 +9,7 @@
 # No OS packages are installed: opencv-python-headless, numpy and shapely ship
 # manylinux wheels that bundle their native libraries (no libGL needed).
 
-FROM registry.access.redhat.com/hi/python:3.15-builder@sha256:f0f26eaca78fb6e4a489640ab7578ea1022120ed044f31f575961f9935d102a9 AS build
+FROM registry.access.redhat.com/hi/python:3.15-builder@sha256:1d22bdc2a76221b47842c8b77afbc68bea577e5480b4ed51a5384712b84385f6 AS build
 
 # The builder image runs as 65532 too; installing into /opt needs root.
 USER 0
@@ -20,7 +20,7 @@ COPY requirements.txt /tmp/requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
     && /opt/venv/bin/pip uninstall -y pip
 
-FROM registry.access.redhat.com/hi/python:3.15@sha256:0766d2d64024695dc2cb90d251c247b834d5ea8b3dec28134f09e47ff6ad68a0
+FROM registry.access.redhat.com/hi/python:3.15@sha256:1739a8c22a807a31cb06a266747b72a276d8e416910a920941b168681a72420b
 
 WORKDIR /app
 
