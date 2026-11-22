@@ -9,6 +9,7 @@ static-parameter vector alongside the image.
   V6: geometry + obstruction input; returns (image, mask, static_vector) via
       encode_room_image_arrays_v6() / encode_multi_window_images_arrays_v6()
 """
+
 import logging
 from typing import Any, Dict, Optional, Tuple
 
@@ -49,7 +50,9 @@ class V5EncodingService(EncodingService):
         # Bypass EncodingService.__init__: RGBA builder/director not needed here
         self._encoding_scheme = encoding_scheme
         self._encoder_factory = EncoderFactory()
-        self._validator = EncodingParameterValidator(encoding_scheme, self._encoder_factory)
+        self._validator = EncodingParameterValidator(
+            encoding_scheme, self._encoder_factory
+        )
 
     def _create_director(self):
         """Create a fresh, request-local V5/V6 director.
@@ -58,7 +61,11 @@ class V5EncodingService(EncodingService):
         shared across concurrent requests via the singleton service (see
         EncodingService._create_director).
         """
-        return V6ImageDirector() if self._encoding_scheme == EncodingScheme.V6 else V5ImageDirector()
+        return (
+            V6ImageDirector()
+            if self._encoding_scheme == EncodingScheme.V6
+            else V5ImageDirector()
+        )
 
     # ------------------------------------------------------------------
     # Validation
@@ -75,10 +82,18 @@ class V5EncodingService(EncodingService):
         """
         if ParameterName.WINDOWS.value in parameters:
             if not isinstance(parameters[ParameterName.WINDOWS.value], dict):
-                return False, "Parameter 'windows' must be a dictionary mapping window_id to window parameters"
-            for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
+                return (
+                    False,
+                    "Parameter 'windows' must be a dictionary mapping window_id to window parameters",
+                )
+            for window_id, window_params in parameters[
+                ParameterName.WINDOWS.value
+            ].items():
                 if not isinstance(window_params, dict):
-                    return False, f"Window '{window_id}' parameters must be a dictionary"
+                    return (
+                        False,
+                        f"Window '{window_id}' parameters must be a dictionary",
+                    )
                 merged = {**parameters, **window_params}
                 merged.pop(ParameterName.WINDOWS.value, None)
                 is_valid, error_msg = self._validate_flat(merged)
@@ -133,14 +148,22 @@ class V5EncodingService(EncodingService):
             logger.error("V5/V6 parameter validation failed: %s", error_msg)
             raise ClientInputError(error_msg)
 
-        logger.info("Encoding V%s mask - model_type: %s", self._encoding_scheme.value, model_type.value)
+        logger.info(
+            "Encoding V%s mask - model_type: %s",
+            self._encoding_scheme.value,
+            model_type.value,
+        )
 
         director = self._create_director()
         result = director.construct_from_flat_parameters(model_type, parameters)
         image_array = result[0]
         mask_array = result[1]
 
-        logger.info("V%s mask encoded - shape: %s", self._encoding_scheme.value, image_array.shape)
+        logger.info(
+            "V%s mask encoded - shape: %s",
+            self._encoding_scheme.value,
+            image_array.shape,
+        )
         return image_array, mask_array
 
     def encode_multi_window_images_arrays(
@@ -157,12 +180,17 @@ class V5EncodingService(EncodingService):
 
         logger.info(
             "Encoding multi-window V%s masks - model_type: %s, window_count: %d",
-            self._encoding_scheme.value, model_type.value,
+            self._encoding_scheme.value,
+            model_type.value,
             len(parameters[ParameterName.WINDOWS.value]),
         )
         director = self._create_director()
         result = director.construct_multi_window_images(model_type, parameters)
-        logger.info("Multi-window V%s masks encoded - count: %d", self._encoding_scheme.value, len(result.images))
+        logger.info(
+            "Multi-window V%s masks encoded - count: %d",
+            self._encoding_scheme.value,
+            len(result.images),
+        )
         return result
 
     # ------------------------------------------------------------------
@@ -181,7 +209,9 @@ class V5EncodingService(EncodingService):
             NotImplementedError: When called on a V5 instance
         """
         if self._encoding_scheme != EncodingScheme.V6:
-            raise NotImplementedError("encode_room_image_arrays_v6 is only available for V6 encoding.")
+            raise NotImplementedError(
+                "encode_room_image_arrays_v6 is only available for V6 encoding."
+            )
 
         self._validator.ensure_direction_angle(parameters)
 
@@ -190,14 +220,22 @@ class V5EncodingService(EncodingService):
             logger.error("V6 parameter validation failed: %s", error_msg)
             raise ClientInputError(error_msg)
 
-        logger.info("Encoding V6 image - model_type: %s, param_count: %d", model_type.value, len(parameters))
-
-        director = self._create_director()
-        image_array, mask_array, static_vector = director.construct_from_flat_parameters(
-            model_type, parameters
+        logger.info(
+            "Encoding V6 image - model_type: %s, param_count: %d",
+            model_type.value,
+            len(parameters),
         )
 
-        logger.info("V6 image encoded - shape: %s, static_vector: %s", image_array.shape, static_vector)
+        director = self._create_director()
+        image_array, mask_array, static_vector = (
+            director.construct_from_flat_parameters(model_type, parameters)
+        )
+
+        logger.info(
+            "V6 image encoded - shape: %s, static_vector: %s",
+            image_array.shape,
+            static_vector,
+        )
         return image_array, mask_array, static_vector
 
     def encode_multi_window_images_arrays_v6(
@@ -212,17 +250,22 @@ class V5EncodingService(EncodingService):
             NotImplementedError: When called on a V5 instance
         """
         if self._encoding_scheme != EncodingScheme.V6:
-            raise NotImplementedError("encode_multi_window_images_arrays_v6 is only available for V6 encoding.")
+            raise NotImplementedError(
+                "encode_multi_window_images_arrays_v6 is only available for V6 encoding."
+            )
 
         if ParameterName.WINDOWS.value not in parameters:
-            image, mask, static_vector = self.encode_room_image_arrays_v6(parameters, model_type)
+            image, mask, static_vector = self.encode_room_image_arrays_v6(
+                parameters, model_type
+            )
             result = V6EncodingResult()
             result.add_window("window_1", image, mask, static_vector)
             return result
 
         logger.info(
             "Encoding multi-window V6 - model_type: %s, window_count: %d",
-            model_type.value, len(parameters[ParameterName.WINDOWS.value]),
+            model_type.value,
+            len(parameters[ParameterName.WINDOWS.value]),
         )
         director = self._create_director()
         result = director.construct_multi_window_images(model_type, parameters)
@@ -239,7 +282,9 @@ class V5EncodingService(EncodingService):
             "exported as PNG byte streams. Use encode_room_image_arrays() instead."
         )
 
-    def encode_multi_window_images(self, parameters: Dict[str, Any], model_type: ModelType):
+    def encode_multi_window_images(
+        self, parameters: Dict[str, Any], model_type: ModelType
+    ):
         raise NotImplementedError(
             "Geometric mask encoding produces float32 single-channel arrays and cannot be "
             "exported as PNG byte streams. Use encode_multi_window_images_arrays() instead."

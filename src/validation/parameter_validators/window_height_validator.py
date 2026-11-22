@@ -1,15 +1,21 @@
 """Validator for window height placement (SRP: validates only window height bounds)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
-from src.validation.enums import ValidationErrorType
+
+from src.components.geometry import (
+    WindowHeightValidator as GeometryWindowHeightValidator,
+)
 from src.core.enums import ParameterName
-from src.components.geometry import WindowHeightValidator as GeometryWindowHeightValidator
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
+from src.validation.enums import ValidationErrorType
 
 
 class WindowHeightValidator(BaseValidator):
     """Validates that window height is between floor and roof"""
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate window height bounds.
 
@@ -27,7 +33,7 @@ class WindowHeightValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"Window data must be a dictionary, got {type(value).__name__}",
-                parameter_name="window"
+                parameter_name="window",
             )
             result.add_error(error)
             return result
@@ -37,7 +43,7 @@ class WindowHeightValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.MISSING_PARAMETER,
                 message="Context with floor_height and height_roof_over_floor is required",
-                parameter_name="context"
+                parameter_name="context",
             )
             result.add_error(error)
             return result
@@ -59,14 +65,14 @@ class WindowHeightValidator(BaseValidator):
         is_valid, error_msg = GeometryWindowHeightValidator.validate_from_parameters(
             window_geometry_data=window_geometry_data,
             floor_height=floor_height,
-            roof_height=roof_height
+            roof_height=roof_height,
         )
 
         if not is_valid:
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_RANGE,
                 message=f"Window height validation failed: {error_msg}",
-                parameter_name="window_height"
+                parameter_name="window_height",
             )
             result.add_error(error)
 

@@ -24,9 +24,9 @@ class RoomImageBuilder:
     @classmethod
     def _empty(cls) -> np.ndarray:
         return np.zeros((128, 128, 4), dtype=np.uint8)
-    
+
     @classmethod
-    def _is_empty(cls, arr)->bool:
+    def _is_empty(cls, arr) -> bool:
         return np.array_equal(arr, cls._empty())
 
     def __init__(self, encoding_scheme: EncodingScheme = EncodingScheme.V2):
@@ -37,7 +37,7 @@ class RoomImageBuilder:
         self._room_mask: np.ndarray = self._empty()
         self.reset()
 
-    def reset(self) -> 'RoomImageBuilder':
+    def reset(self) -> "RoomImageBuilder":
         """Reset builder to initial state"""
         # Create 128×128 RGBA image initialized to zeros
         self._image = self._empty()
@@ -45,14 +45,16 @@ class RoomImageBuilder:
         self._room_mask = self._empty()
         return self
 
-    def set_model_type(self, model_type: ModelType) -> 'RoomImageBuilder':
+    def set_model_type(self, model_type: ModelType) -> "RoomImageBuilder":
         """Set the model type for encoding"""
         if not isinstance(model_type, ModelType):
             raise ClientInputError(f"Invalid model type: {model_type}")
         self._model_type = model_type
         return self
 
-    def encode_region(self, region_type: RegionType, parameters: Dict[str, Any]) -> 'RoomImageBuilder':
+    def encode_region(
+        self, region_type: RegionType, parameters: Dict[str, Any]
+    ) -> "RoomImageBuilder":
         """
         Encode a region using its encoder (Single Responsibility Principle)
 
@@ -69,7 +71,9 @@ class RoomImageBuilder:
         # if region_type == RegionType.WINDOW and not self._is_empty(self._room_mask):
         #     self._snap_window_to_room(parameters)
 
-        encoder = self._region_encoder_factory.get_encoder(region_type, self._encoding_scheme)
+        encoder = self._region_encoder_factory.get_encoder(
+            region_type, self._encoding_scheme
+        )
         self._image = encoder.encode_region(self._image, parameters, self._model_type)
 
         # Capture room mask when encoding room region

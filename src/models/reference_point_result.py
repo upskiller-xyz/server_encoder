@@ -4,6 +4,7 @@ from enum import Enum
 
 class CoordinateAxis(str, Enum):
     """Coordinate axis enumeration (Enumerator Pattern)"""
+
     X = "x"
     Y = "y"
     Z = "z"
@@ -17,6 +18,7 @@ class ReferencePointResult:
     Encapsulates a 3D reference point with proper OOP design.
     Uses enum members for coordinate keys instead of magic strings.
     """
+
     x: float
     y: float
     z: float
@@ -32,7 +34,7 @@ class ReferencePointResult:
         return {
             CoordinateAxis.X.value: round(self.x, 4),
             CoordinateAxis.Y.value: round(self.y, 4),
-            CoordinateAxis.Z.value: round(self.z, 4)
+            CoordinateAxis.Z.value: round(self.z, 4),
         }
 
     @classmethod

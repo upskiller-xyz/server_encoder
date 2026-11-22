@@ -1,13 +1,21 @@
 """Validation utility functions (SRP: helper functions for validation checks)"""
-from typing import Dict, Any
-from src.core.enums import ParameterName, REQUIRED_WINDOW_COORDINATES, REQUIRED_WINDOW_2D_COORDINATES
+
+from typing import Any, Dict
+
+from src.core.enums import (
+    REQUIRED_WINDOW_2D_COORDINATES,
+    REQUIRED_WINDOW_COORDINATES,
+    ParameterName,
+)
 
 
 class ValidationUtils:
     """Utility class for common validation checks"""
 
     @staticmethod
-    def has_window_coordinates(parameters: Dict[str, Any], require_3d: bool = True) -> bool:
+    def has_window_coordinates(
+        parameters: Dict[str, Any], require_3d: bool = True
+    ) -> bool:
         """
         Check if parameters contain window coordinates.
 
@@ -24,7 +32,11 @@ class ValidationUtils:
             return True
 
         # Check for flat coordinate structure
-        required_coords = REQUIRED_WINDOW_COORDINATES if require_3d else REQUIRED_WINDOW_2D_COORDINATES
+        required_coords = (
+            REQUIRED_WINDOW_COORDINATES
+            if require_3d
+            else REQUIRED_WINDOW_2D_COORDINATES
+        )
         return all(k in parameters for k in required_coords)
 
     @staticmethod

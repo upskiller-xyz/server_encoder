@@ -1,9 +1,8 @@
 from typing import List, Tuple, Union
-from src.components.geometry.window_geometry import WindowGeometry
+
 from src.components.geometry.room_polygon import RoomPolygon
-from src.core import ParameterName
-from src.core import GRAPHICS_CONSTANTS
-from src.core import WindowNotOnPolygonError
+from src.components.geometry.window_geometry import WindowGeometry
+from src.core import GRAPHICS_CONSTANTS, ParameterName, WindowNotOnPolygonError
 
 
 class WindowBorderValidator:
@@ -13,11 +12,10 @@ class WindowBorderValidator:
     The internal side of the window should lie on one of the polygon's edges.
     Uses Shapely geometry for precise calculations.
     """
+
     @classmethod
     def validate_window_on_border(
-        cls,
-        window_geometry: WindowGeometry,
-        room_polygon: RoomPolygon
+        cls, window_geometry: WindowGeometry, room_polygon: RoomPolygon
     ) -> Tuple[bool, str]:
         """
         Validate that window internal side lies on a polygon edge
@@ -37,31 +35,34 @@ class WindowBorderValidator:
             (is_valid, error_message) tuple
         """
 
-
         w_edges = window_geometry.get_candidate_edges()
 
         window_on_edge = any(
-            room_polygon.boundary_contains(w_edge, GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE)
+            room_polygon.boundary_contains(
+                w_edge, GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE
+            )
             for w_edge in w_edges
         )
 
         if not window_on_edge:
             raise WindowNotOnPolygonError(
-            window_bbox=(window_geometry.x1, window_geometry.y1, window_geometry.x2, window_geometry.y2),
-            direction_angle=window_geometry.direction_angle,
-            tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
-            polygon_edges=room_polygon.get_edges(),
-            window_edges=w_edges
-        )
+                window_bbox=(
+                    window_geometry.x1,
+                    window_geometry.y1,
+                    window_geometry.x2,
+                    window_geometry.y2,
+                ),
+                direction_angle=window_geometry.direction_angle,
+                tolerance=GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE,
+                polygon_edges=room_polygon.get_edges(),
+                window_edges=w_edges,
+            )
 
         return True, ""
-    
 
     @classmethod
     def validate_from_dict(
-        cls,
-        window_data: dict,
-        polygon_data: List[Union[dict, List[float]]]
+        cls, window_data: dict, polygon_data: List[Union[dict, List[float]]]
     ) -> Tuple[bool, str]:
         """
         Validate window position from dictionary data

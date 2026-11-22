@@ -4,6 +4,7 @@ Geometry service.
 SRP: owns geometric queries — direction angle, reference point, and external
 reference point. These are coordinate calculations, not encoding operations.
 """
+
 import logging
 import math
 from typing import Any, Dict
@@ -51,19 +52,25 @@ class GeometryService:
                 results[window_id] = angle
                 logger.info(
                     "Calculated direction_angle for '%s': %.4f rad (%.2f°)",
-                    window_id, angle, angle * 180 / math.pi,
+                    window_id,
+                    angle,
+                    angle * 180 / math.pi,
                 )
             except ClientInputError:
                 raise
             except Exception as exc:
-                logger.exception("direction_angle calculation failed for window '%s'", window_id)
+                logger.exception(
+                    "direction_angle calculation failed for window '%s'", window_id
+                )
                 raise ClientInputError(
                     f"Failed to calculate direction_angle for window '{window_id}'"
                 ) from exc
 
         return results
 
-    def calculate_reference_point(self, parameters: Dict[str, Any]) -> Dict[str, ReferencePointResult]:
+    def calculate_reference_point(
+        self, parameters: Dict[str, Any]
+    ) -> Dict[str, ReferencePointResult]:
         """
         Calculate the reference point (window edge on room boundary) for each window.
 
@@ -83,23 +90,32 @@ class GeometryService:
         for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
             try:
                 window_geom = WindowGeometry.from_dict(window_params)
-                ref_point = window_geom.calculate_reference_point_from_polygon(room_polygon)
+                ref_point = window_geom.calculate_reference_point_from_polygon(
+                    room_polygon
+                )
                 results[window_id] = ReferencePointResult.from_point(ref_point)
                 logger.info(
                     "Calculated reference_point for '%s': (%.4f, %.4f, %.4f)",
-                    window_id, ref_point.x, ref_point.y, ref_point.z,
+                    window_id,
+                    ref_point.x,
+                    ref_point.y,
+                    ref_point.z,
                 )
             except ClientInputError:
                 raise
             except Exception as exc:
-                logger.exception("reference_point calculation failed for window '%s'", window_id)
+                logger.exception(
+                    "reference_point calculation failed for window '%s'", window_id
+                )
                 raise ClientInputError(
                     f"Failed to calculate reference_point for window '{window_id}'"
                 ) from exc
 
         return results
 
-    def calculate_external_reference_point(self, parameters: Dict[str, Any]) -> Dict[str, ReferencePointResult]:
+    def calculate_external_reference_point(
+        self, parameters: Dict[str, Any]
+    ) -> Dict[str, ReferencePointResult]:
         """
         Calculate the external reference point (opposite face of the window) for each window.
 
@@ -119,16 +135,24 @@ class GeometryService:
         for window_id, window_params in parameters[ParameterName.WINDOWS.value].items():
             try:
                 window_geom = WindowGeometry.from_dict(window_params)
-                ext_point = window_geom.calculate_external_reference_point_from_polygon(room_polygon)
+                ext_point = window_geom.calculate_external_reference_point_from_polygon(
+                    room_polygon
+                )
                 results[window_id] = ReferencePointResult.from_point(ext_point)
                 logger.info(
                     "Calculated external_reference_point for '%s': (%.4f, %.4f, %.4f)",
-                    window_id, ext_point.x, ext_point.y, ext_point.z,
+                    window_id,
+                    ext_point.x,
+                    ext_point.y,
+                    ext_point.z,
                 )
             except ClientInputError:
                 raise
             except Exception as exc:
-                logger.exception("external_reference_point calculation failed for window '%s'", window_id)
+                logger.exception(
+                    "external_reference_point calculation failed for window '%s'",
+                    window_id,
+                )
                 raise ClientInputError(
                     f"Failed to calculate external_reference_point for window '{window_id}'"
                 ) from exc

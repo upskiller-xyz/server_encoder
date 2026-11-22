@@ -1,9 +1,10 @@
-from typing import Optional
 import copy
 import math
-from src.core import ParameterName, GRAPHICS_CONSTANTS
+from typing import Optional
+
+from src.components.geometry import Point2D, RoomPolygon, WindowGeometry
+from src.core import GRAPHICS_CONSTANTS, ParameterName
 from src.models import EncodingParameters
-from src.components.geometry import WindowGeometry, RoomPolygon, Point2D
 
 
 class GeometryRotator:
@@ -15,7 +16,7 @@ class GeometryRotator:
     def rotate_if_needed(
         all_parameters: EncodingParameters,
         window_geom: WindowGeometry,
-        room_polygon: Optional[RoomPolygon]
+        room_polygon: Optional[RoomPolygon],
     ) -> EncodingParameters:
         """
         Rotate geometry if window is not pointing right (0 degrees)
@@ -33,8 +34,12 @@ class GeometryRotator:
             all_parameters.set_global(ParameterName.DIRECTION_ANGLE.value, 0.0)
             return all_parameters
 
-        direction_angle_degrees = window_geom.direction_angle * 180 / math.pi  # Convert to degrees
-        all_parameters.set_global(ParameterName.DIRECTION_ANGLE.value, window_geom.direction_angle)
+        direction_angle_degrees = (
+            window_geom.direction_angle * 180 / math.pi
+        )  # Convert to degrees
+        all_parameters.set_global(
+            ParameterName.DIRECTION_ANGLE.value, window_geom.direction_angle
+        )
 
         # If already pointing right (within tolerance), no rotation needed
         if abs(direction_angle_degrees) < GRAPHICS_CONSTANTS.WINDOW_PLACEMENT_TOLERANCE:
@@ -53,7 +58,9 @@ class GeometryRotator:
         rotated_window = window_geom.rotate(rotation_angle, origin)
         window_params_copy = rotated_params.window.parameters
 
-        GeometryRotator._update_window_coords(window_params_copy, rotated_window, window_geom.wall_thickness)
+        GeometryRotator._update_window_coords(
+            window_params_copy, rotated_window, window_geom.wall_thickness
+        )
 
         # Rotate room polygon if present
         if room_polygon is not None:
@@ -62,7 +69,9 @@ class GeometryRotator:
             room_params = rotated_params.room.parameters
             room_params[ParameterName.ROOM_POLYGON.value] = rotated_polygon
 
-            GeometryRotator._update_window_coords(room_params, rotated_window, window_geom.wall_thickness)
+            GeometryRotator._update_window_coords(
+                room_params, rotated_window, window_geom.wall_thickness
+            )
 
             # Set direction_angle to 0 after rotation (window now points right)
             room_params[ParameterName.DIRECTION_ANGLE.value] = 0.0
@@ -70,7 +79,9 @@ class GeometryRotator:
         return rotated_params
 
     @staticmethod
-    def _update_window_coords(param_dict: dict, window: WindowGeometry, thickness: float) -> dict:
+    def _update_window_coords(
+        param_dict: dict, window: WindowGeometry, thickness: float
+    ) -> dict:
         """Update parameter dict with window coordinates and thickness"""
         param_dict[ParameterName.X1.value] = window.x1
         param_dict[ParameterName.Y1.value] = window.y1

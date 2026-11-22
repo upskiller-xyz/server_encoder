@@ -136,9 +136,9 @@ response = requests.post("http://localhost:8081/encode", json=payload)
 npz = np.load(io.BytesIO(response.content))
 
 image = npz["main_window_image"]  # (128, 128, 1) float32
-mask  = npz["main_window_mask"]   # (128, 128) binary room mask
+mask = npz["main_window_mask"]  # (128, 128) binary room mask
 
-print(image.shape, image.dtype)   # (128, 128, 1) float32
+print(image.shape, image.dtype)  # (128, 128, 1) float32
 print(np.unique(image.round(2)))  # [0.  0.6 1. ]
 ```
 
@@ -280,8 +280,8 @@ Pass `encoding_scheme` in the request body:
 ```python
 payload = {
     "model_type": "df_default",
-    "encoding_scheme": "v12",   # "v1"|"v2"|"v3"|"v4"|"v5"|"v6"|"v7"|"v8"|"v9"|"v10"|"v11"|"v12"|"v13"
-    "parameters": { ... }
+    "encoding_scheme": "v12",  # "v1"|"v2"|"v3"|"v4"|"v5"|"v6"|"v7"|"v8"|"v9"|"v10"|"v11"|"v12"|"v13"
+    "parameters": {...},
 }
 ```
 

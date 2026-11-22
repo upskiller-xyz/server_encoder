@@ -29,7 +29,7 @@ class ContentType(Enum):
 
     @classmethod
     def is_image(cls, content_type: str) -> bool:
-        return content_type.startswith('image/')
+        return content_type.startswith("image/")
 
 
 class HTTPStatus(Enum):
@@ -40,6 +40,7 @@ class HTTPStatus(Enum):
 
 class ServiceName(Enum):
     """Service names for dependency injection"""
+
     ENCODING_SERVICE = "encoding_service"
     ENCODING_SERVICE_V1 = "encoding_service_v1"
     ENCODING_SERVICE_V2 = "encoding_service_v2"
@@ -50,9 +51,9 @@ class ServiceName(Enum):
 
 class Endpoint(Enum):
     """API endpoint names"""
+
     STATUS = "status"
     ENCODE = "encode"
     CALCULATE_DIRECTION = "calculate_direction"
     GET_REFERENCE_POINT = "get_reference_point"
     GET_EXTERNAL_REFERENCE_POINT = "get_external_reference_point"
-

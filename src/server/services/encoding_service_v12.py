@@ -13,6 +13,7 @@ returned as a separate 1-D float32 static vector (V12_STATIC_PARAMS order).
   V12: background + room + window stripe + projection rectangle + static_vector
   V13: background + room + projection rectangle + static_vector  (no window stripe)
 """
+
 import logging
 from typing import Any, Dict, Optional, Tuple
 
@@ -85,14 +86,18 @@ class V12EncodingService(EncodingService):
         """
         windows_key = ParameterName.WINDOWS.value
         if windows_key not in parameters:
-            image, mask, static_vector = self.encode_room_image_arrays_v12(parameters, model_type)
+            image, mask, static_vector = self.encode_room_image_arrays_v12(
+                parameters, model_type
+            )
             return {"window_1": (image, mask, static_vector)}
 
         shared = {k: v for k, v in parameters.items() if k != windows_key}
         result = {}
         for window_id, window_params in parameters[windows_key].items():
             merged = {**shared, **window_params}
-            image, mask, static_vector = self.encode_room_image_arrays_v12(merged, model_type)
+            image, mask, static_vector = self.encode_room_image_arrays_v12(
+                merged, model_type
+            )
             result[window_id] = (image, mask, static_vector)
         return result
 
@@ -127,7 +132,10 @@ class V12EncodingService(EncodingService):
             key = param_name.value
             raw = flat.get(key, self._STATIC_PARAM_DEFAULTS.get(key))
             if raw is None:
-                logger.debug("V12 static vector: '%s' not found and has no default, using 0.0", key)
+                logger.debug(
+                    "V12 static vector: '%s' not found and has no default, using 0.0",
+                    key,
+                )
                 continue
             try:
                 encoder = self._encoder_factory.create_encoder(key)

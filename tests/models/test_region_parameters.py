@@ -1,6 +1,7 @@
 """Unit tests for RegionParameters model"""
 
 import pytest
+
 from src.models.region_parameters import RegionParameters
 
 

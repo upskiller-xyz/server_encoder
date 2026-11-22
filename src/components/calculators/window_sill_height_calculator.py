@@ -21,7 +21,10 @@ class WindowSillHeightCalculator(IParameterCalculator):
     def can_calculate(self, parameters: Dict[str, Any]) -> bool:
         """Check if we have window geometry and floor height"""
         has_window_geometry = ParameterName.WINDOW_GEOMETRY.value in parameters
-        has_z_coords = ParameterName.Z1.value in parameters and ParameterName.Z2.value in parameters
+        has_z_coords = (
+            ParameterName.Z1.value in parameters
+            and ParameterName.Z2.value in parameters
+        )
         has_floor_height = ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in parameters
 
         return (has_window_geometry or has_z_coords) and has_floor_height
@@ -54,7 +57,9 @@ class WindowSillHeightCalculator(IParameterCalculator):
                 z1 = float(parameters.get(ParameterName.Z1.value, 0))
                 z2 = float(parameters.get(ParameterName.Z2.value, 0))
 
-            floor_height = float(parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value])
+            floor_height = float(
+                parameters[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
+            )
 
             # Calculate: min(z1, z2) - floor_height, capped at 0
             window_bottom = min(z1, z2)

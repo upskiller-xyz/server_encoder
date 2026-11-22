@@ -1,16 +1,22 @@
 """Validator for window border placement (SRP: validates only window border positioning)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.components.geometry import (
+    WindowBorderValidator as GeometryWindowBorderValidator,
+)
+from src.core.enums import ParameterName
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
 from src.validation.utils import ValidationUtils
-from src.core.enums import ParameterName
-from src.components.geometry import WindowBorderValidator as GeometryWindowBorderValidator
 
 
 class WindowBorderValidator(BaseValidator):
     """Validates that window is positioned on the room polygon border"""
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate window border placement.
 
@@ -28,7 +34,7 @@ class WindowBorderValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"Window data must be a dictionary, got {type(value).__name__}",
-                parameter_name="window"
+                parameter_name="window",
             )
             result.add_error(error)
             return result
@@ -38,7 +44,7 @@ class WindowBorderValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.MISSING_PARAMETER,
                 message="room_polygon is required in context for window border validation",
-                parameter_name="room_polygon"
+                parameter_name="room_polygon",
             )
             result.add_error(error)
             return result
@@ -46,7 +52,9 @@ class WindowBorderValidator(BaseValidator):
         room_polygon = context["room_polygon"]
 
         # Check if we have window coordinates (either as nested object or flat)
-        has_window_coords = ValidationUtils.has_window_coordinates(value, require_3d=True)
+        has_window_coords = ValidationUtils.has_window_coordinates(
+            value, require_3d=True
+        )
 
         if not has_window_coords:
             # Skip validation if no window coordinates present
@@ -54,15 +62,14 @@ class WindowBorderValidator(BaseValidator):
 
         # Use existing WindowBorderValidator from geometry components
         is_valid, error_msg = GeometryWindowBorderValidator.validate_from_dict(
-            window_data=value,
-            polygon_data=room_polygon
+            window_data=value, polygon_data=room_polygon
         )
 
         if not is_valid:
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_VALUE,
                 message=f"Window geometry validation failed: {error_msg}",
-                parameter_name="window_geometry"
+                parameter_name="window_geometry",
             )
             result.add_error(error)
 

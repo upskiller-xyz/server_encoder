@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any, Dict
+
 import numpy as np
-from src.core import RegionType, ModelType
+
+from src.core import ModelType, RegionType
+
 # from src.models.encoding_parameters import EncodingParameters
 
 
@@ -20,10 +23,7 @@ class IRegionEncoder(ABC):
 
     @abstractmethod
     def encode_region(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
+        self, image: np.ndarray, parameters: Dict[str, Any], model_type: ModelType
     ) -> np.ndarray:
         """
         Encode region parameters into the image

@@ -1,13 +1,15 @@
 """OpenAPI specification generator from Pydantic models for auto-documentation"""
-from typing import Dict, Any, List
+
+from typing import Any, Dict, List
+
 from src.server.schemas import (
-    EncodeRequest,
     CalculateDirectionRequest,
-    ReferencePointRequest,
     DirectionAngleResponse,
-    ReferencePointResponse,
-    ExternalReferencePointResponse,
+    EncodeRequest,
     ErrorResponse,
+    ExternalReferencePointResponse,
+    ReferencePointRequest,
+    ReferencePointResponse,
 )
 
 
@@ -19,17 +21,17 @@ class OpenAPISpecGenerator:
         title: str = "Server Encoder API",
         description: str = "Room encoding service with support for multiple encoding schemes",
         version: str = "0.1.0",
-        base_url: str = "/"
+        base_url: str = "/",
     ) -> Dict[str, Any]:
         """
         Generate OpenAPI 3.0 specification from Pydantic models.
-        
+
         Args:
             title: API title
             description: API description
             version: API version
             base_url: Base URL for API endpoints
-            
+
         Returns:
             OpenAPI 3.0 specification dict
         """
@@ -39,20 +41,11 @@ class OpenAPISpecGenerator:
                 "title": title,
                 "description": description,
                 "version": version,
-                "contact": {
-                    "name": "API Support"
-                }
+                "contact": {"name": "API Support"},
             },
-            "servers": [
-                {
-                    "url": base_url,
-                    "description": "Server API"
-                }
-            ],
+            "servers": [{"url": base_url, "description": "Server API"}],
             "paths": OpenAPISpecGenerator._generate_paths(),
-            "components": {
-                "schemas": OpenAPISpecGenerator._generate_schemas()
-            }
+            "components": {"schemas": OpenAPISpecGenerator._generate_schemas()},
         }
 
     @staticmethod
@@ -70,37 +63,38 @@ class OpenAPISpecGenerator:
                             "application/json": {
                                 "schema": {"$ref": "#/components/schemas/EncodeRequest"}
                             }
-                        }
+                        },
                     },
                     "responses": {
                         "200": {
                             "description": "Success - NPZ file with encoded arrays",
                             "content": {
                                 "application/octet-stream": {
-                                    "schema": {
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
+                                    "schema": {"type": "string", "format": "binary"}
                                 }
-                            }
+                            },
                         },
                         "400": {
                             "description": "Validation error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "500": {
                             "description": "Server error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
             },
             "/calculate-direction": {
@@ -112,36 +106,44 @@ class OpenAPISpecGenerator:
                         "required": True,
                         "content": {
                             "application/json": {
-                                "schema": {"$ref": "#/components/schemas/CalculateDirectionRequest"}
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalculateDirectionRequest"
+                                }
                             }
-                        }
+                        },
                     },
                     "responses": {
                         "200": {
                             "description": "Success - Direction angles for windows",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/DirectionAngleResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/DirectionAngleResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "400": {
                             "description": "Validation error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "500": {
                             "description": "Server error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
             },
             "/get-reference-point": {
@@ -153,36 +155,44 @@ class OpenAPISpecGenerator:
                         "required": True,
                         "content": {
                             "application/json": {
-                                "schema": {"$ref": "#/components/schemas/ReferencePointRequest"}
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReferencePointRequest"
+                                }
                             }
-                        }
+                        },
                     },
                     "responses": {
                         "200": {
                             "description": "Success - Reference points for windows",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ReferencePointResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ReferencePointResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "400": {
                             "description": "Validation error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "500": {
                             "description": "Server error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
             },
             "/get-external-reference-point": {
@@ -194,38 +204,46 @@ class OpenAPISpecGenerator:
                         "required": True,
                         "content": {
                             "application/json": {
-                                "schema": {"$ref": "#/components/schemas/ReferencePointRequest"}
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReferencePointRequest"
+                                }
                             }
-                        }
+                        },
                     },
                     "responses": {
                         "200": {
                             "description": "Success - External reference points for windows",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ExternalReferencePointResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ExternalReferencePointResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "400": {
                             "description": "Validation error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
+                            },
                         },
                         "500": {
                             "description": "Server error",
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
-            }
+            },
         }
 
     @staticmethod

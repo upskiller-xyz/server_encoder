@@ -4,8 +4,10 @@ Reflectance Parameters Model
 Encapsulates all reflectance parameters with validation.
 Follows the Strategy Pattern for organizing related parameters.
 """
+
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, Tuple
+from typing import Any, Dict, Optional, Tuple
+
 from src.core import ParameterName
 
 
@@ -16,6 +18,7 @@ class ReflectanceParameters:
 
     All reflectance values must be between 0 and 1 (representing 0-100% reflectance).
     """
+
     # Room surface reflectances
     ceiling_reflectance: Optional[float] = None
     floor_reflectance: Optional[float] = None
@@ -80,12 +83,14 @@ class ReflectanceParameters:
         if self.context_reflectance is not None:
             result[ParameterName.CONTEXT_REFLECTANCE.value] = self.context_reflectance
         if self.window_frame_reflectance is not None:
-            result[ParameterName.WINDOW_FRAME_REFLECTANCE.value] = self.window_frame_reflectance
+            result[ParameterName.WINDOW_FRAME_REFLECTANCE.value] = (
+                self.window_frame_reflectance
+            )
 
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReflectanceParameters':
+    def from_dict(cls, data: Dict[str, Any]) -> "ReflectanceParameters":
         """
         Parse dictionary into ReflectanceParameters.
 
@@ -96,12 +101,30 @@ class ReflectanceParameters:
             ReflectanceParameters instance
         """
         return cls(
-            ceiling_reflectance=float(data[ParameterName.CEILING_REFLECTANCE.value]) if ParameterName.CEILING_REFLECTANCE.value in data else None,
-            floor_reflectance=float(data[ParameterName.FLOOR_REFLECTANCE.value]) if ParameterName.FLOOR_REFLECTANCE.value in data else None,
-            wall_reflectance=float(data[ParameterName.WALL_REFLECTANCE.value]) if ParameterName.WALL_REFLECTANCE.value in data else None,
-            facade_reflectance=float(data[ParameterName.FACADE_REFLECTANCE.value]) if ParameterName.FACADE_REFLECTANCE.value in data else None,
-            terrain_reflectance=float(data[ParameterName.TERRAIN_REFLECTANCE.value]) if ParameterName.TERRAIN_REFLECTANCE.value in data else None,
-            balcony_reflectance=float(data[ParameterName.BALCONY_REFLECTANCE.value]) if ParameterName.BALCONY_REFLECTANCE.value in data else None,
-            context_reflectance=float(data[ParameterName.CONTEXT_REFLECTANCE.value]) if ParameterName.CONTEXT_REFLECTANCE.value in data else None,
-            window_frame_reflectance=float(data[ParameterName.WINDOW_FRAME_REFLECTANCE.value]) if ParameterName.WINDOW_FRAME_REFLECTANCE.value in data else None,
+            ceiling_reflectance=float(data[ParameterName.CEILING_REFLECTANCE.value])
+            if ParameterName.CEILING_REFLECTANCE.value in data
+            else None,
+            floor_reflectance=float(data[ParameterName.FLOOR_REFLECTANCE.value])
+            if ParameterName.FLOOR_REFLECTANCE.value in data
+            else None,
+            wall_reflectance=float(data[ParameterName.WALL_REFLECTANCE.value])
+            if ParameterName.WALL_REFLECTANCE.value in data
+            else None,
+            facade_reflectance=float(data[ParameterName.FACADE_REFLECTANCE.value])
+            if ParameterName.FACADE_REFLECTANCE.value in data
+            else None,
+            terrain_reflectance=float(data[ParameterName.TERRAIN_REFLECTANCE.value])
+            if ParameterName.TERRAIN_REFLECTANCE.value in data
+            else None,
+            balcony_reflectance=float(data[ParameterName.BALCONY_REFLECTANCE.value])
+            if ParameterName.BALCONY_REFLECTANCE.value in data
+            else None,
+            context_reflectance=float(data[ParameterName.CONTEXT_REFLECTANCE.value])
+            if ParameterName.CONTEXT_REFLECTANCE.value in data
+            else None,
+            window_frame_reflectance=float(
+                data[ParameterName.WINDOW_FRAME_REFLECTANCE.value]
+            )
+            if ParameterName.WINDOW_FRAME_REFLECTANCE.value in data
+            else None,
         )

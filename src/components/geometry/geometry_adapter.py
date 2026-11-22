@@ -1,7 +1,9 @@
-from typing import List, Tuple, Any, Dict, Callable
 import logging
+from typing import Any, Callable, Dict, List, Tuple
+
 import numpy as np
 from shapely.geometry import Polygon as ShapelyPolygon
+
 from src.core import GeometryType
 
 
@@ -27,7 +29,9 @@ class GeometryAdapter:
     @staticmethod
     def _extract_geometry_collection_coords(geometry: Any) -> List[Tuple[float, float]]:
         """Extract coordinates from GeometryCollection by finding polygons"""
-        polygons = [g for g in geometry.geoms if g.geom_type == GeometryType.POLYGON.value]
+        polygons = [
+            g for g in geometry.geoms if g.geom_type == GeometryType.POLYGON.value
+        ]
         if not polygons:
             return []
         largest = max(polygons, key=lambda p: p.area)
@@ -35,9 +39,9 @@ class GeometryAdapter:
 
     # Strategy map: GeometryType -> extraction function (Strategy Pattern)
     GEOMETRY_HANDLERS: Dict[GeometryType, Callable] = {
-        GeometryType.POLYGON: _extract_polygon_coords.__func__, # type: ignore
-        GeometryType.MULTI_POLYGON: _extract_multi_polygon_coords.__func__, # type: ignore
-        GeometryType.GEOMETRY_COLLECTION: _extract_geometry_collection_coords.__func__, # type: ignore
+        GeometryType.POLYGON: _extract_polygon_coords.__func__,  # type: ignore
+        GeometryType.MULTI_POLYGON: _extract_multi_polygon_coords.__func__,  # type: ignore
+        GeometryType.GEOMETRY_COLLECTION: _extract_geometry_collection_coords.__func__,  # type: ignore
     }
 
     @classmethod
@@ -47,9 +51,7 @@ class GeometryAdapter:
 
     @classmethod
     def extract_coordinates(
-        cls,
-        geometry: Any,
-        fallback_coords: List[List[int]] = []
+        cls, geometry: Any, fallback_coords: List[List[int]] = []
     ) -> np.ndarray:
         """
         Extract coordinates from a Shapely geometry object

@@ -92,17 +92,21 @@ payload = {
         "room_polygon": [[0, 0], [5, 0], [5, 4], [0, 4]],
         "windows": {
             "main_window": {
-                "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                "x2":  0.6, "y2": 0.0, "z2": 2.4
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
             }
-        }
-    }
+        },
+    },
 }
 
 response = requests.post("http://localhost:8081/encode", json=payload)
 npz = np.load(io.BytesIO(response.content))
 image = npz["main_window_image"]  # (128, 128, 1) float32
-print(image.shape, image.dtype)   # (128, 128, 1) float32
+print(image.shape, image.dtype)  # (128, 128, 1) float32
 ```
 
 ## Examples
@@ -141,13 +145,17 @@ payload = {
                 "window_sill_height": 0.9,
                 "window_frame_ratio": 0.15,
                 "window_height": 1.5,
-                "x1": -0.6, "y1": 0.0, "z1": 0.9,
-                "x2": 0.6, "y2": 0.0, "z2": 2.4,
+                "x1": -0.6,
+                "y1": 0.0,
+                "z1": 0.9,
+                "x2": 0.6,
+                "y2": 0.0,
+                "z2": 2.4,
                 "horizon": 15.0,
-                "zenith": 10.0
+                "zenith": 10.0,
             }
-        }
-    }
+        },
+    },
 }
 
 response = requests.post(url, json=payload)
@@ -167,6 +175,6 @@ payload = {
     "encoding_scheme": "v1",  # Legacy RGB channel mapping
     "parameters": {
         # ... same parameters as above
-    }
+    },
 }
 ```

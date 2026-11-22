@@ -1,7 +1,8 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+from src.components.geometry import RoomPolygon, WindowGeometry
 from src.core import ParameterName
 from src.core.enums import REQUIRED_WINDOW_COORDINATES
-from src.components.geometry import WindowGeometry, RoomPolygon
 
 
 class ParameterNormalizer:
@@ -12,7 +13,9 @@ class ParameterNormalizer:
     """
 
     @staticmethod
-    def normalize_window_geometry(window_params: Dict[str, Any]) -> Optional[WindowGeometry]:
+    def normalize_window_geometry(
+        window_params: Dict[str, Any],
+    ) -> Optional[WindowGeometry]:
         """
         Extract or create WindowGeometry from parameters
 
@@ -39,7 +42,9 @@ class ParameterNormalizer:
                 x2=window_params[ParameterName.X2.value],
                 y2=window_params[ParameterName.Y2.value],
                 z2=window_params[ParameterName.Z2.value],
-                direction_angle=window_params.get(ParameterName.DIRECTION_ANGLE.value, None)
+                direction_angle=window_params.get(
+                    ParameterName.DIRECTION_ANGLE.value, None
+                ),
             )
 
         return None
@@ -65,6 +70,6 @@ class ParameterNormalizer:
         if isinstance(polygon, (list, tuple)):
             return RoomPolygon.from_dict(polygon)  # type:ignore
         # If it's a dict, it might be a serialized RoomPolygon
-        if isinstance(polygon, dict) and 'vertices' in polygon:
-            return RoomPolygon.from_dict(polygon['vertices'])
+        if isinstance(polygon, dict) and "vertices" in polygon:
+            return RoomPolygon.from_dict(polygon["vertices"])
         return RoomPolygon.from_dict(polygon)  # type:ignore

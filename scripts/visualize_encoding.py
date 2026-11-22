@@ -7,13 +7,14 @@ per-channel PNG images + a combined overview for visual inspection.
 Usage:
     python scripts/visualize_encoding.py --input ./training_output/ --output ./training_viz/
 """
+
+import argparse
 import os
 import sys
-import argparse
 from typing import Dict
 
-import numpy as np
 import cv2
+import numpy as np
 
 
 class EncodingVisualizer:
@@ -72,13 +73,17 @@ class EncodingVisualizer:
             colored = cv2.applyColorMap(channel, cv2.COLORMAP_VIRIDIS)
             label = EncodingVisualizer.CHANNEL_NAMES[ch]
             cv2.putText(
-                colored, label, (2, 12),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1
+                colored,
+                label,
+                (2, 12),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.35,
+                (255, 255, 255),
+                1,
             )
             channel_imgs.append(colored)
             cv2.imwrite(
-                os.path.join(dp_dir, f"{key}_ch{ch}_{label.lower()}.png"),
-                colored
+                os.path.join(dp_dir, f"{key}_ch{ch}_{label.lower()}.png"), colored
             )
 
         # Combined overview: 4 channels side by side
@@ -90,12 +95,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Visualize encoder output .npz files as PNG images"
     )
+    parser.add_argument("--input", required=True, help="Directory with .npz files")
     parser.add_argument(
-        "--input", required=True, help="Directory with .npz files"
-    )
-    parser.add_argument(
-        "--output", default=None,
-        help="Output directory for PNGs (default: <input>_viz)"
+        "--output",
+        default=None,
+        help="Output directory for PNGs (default: <input>_viz)",
     )
 
     args = parser.parse_args()
@@ -105,9 +109,7 @@ def main():
 
     os.makedirs(args.output, exist_ok=True)
 
-    npz_files = sorted([
-        f for f in os.listdir(args.input) if f.endswith(".npz")
-    ])
+    npz_files = sorted([f for f in os.listdir(args.input) if f.endswith(".npz")])
 
     if not npz_files:
         print(f"No .npz files found in {args.input}")

@@ -1,4 +1,5 @@
 from typing import Tuple
+
 import numpy as np
 
 
@@ -10,7 +11,7 @@ class LinearChannelEncoder:
         min_value: float,
         max_value: float,
         output_min: float = 0.0,
-        output_max: float = 1.0
+        output_max: float = 1.0,
     ):
         """
         Initialize linear encoder

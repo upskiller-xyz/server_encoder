@@ -1,4 +1,5 @@
 """Transport hardening for an internal service: request-size limit and opt-in CORS."""
+
 import logging
 import os
 from dataclasses import dataclass
@@ -33,9 +34,13 @@ class HttpPolicy:
     def from_environment(cls, default_max_bytes: int) -> "HttpPolicy":
         max_bytes = int(os.getenv(MAX_CONTENT_LENGTH_ENV, str(default_max_bytes)))
         if max_bytes <= 0:
-            raise ValueError(f"{MAX_CONTENT_LENGTH_ENV} must be positive, got {max_bytes}")
+            raise ValueError(
+                f"{MAX_CONTENT_LENGTH_ENV} must be positive, got {max_bytes}"
+            )
         raw = os.getenv(CORS_ORIGINS_ENV, "")
-        origins = tuple(origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip())
+        origins = tuple(
+            origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()
+        )
         return cls(max_bytes, origins)
 
     def apply(self, app: Flask) -> None:

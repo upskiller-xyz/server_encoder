@@ -1,6 +1,8 @@
 """Tests for server enums (ServiceName, Endpoint)"""
+
 import pytest
-from src.server.enums import ServiceName, Endpoint, HTTPStatus
+
+from src.server.enums import Endpoint, HTTPStatus, ServiceName
 
 
 class TestServiceNameEnum:
@@ -63,7 +65,10 @@ class TestEndpointEnum:
 
     def test_get_external_reference_point_value(self):
         """Test GET_EXTERNAL_REFERENCE_POINT endpoint value"""
-        assert Endpoint.GET_EXTERNAL_REFERENCE_POINT.value == "get_external_reference_point"
+        assert (
+            Endpoint.GET_EXTERNAL_REFERENCE_POINT.value
+            == "get_external_reference_point"
+        )
 
     def test_endpoint_all_members(self):
         """Test all Endpoint members are defined"""

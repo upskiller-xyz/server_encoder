@@ -3,18 +3,18 @@ import sys
 from pathlib import Path
 
 # Disable GPU/CUDA to prevent bus errors on WSL2
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['OPENCV_IO_ENABLE_OPENEXR'] = '0'
-os.environ['OMP_NUM_THREADS'] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "0"
+os.environ["OMP_NUM_THREADS"] = "1"
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.server.application import ServerApplication
-from src.server.launcher import ServerLauncher
 from src.server.http_policy import HttpPolicy
+from src.server.launcher import ServerLauncher
 
 
 def main() -> None:
@@ -30,7 +30,7 @@ def main() -> None:
 def create_app():
     """
     Factory function for creating the Flask app (for gunicorn).
-    
+
     Returns:
         Flask: The Flask application instance
     """

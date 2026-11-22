@@ -1,8 +1,14 @@
 """Validator for window coordinates (SRP: validates only window coordinate structures)"""
+
 from typing import Any, Dict, Optional
-from src.validation.base import BaseValidator, ValidationResult, ValidationError
+
+from src.core.enums import (
+    REQUIRED_WINDOW_2D_COORDINATES,
+    REQUIRED_WINDOW_COORDINATES,
+    ParameterName,
+)
+from src.validation.base import BaseValidator, ValidationError, ValidationResult
 from src.validation.enums import ValidationErrorType
-from src.core.enums import ParameterName, REQUIRED_WINDOW_COORDINATES, REQUIRED_WINDOW_2D_COORDINATES
 
 
 class WindowCoordinatesValidator(BaseValidator):
@@ -17,9 +23,15 @@ class WindowCoordinatesValidator(BaseValidator):
                        If False, only 2D coordinates are required (x1, y1, x2, y2)
         """
         self._require_3d = require_3d
-        self._required_coords = REQUIRED_WINDOW_COORDINATES if require_3d else REQUIRED_WINDOW_2D_COORDINATES
+        self._required_coords = (
+            REQUIRED_WINDOW_COORDINATES
+            if require_3d
+            else REQUIRED_WINDOW_2D_COORDINATES
+        )
 
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         """
         Validate window coordinates.
 
@@ -38,7 +50,7 @@ class WindowCoordinatesValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_TYPE,
                 message=f"{parameter_name} must be a dictionary, got {type(value).__name__}",
-                parameter_name=parameter_name
+                parameter_name=parameter_name,
             )
             result.add_error(error)
             return result
@@ -48,7 +60,7 @@ class WindowCoordinatesValidator(BaseValidator):
             error = ValidationError(
                 error_type=ValidationErrorType.INVALID_LENGTH,
                 message=f"{parameter_name} must contain at least one window",
-                parameter_name=parameter_name
+                parameter_name=parameter_name,
             )
             result.add_error(error)
             return result
@@ -59,7 +71,7 @@ class WindowCoordinatesValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.INVALID_TYPE,
                     message=f"{parameter_name}[{window_id}] must be a dictionary, got {type(window_data).__name__}",
-                    parameter_name=f"{parameter_name}.{window_id}"
+                    parameter_name=f"{parameter_name}.{window_id}",
                 )
                 result.add_error(error)
                 continue
@@ -70,7 +82,7 @@ class WindowCoordinatesValidator(BaseValidator):
                 error = ValidationError(
                     error_type=ValidationErrorType.MISSING_PARAMETER,
                     message=f"{parameter_name}[{window_id}] missing required coordinates: {', '.join(sorted(missing_coords))}",
-                    parameter_name=f"{parameter_name}.{window_id}"
+                    parameter_name=f"{parameter_name}.{window_id}",
                 )
                 result.add_error(error)
                 continue
@@ -83,7 +95,7 @@ class WindowCoordinatesValidator(BaseValidator):
                         error = ValidationError(
                             error_type=ValidationErrorType.INVALID_TYPE,
                             message=f"{parameter_name}[{window_id}].{coord_name} must be a number, got {type(coord_value).__name__}",
-                            parameter_name=f"{parameter_name}.{window_id}.{coord_name}"
+                            parameter_name=f"{parameter_name}.{window_id}.{coord_name}",
                         )
                         result.add_error(error)
 

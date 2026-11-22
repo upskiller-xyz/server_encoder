@@ -6,9 +6,10 @@ to calculate the direction_angle (orientation) for windows based on
 their position in a room polygon.
 """
 
-import requests
 import json
 import math
+
+import requests
 
 
 def calculate_direction_angles():
@@ -24,25 +25,15 @@ def calculate_direction_angles():
     payload = {
         "parameters": {
             "room_polygon": [
-                [0, 2],      # Northeast corner
-                [0, -7],     # Southeast corner
-                [-3, -7],    # Southwest corner
-                [-3, 2]      # Northwest corner
+                [0, 2],  # Northeast corner
+                [0, -7],  # Southeast corner
+                [-3, -7],  # Southwest corner
+                [-3, 2],  # Northwest corner
             ],
             "windows": {
-                "east_window": {
-                    "x1": 0.0,
-                    "y1": 0.2,
-                    "x2": 0.0,
-                    "y2": 1.8
-                },
-                "south_window": {
-                    "x1": -0.5,
-                    "y1": -7.0,
-                    "x2": -2.5,
-                    "y2": -7.0
-                }
-            }
+                "east_window": {"x1": 0.0, "y1": 0.2, "x2": 0.0, "y2": 1.8},
+                "south_window": {"x1": -0.5, "y1": -7.0, "x2": -2.5, "y2": -7.0},
+            },
         }
     }
 
@@ -84,6 +75,7 @@ def calculate_direction_angles():
         print(f"✗ Error: {str(e)}")
         return None
 
+
 def example_with_single_window():
     """Example with a single window."""
     url = "http://localhost:3000/calculate-direction"
@@ -91,27 +83,20 @@ def example_with_single_window():
     payload = {
         "parameters": {
             "room_polygon": [[0, 2], [0, -7], [-3, -7], [-3, 2]],
-            "windows": {
-                "my_window": {
-                    "x1": 0.0,
-                    "y1": 0.2,
-                    "x2": 0.0,
-                    "y2": 1.8
-                }
-            }
+            "windows": {"my_window": {"x1": 0.0, "y1": 0.2, "x2": 0.0, "y2": 1.8}},
         }
     }
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Example: Single window")
-    print("="*50 + "\n")
+    print("=" * 50 + "\n")
 
     try:
         response = requests.post(url, json=payload)
         if response.status_code == 200:
             result = response.json()
             angle_deg = result["direction_angles_degrees"]["my_window"]
-           
+
             return result
         else:
             print(f"Error: {response.status_code}")
@@ -122,9 +107,9 @@ def example_with_single_window():
 
 
 if __name__ == "__main__":
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Direction Angle Calculation Example")
-    print("="*50 + "\n")
+    print("=" * 50 + "\n")
 
     # Example 1: Multiple windows
     calculate_direction_angles()
@@ -132,6 +117,6 @@ if __name__ == "__main__":
     # Example 2: Single window
     example_with_single_window()
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Done!")
-    print("="*50 + "\n")
+    print("=" * 50 + "\n")

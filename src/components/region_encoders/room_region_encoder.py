@@ -1,10 +1,18 @@
-from typing import Dict, Any
-import numpy as np
+from typing import Any, Dict
+
 import cv2
-from src.core import RegionType, ModelType, ParameterName, ImageDimensions, EncodingScheme
-from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
+import numpy as np
+
 from src.components.geometry import RoomPolygon, WindowGeometry
-from src.core import GRAPHICS_CONSTANTS
+from src.components.region_encoders.base_region_encoder import BaseRegionEncoder
+from src.core import (
+    GRAPHICS_CONSTANTS,
+    EncodingScheme,
+    ImageDimensions,
+    ModelType,
+    ParameterName,
+    RegionType,
+)
 
 
 class RoomRegionEncoder(BaseRegionEncoder):
@@ -28,10 +36,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
         super().__init__(RegionType.ROOM, encoding_scheme)
 
     def _get_area_mask(
-        self,
-        image: np.ndarray,
-        parameters: Dict[str, Any],
-        model_type: ModelType
+        self, image: np.ndarray, parameters: Dict[str, Any], model_type: ModelType
     ) -> np.ndarray:
         """
         Create binary mask for room polygon
@@ -80,7 +85,6 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 if direction_angle is None:
                     direction_angle = geom.calculate_direction_from_polygon(polygon)
 
-
             # Note: Rotation is handled at a higher level (in image builder)
             # so polygon and window coordinates here are already rotated if needed
 
@@ -92,10 +96,10 @@ class RoomRegionEncoder(BaseRegionEncoder):
                 window_x2=window_x2,
                 window_y2=window_y2,
                 image_size=width,
-                direction_angle=direction_angle
+                direction_angle=direction_angle,
             )
 
-            cv2.fillPoly(mask, pixel_coords, 1) # type: ignore
+            cv2.fillPoly(mask, pixel_coords, 1)  # type: ignore
 
             # Enforce border
             mask = self._enforce_border(mask, height, width)
@@ -107,7 +111,7 @@ class RoomRegionEncoder(BaseRegionEncoder):
         dims = ImageDimensions(width)
         bar_x_start, _, _, _ = dims.get_obstruction_bar_position()
         mask = np.zeros((height, width), dtype=bool)
-        mask[border:height-border, border:bar_x_start] = True
+        mask[border : height - border, border:bar_x_start] = True
 
         return mask
 
@@ -122,6 +126,6 @@ class RoomRegionEncoder(BaseRegionEncoder):
         """
         border = GRAPHICS_CONSTANTS.BORDER_PX
         mask[0:border, :] = 0  # Top rows
-        mask[height-border:height, :] = 0  # Bottom rows
+        mask[height - border : height, :] = 0  # Bottom rows
         mask[:, 0:border] = 0  # Left columns
         return mask

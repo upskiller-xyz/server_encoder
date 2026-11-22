@@ -46,7 +46,9 @@ All validators inherit from this interface.
 ```python
 class BaseValidator(ABC):
     @abstractmethod
-    def validate(self, value: Any, context: Optional[Dict[str, Any]] = None) -> ValidationResult:
+    def validate(
+        self, value: Any, context: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
         pass
 ```
 
@@ -69,7 +71,7 @@ Custom exception with error type enum and parameter name.
 error = ValidationError(
     error_type=ValidationErrorType.INVALID_RANGE,
     message="height must be > 0",
-    parameter_name="height_roof_over_floor"
+    parameter_name="height_roof_over_floor",
 )
 ```
 
@@ -130,8 +132,8 @@ request = {
     "parameters": {
         "room_polygon": [[0, 0], [10, 0], [10, 10], [0, 10]],
         "height_roof_over_floor": 2.7,
-        "floor_height_above_terrain": 0.0
-    }
+        "floor_height_above_terrain": 0.0,
+    },
 }
 
 result = manager.validate(RequestType.ENCODE, request)
@@ -146,7 +148,8 @@ from werkzeug.exceptions import BadRequest
 
 manager = ValidatorManager()
 
-@app.route('/encode', methods=['POST'])
+
+@app.route("/encode", methods=["POST"])
 def encode():
     data = request.get_json()
 
@@ -169,6 +172,7 @@ To add a new parameter validator:
 from src.validation.base import BaseValidator, ValidationResult, ValidationError
 from src.validation.enums import ValidationErrorType
 
+
 class MyCustomValidator(BaseValidator):
     def __init__(self, parameter_name: str):
         self._parameter_name = parameter_name
@@ -178,11 +182,13 @@ class MyCustomValidator(BaseValidator):
 
         # Type check
         if not isinstance(value, str):
-            result.add_error(ValidationError(
-                error_type=ValidationErrorType.INVALID_TYPE,
-                message=f"{self._parameter_name} must be a string",
-                parameter_name=self._parameter_name
-            ))
+            result.add_error(
+                ValidationError(
+                    error_type=ValidationErrorType.INVALID_TYPE,
+                    message=f"{self._parameter_name} must be a string",
+                    parameter_name=self._parameter_name,
+                )
+            )
 
         return result
 ```

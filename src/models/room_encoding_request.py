@@ -4,6 +4,7 @@ Room Encoding Request Model
 Represents a complete room encoding request with all parameters.
 Provides validation and conversion to internal formats.
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -18,10 +19,10 @@ from src.models.window_request import WindowRequest
 def _parse_float_or_list(value: Any) -> Optional[Union[float, List[float]]]:
     """
     Parse value as either float or list of floats
-    
+
     Args:
         value: Value to parse (can be int, float, or list)
-        
+
     Returns:
         Parsed value as float, list, or None
     """
@@ -43,6 +44,7 @@ class RoomEncodingRequest:
     Represents all parameters needed to encode a room image.
     Provides validation and conversion to internal formats.
     """
+
     # Model configuration
     model_type: ModelType
 
@@ -77,11 +79,20 @@ class RoomEncodingRequest:
         """
         # Validate roof height when provided
         if self.height_roof_over_floor is not None and self.height_roof_over_floor <= 0:
-            return False, f"height_roof_over_floor must be positive, got {self.height_roof_over_floor}"
+            return (
+                False,
+                f"height_roof_over_floor must be positive, got {self.height_roof_over_floor}",
+            )
 
         # Validate floor height when provided
-        if self.floor_height_above_terrain is not None and self.floor_height_above_terrain < 0:
-            return False, f"floor_height_above_terrain must be non-negative, got {self.floor_height_above_terrain}"
+        if (
+            self.floor_height_above_terrain is not None
+            and self.floor_height_above_terrain < 0
+        ):
+            return (
+                False,
+                f"floor_height_above_terrain must be non-negative, got {self.floor_height_above_terrain}",
+            )
 
         # Validate room polygon if provided
         if self.room_polygon is not None:
@@ -89,7 +100,10 @@ class RoomEncodingRequest:
                 return False, "room_polygon must have at least 3 vertices"
             for i, vertex in enumerate(self.room_polygon):
                 if len(vertex) < 2:
-                    return False, f"room_polygon vertex {i} must have at least 2 coordinates"
+                    return (
+                        False,
+                        f"room_polygon vertex {i} must have at least 2 coordinates",
+                    )
 
         # Validate windows
         if not self.windows:
@@ -106,8 +120,14 @@ class RoomEncodingRequest:
             return False, f"Reflectance error: {error}"
 
         # Validate orientation
-        if self.window_orientation is not None and not 0 <= self.window_orientation <= 360:
-            return False, f"window_orientation must be between 0 and 360, got {self.window_orientation}"
+        if (
+            self.window_orientation is not None
+            and not 0 <= self.window_orientation <= 360
+        ):
+            return (
+                False,
+                f"window_orientation must be between 0 and 360, got {self.window_orientation}",
+            )
 
         return True, ""
 
@@ -120,9 +140,13 @@ class RoomEncodingRequest:
         """
         result: Dict[str, Any] = {}
         if self.height_roof_over_floor is not None:
-            result[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = self.height_roof_over_floor
+            result[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value] = (
+                self.height_roof_over_floor
+            )
         if self.floor_height_above_terrain is not None:
-            result[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = self.floor_height_above_terrain
+            result[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value] = (
+                self.floor_height_above_terrain
+            )
 
         # Add room polygon if present
         if self.room_polygon is not None:
@@ -156,7 +180,7 @@ class RoomEncodingRequest:
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'RoomEncodingRequest':
+    def from_dict(cls, data: Dict[str, Any]) -> "RoomEncodingRequest":
         """
         Parse raw request dictionary into RoomEncodingRequest
 
@@ -172,7 +196,9 @@ class RoomEncodingRequest:
         # Parse model type
         model_type_str = data.get(ParameterName.MODEL_TYPE.value)
         if not model_type_str:
-            raise ClientInputError(f"Missing required field: {ParameterName.MODEL_TYPE.value}")
+            raise ClientInputError(
+                f"Missing required field: {ParameterName.MODEL_TYPE.value}"
+            )
 
         try:
             model_type = ModelType(model_type_str)
@@ -191,28 +217,42 @@ class RoomEncodingRequest:
 
         # Check for single window (flat structure)
         if all(k in params for k in REQUIRED_WINDOW_COORDINATES):
-            windows['window_0'] = WindowRequest.from_dict(params)
+            windows["window_0"] = WindowRequest.from_dict(params)
         # Check for multiple windows (nested structure)
         elif ParameterName.WINDOWS.value in params:
             windows_data = params[ParameterName.WINDOWS.value]
             if not isinstance(windows_data, dict):
-                raise ClientInputError(f"'{ParameterName.WINDOWS.value}' must be a dictionary")
+                raise ClientInputError(
+                    f"'{ParameterName.WINDOWS.value}' must be a dictionary"
+                )
             for window_id, window_data in windows_data.items():
                 windows[window_id] = WindowRequest.from_dict(window_data)
         else:
-            raise ClientInputError(f"No windows found in request. Need either flat window coordinates or '{ParameterName.WINDOWS.value}' dictionary")
+            raise ClientInputError(
+                f"No windows found in request. Need either flat window coordinates or '{ParameterName.WINDOWS.value}' dictionary"
+            )
 
         # Parse reflectance parameters
         reflectance = ReflectanceParameters.from_dict(params)
 
         return cls(
             model_type=model_type,
-            height_roof_over_floor=float(params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value]) if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value in params else None,
-            floor_height_above_terrain=float(params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]) if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in params else None,
+            height_roof_over_floor=float(
+                params[ParameterName.HEIGHT_ROOF_OVER_FLOOR.value]
+            )
+            if ParameterName.HEIGHT_ROOF_OVER_FLOOR.value in params
+            else None,
+            floor_height_above_terrain=float(
+                params[ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value]
+            )
+            if ParameterName.FLOOR_HEIGHT_ABOVE_TERRAIN.value in params
+            else None,
             room_polygon=params.get(ParameterName.ROOM_POLYGON.value),
             windows=windows,
             reflectance=reflectance,
-            window_orientation=float(params[ParameterName.WINDOW_ORIENTATION.value]) if ParameterName.WINDOW_ORIENTATION.value in params else None,
+            window_orientation=float(params[ParameterName.WINDOW_ORIENTATION.value])
+            if ParameterName.WINDOW_ORIENTATION.value in params
+            else None,
             horizon=_parse_float_or_list(params.get(ParameterName.HORIZON.value)),
             zenith=_parse_float_or_list(params.get(ParameterName.ZENITH.value)),
         )
