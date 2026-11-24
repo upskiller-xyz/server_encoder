@@ -30,3 +30,27 @@ ignore:
       name: ffmpeg
       version: 9.0.2
       type: binary
+  # openssl 3.5.9-0.5.hum1 in the Hummingbird base (also -0.4): High, no fixed
+  # version published yet. Both CVEs are memory-exhaustion DoS in OpenSSL's
+  # QUIC server stack. The service speaks plain HTTP (gunicorn) behind the
+  # proxy, and Python's ssl module exposes no QUIC, so the code is never reached.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-124709
+    package:
+      name: openssl-libs
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-124709
+    package:
+      name: openssl-fips-provider-upstream
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-107494
+    package:
+      name: openssl-libs
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-107494
+    package:
+      name: openssl-fips-provider-upstream
+      type: rpm
