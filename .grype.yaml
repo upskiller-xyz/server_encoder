@@ -30,3 +30,206 @@ ignore:
       name: ffmpeg
       version: 9.0.2
       type: binary
+  # openssl 3.5.9-0.5.hum1 in the Hummingbird base (also -0.4): High, no fixed
+  # version published yet. Both CVEs are memory-exhaustion DoS in OpenSSL's
+  # QUIC server stack. The service speaks plain HTTP (gunicorn) behind the
+  # proxy, and Python's ssl module exposes no QUIC, so the code is never reached.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-124709
+    package:
+      name: openssl-libs
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-124709
+    package:
+      name: openssl-fips-provider-upstream
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-107494
+    package:
+      name: openssl-libs
+      type: rpm
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-107494
+    package:
+      name: openssl-fips-provider-upstream
+      type: rpm
+
+  # ffmpeg 9.0.2 bundled in the opencv-python-headless 5.1 wheel (only for cv2 video I/O): 29 High
+  # advisories published 2026-11-24, no fix in an opencv wheel yet. The service
+  # never opens video (no VideoCapture/VideoWriter), so libavcodec is not
+  # reached. Scoped to this ffmpeg version so a newer wheel drops the match.
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125181
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125196
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125202
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125204
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125208
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125210
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125211
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125212
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125213
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125214
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125218
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125219
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125222
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125227
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125229
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125233
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125235
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125239
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125241
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125248
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125249
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125250
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125251
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125256
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125257
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125259
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125260
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125262
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
+  # expires: 2026-12-15
+  - vulnerability: CVE-2026-125269
+    package:
+      name: ffmpeg
+      version: 9.0.2
+      type: binary
